@@ -1,0 +1,191 @@
+---
+title: "Rumex DE analysis"
+author: "Meng"
+date: "2023-05-15"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/deseq2/"
+```
+
+## prep dataset
+```{r}
+readcnt<-read.table("/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2/readcnts_eqtl_RNA.txt",header=T)
+head(readcnt)
+# get pollen and male leaf samples
+meta_data$id <- seq.int(nrow(meta_data))
+l_m <- meta_data %>% filter(sex == "male") %>% select(id)
+# l_f <- meta_data %>% filter(sex == "female") %>% select(id)
+l_p <- meta_data %>% filter(tissue == "pollen") %>% select(id)
+readcnt <- readcnt[ , -c(1:6)]
+
+readcnt_m <- readcnt[,c(t(l_p),t(l_m))]
+readcnt_matrix<-as.matrix(readcnt_m) 
+rownames(readcnt_matrix) <- readcnt[ , 1]
+head(readcnt_matrix)
+str(readcnt_matrix)
+meta_data <- data.frame(colnames(readcnt_matrix))
+write.csv(meta_data, file="/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2/meta_data_m.csv", row.names = FALSE)
+meta_data_m<-read.csv("/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2/meta_data_m.csv")
+write.table(readcnt_matrix, file="/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2/readcnt_m.txt")
+rownames(meta_data_m) <- colnames(readcnt_matrix)
+head(meta_data_m)
+```
+
+
+
+## run deseq2 (male leaf vs pollen)
+```{r}
+dds_tissue <- DESeqDataSetFromMatrix(countData = readcnt_matrix, 
+                              colData = meta_data_m,
+                              design = ~ tissue)
+dds_tissue <- DESeq(dds_tissue)
+resultsNames(dds_tissue) # "tissue_pollen_vs_leaf"
+res_tissue <- results(dds_tissue)
+head(res_tissue)
+summary(res_tissue)
+result_tissue <- res_tissue[complete.cases(res_tissue),]
+nrow(res_tissue) # 59120
+nrow(result_tissue) # 38742
+
+```
+
+
+PCA plot
+```{r}
+vsdata_tissue <- vst(dds_tissue, blind=FALSE)
+# pdf("pca_tissue.pdf")
+plotPCA(vsdata_tissue, intgroup=c("tissue")) 
+```
+
+MA plot
+```{r}
+plotMA(res_tissue, ylim=c(-2,2))
+resLFC <- lfcShrink(dds_tissue, coef="tissue_pollen_vs_leaf", type="apeglm")
+plotMA(resLFC, ylim=c(-2,2))
+```
+
+
+## get significant DE genes
+no baseMean cutoff, relaxed p cutoff
+```{r}
+DE_tissue<-as.data.frame(subset(result_tissue, padj<0.05 & abs(log2FoldChange)>1))
+DE_tissue<-as.data.frame(subset(result_tissue, padj<0.1))
+# for DFE
+DE_tissue<-as.data.frame(subset(result_tissue, padj<0.1 & baseMean >= 1))
+DE_tissue<-as.data.frame(subset(result_tissue))
+write.csv(DE_tissue, file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/plot/DE_tissue.csv", row.names = FALSE, quote = FALSE) 
+write.table(DE_tissue, file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/plot/DE_tissue_p01.txt", row.names = FALSE, quote = FALSE) 
+
+DE_tissue <- DE_tissue %>% mutate(gene = rownames(DE_tissue))
+DE_tissue$gene <- str_sub(DE_tissue$gene, end=-4)
+head(DE_tissue) # 38472
+
+DE_tissue <- DE_tissue[,c(7,1:6)]
+
+DE_tissue_pollen <-  DE_tissue %>% filter(log2FoldChange>0) #4326 #14856 #12292
+DE_tissue_leaf <-  DE_tissue %>% filter(log2FoldChange<0) #4136 #11015 #10889
+head(DE_tissue_pollen)
+# write.csv(DE_tissue_pollen, file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/plot/pollen_biased_noFC.csv", row.names = FALSE, quote = FALSE) 
+# write.csv(DE_tissue_leaf, file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/plot/leaf_biased_noFC.csv", row.names = FALSE, quote = FALSE)
+write.csv(DE_tissue_pollen, file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/plot/pollen_biased_p01.csv", row.names = FALSE, quote = FALSE) 
+write.csv(DE_tissue_leaf, file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/plot/leaf_biased_p01.csv", row.names = FALSE, quote = FALSE)
+
+DE_tissue$category <- "DE"
+```
+
+
+## get mean normalized cnts
+```{r}
+normalized_counts <- as.data.frame(counts(dds_tissue, normalized=T))
+normalized_counts <- normalized_counts %>% mutate(gene=rownames(normalized_counts)) 
+normalized_counts <- normalized_counts[,c(153,1:152)]
+normalized_counts$gene <- str_sub(normalized_counts$gene, end=-4)
+write.table(normalized_counts, file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2/normalized_counts_m.txt", quote = FALSE)
+
+col<-data.frame(colnames(normalized_counts))
+normalized_counts<-normalized_counts %>%  mutate(p_mean = rowMeans(normalized_counts[,c(2:76)] )) %>% mutate(l_mean = rowMeans(normalized_counts[,c(77:153)] ))
+
+normalized_counts<- normalized_counts %>% mutate(p_l_ratio = p_mean/l_mean)
+cnt<- normalized_counts %>% select(c(1,154:157))
+head(cnt)
+cnt$gene <- str_sub(cnt$gene, end=-4)
+write.table(cnt, file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2/cnt.txt", row.names = FALSE)
+cnt <- cnt[complete.cases(cnt),] #47954
+```
+
+
+proportion of pollen expressed genes
+```{r}
+pollen <- cnt %>% filter(p_mean>0) # 43766
+nrow(normalized_counts) # 59120
+nrow(pollen)/nrow(normalized_counts) # 0.7402909
+
+normalized_counts$mean <- rowMeans(normalized_counts[,c(2:153)])
+expressed <- normalized_counts %>% filter(mean>0)
+nrow(expressed) # 47954
+nrow(pollen)/nrow(expressed) # 0.9126663
+
+
+nrow(p_specific)/nrow(normalized_counts) # 0.1049053
+nrow(p_specific)/nrow(expressed) # 0.1293323
+```
+
+## get pollen and leaf specific genes
+
+```{r}
+genes<-left_join(cnt,DE_tissue,by="gene")
+write.table(cnt, file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2/cnt.txt", row.names = FALSE, quote = F)
+write.table(genes,file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2/gene_ratio_deseq2.txt", row.names = FALSE, quote = F)
+p_specific <- genes %>% filter(is.infinite(p_l_ratio))
+l_specific <- genes %>% filter(p_l_ratio == 0)
+
+# get .bed file
+gff <-read.table("/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2/april2022/TE_filtered_REF_LA.gff")
+colnames(gff)<-c("gene","chrom","start","end")
+p_specific <- inner_join(p_specific,gff, by="gene")
+l_specific <- inner_join(l_specific,gff, by="gene")
+
+p_specific_full <- left_join(p_specific,gff, by="gene")
+l_specific_full <- left_join(l_specific,gff, by="gene")
+
+write.table(p_specific,file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2/p_specific_noTE.txt", row.names = FALSE, quote = F)
+write.table(l_specific,file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2/l_specific_noTE.txt", row.names = FALSE, quote = F)
+
+write.table(p_specific_full,file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2/p_specific_full.txt", row.names = FALSE, quote = F)
+write.table(l_specific_full,file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2/l_specific_full.txt", row.names = FALSE, quote = F)
+
+write.table(l_specific[,c(13:15)],file=paste0(directory,"l_specific_noTE.bed"),sep="\t",row.names = FALSE, col.names = FALSE, quote=FALSE)
+write.table(p_specific[,c(13:15)],file=paste0(directory,"p_specific_noTE.bed"),sep="\t",row.names = FALSE, col.names = FALSE, quote=FALSE)
+
+
+
+```
+   DE nonDE 
+38742  9212 
+
+> mean(genes$l_mean)
+[1] 151.3402
+> mean(genes$p_mean)
+[1] 642.4631
+> median(genes$l_mean)
+[1] 0.4724794
+> median(genes$p_mean)
+[1] 2.171689
+
+scatterplot of all genes expressed
+```{r}
+genes$category <- ifelse(!is.na(genes$category),"DE","nonDE")
+table(genes$category)
+ggplot(genes, aes(x = p_mean, y = l_mean, color=genes$category)) + geom_point(size=1,alpha=0.4)+theme_bw()+xlim(1,50000)+ylim(1,50000)
+
+```
+
+
+```{r}
+ggplot(genes, aes(x = mean, y = log2(p_l_ratio),color=genes$category)) + geom_point(size=1,alpha=0.4)+theme_bw()+xlim(1,50000)
+```
+
+

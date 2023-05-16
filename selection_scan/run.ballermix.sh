@@ -1,29 +1,16 @@
 ########################## in ceratodon #################
-Please make sure the input has derived allele frequency. Sites with 0 observed allele count (k=0) should not be included.
-
-
-
 output <- read.table("ceratodon_gDNA.auto.filt.vcf.allele.cnt", header=T)
 output$cnt_derived <- ifelse(output$outgroup == "0", output$cnt_alt, output$cnt_ref)
 output$genPos <- 0
-
+# output <- output[order(output$chrom, output$physPos),]
 output<- output %>% select(chrom, physPos, genPos, cnt_derived, n)
-output <- output[order(output$chrom, output$physPos),]
-
-colnames(output)[3] <- "x"
-output <- output %>% filter(x != 0)
-write.table(output, file = "ceratodon_input_DAF.txt", row.names = FALSE, quote = FALSE, sep = "\t")
-
-# output3<- output2 %>% select(chrom, physPos, genPos, cnt_derived, n)
-# output3<- output2[,c(1,2,14,11,8)]
-# output3 <- output3[order(output3$chrom, output3$physPos),]
-# write.table(output3, file = "rumex_input_DAF_May9.txt", row.names = FALSE, quote = FALSE, sep = "\t")
-
+output <- output %>% filter(cnt_derived != 0)
+write.table(output, file = "ceratodon_input_DAF.txt", row.names = FALSE, quote = FALSE, sep = "\t"
 
 
 python3 /ohta2/meng.yuan/apps/BallerMixPlus/BalLeRMix+_v1.py -i ceratodon_input_DAF.txt --getSpect --spect ceratodon_spect_DAF.txt
 
-python3 /ohta2/meng.yuan/apps/BallerMixPlus/BalLeRMix+_v1.py -i rumex_input_DAF_May9.txt  -o rumex_scan_DAF_May9.txt --spect rumex_spect_DAF_May9.txt
+python3 /ohta2/meng.yuan/apps/BallerMixPlus/BalLeRMix+_v1.py -i ceratodon_input_DAF.txt  -o ceratodon_scan_DAF.txt --spect ceratodon_spect_DAF.txt
 
 
 
