@@ -120,8 +120,10 @@ cnt <- cnt[complete.cases(cnt),] #47954
 proportion of pollen expressed genes
 ```{r}
 pollen <- cnt %>% filter(p_mean>0) # 43766
+pollen <- genes %>% filter(p_mean>0)
 nrow(normalized_counts) # 59120
 nrow(pollen)/nrow(normalized_counts) # 0.7402909
+
 
 normalized_counts$mean <- rowMeans(normalized_counts[,c(2:153)])
 expressed <- normalized_counts %>% filter(mean>0)
@@ -131,7 +133,26 @@ nrow(pollen)/nrow(expressed) # 0.9126663
 
 nrow(p_specific)/nrow(normalized_counts) # 0.1049053
 nrow(p_specific)/nrow(expressed) # 0.1293323
+
+
+# TE filtered gff
+pollen_noTE<- left_join(pollen,gff,by="gene")
+pollen_noTE <- pollen_noTE[complete.cases(pollen_noTE),] #28730
+nrow(pollen_noTE)/nrow(gff) # 0.8501258
+expressed_noTE <- left_join(expressed,gff,by="gene") # 47954
+expressed_noTE <- expressed_noTE[complete.cases(expressed_noTE),] # 30139
+nrow(pollen_noTE)/nrow(expressed_noTE) # 0.9532499
+
+nrow(p_specific_DE)/nrow(gff) # 0.03633674
+nrow(p_specific_DE)/nrow(expressed_noTE) # 0.04074455
+
+
+# new cutoff for expressed 0.1
+
 ```
+
+
+
 
 ## get pollen and leaf specific genes
 
@@ -148,17 +169,23 @@ colnames(gff)<-c("gene","chrom","start","end")
 p_specific <- inner_join(p_specific,gff, by="gene")
 l_specific <- inner_join(l_specific,gff, by="gene")
 
+p_specific_DE <- p_specific[complete.cases(p_specific),] # 1228
+l_specific_DE <- l_specific[complete.cases(l_specific),] # 157
+
 p_specific_full <- left_join(p_specific,gff, by="gene")
 l_specific_full <- left_join(l_specific,gff, by="gene")
 
 write.table(p_specific,file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2/p_specific_noTE.txt", row.names = FALSE, quote = F)
 write.table(l_specific,file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2/l_specific_noTE.txt", row.names = FALSE, quote = F)
 
+write.table(p_specific_DE,file = paste0(directory,"p_specific_noTE_DE.txt"), row.names = FALSE, quote = F)
+write.table(l_specific_DE,file = paste0(directory,"l_specific_noTE_DE.txt"), row.names = FALSE, quote = F)
+
 write.table(p_specific_full,file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2/p_specific_full.txt", row.names = FALSE, quote = F)
 write.table(l_specific_full,file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2/l_specific_full.txt", row.names = FALSE, quote = F)
 
-write.table(l_specific[,c(13:15)],file=paste0(directory,"l_specific_noTE.bed"),sep="\t",row.names = FALSE, col.names = FALSE, quote=FALSE)
-write.table(p_specific[,c(13:15)],file=paste0(directory,"p_specific_noTE.bed"),sep="\t",row.names = FALSE, col.names = FALSE, quote=FALSE)
+write.table(l_specific_DE[,c(13:15)],file=paste0(directory,"l_specific_noTE_DE.bed"),sep="\t",row.names = FALSE, col.names = FALSE, quote=FALSE)
+write.table(p_specific_DE[,c(13:15)],file=paste0(directory,"p_specific_noTE_DE.bed"),sep="\t",row.names = FALSE, col.names = FALSE, quote=FALSE)
 
 
 
