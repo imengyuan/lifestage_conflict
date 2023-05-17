@@ -1,0 +1,12 @@
+data_path_1     /ohta2/meng.yuan/ceratodon/dfe_a/downloaded_data/data
+data_path_2     /ohta2/meng.yuan/ceratodon/dfe_a/data-three-epoch
+sfs_input_file  sfs_expressed_test.txt
+est_dfe_results_dir     results_dir_sel
+est_dfe_demography_results_file results_dir_neut/est_dfe.out
+site_class 1
+fold       1
+epochs  2
+mean_s_variable 1
+mean_s          -0.1
+beta_variable   1
+beta                    0.5

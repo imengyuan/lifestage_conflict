@@ -1,0 +1,111 @@
+---
+title: "DFE plots"
+author: "Meng"
+date: "2023-05-17"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(dplyr)
+library(ggplot2)
+knitr::opts_chunk$set(echo = TRUE)
+setwd("/Users/yuanmeng/Git/rumex_haploid_sel/DFE")
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/DFE/"
+```
+
+
+
+## get CI from bootstrapping
+```{r}
+bs_pollen <- read.table(paste0(directory,"p_specific_noTE_DE_bs.prop_muts.txt"))
+bs_leaf <- read.table(paste0(directory,"l_specific_noTE_DE_bs.prop_muts.txt"))
+
+bs_pollen$V5 <- rowSums(bs_pollen[,3:4])
+bs_pollen <- bs_pollen[,c(1:2,5)]
+colnames(bs_pollen) <- c("0~1", "1~10", ">10")
+
+bs_leaf$V5 <- rowSums(bs_leaf[,3:4])
+bs_leaf <- bs_leaf[,c(1:2,5)]
+colnames(bs_leaf) <- c("0~1", "1~10", ">10")
+
+bs_pollen$Category <- "pollen_specific"
+bs_leaf$Category <- "leaf_specific"
+
+# convert to long format
+pollen_long <- gather(bs_pollen, Nes, Prop, "0~1" : ">10", factor_key=TRUE)
+leaf_long <- gather(bs_leaf, Nes, Prop, "0~1" : ">10", factor_key=TRUE)
+
+# get error bar
+data_summary <- function(data, varname, groupnames){
+  require(plyr)
+  summary_func <- function(x, col){
+    c(mean = mean(x[[col]], na.rm=TRUE),
+      sd = sd(x[[col]], na.rm=TRUE))
+  }
+  data_sum<-ddply(data, groupnames, .fun=summary_func,
+                  varname)
+  data_sum <- rename(data_sum, c("mean" = varname))
+ return(data_sum)
+}
+
+bs_all <-rbind(pollen_long,leaf_long)
+
+df3 <- data_summary(bs_all, varname="Prop", 
+                    groupnames=c("Category", "Nes"))
+
+# df3 merge to prop
+colnames(df3)[3] <- "mean"
+prop <- read.table("dfe_prop.txt", header = TRUE)
+
+prop <- left_join(prop, df3, by=c("Category","Nes"))
+write.table(prop, file = paste0(directory,"final_prop.txt"), row.names = F, quote = F)
+write.table(bs_all, file = paste0(directory,"bs_all_long.txt"), row.names = F, quote = F)
+```
+
+
+## plot DFE with CI
+```{r}
+#prop <- read.table("final_prop.txt", header = TRUE)
+
+ggplot(prop, aes(x=Nes,y=Prop,fill=Category)) + geom_bar(stat="identity", position=position_dodge()) + theme_classic() + scale_x_discrete(limits=c("0~1", "1~10", ">10")) + scale_fill_manual(values = c("#CCEBC5", "#238B45"))  + labs(y="Proportion of mutations") + geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(.9)) + theme(text = element_text(size = 20))
+```
+
+
+## plots for presentation
+only two categories for the mutations
+```{r}
+bs_g <- read.table("/Users/yuanmeng/Dropbox/popgen_diversity/2022/pollen_specific.prop_muts.txt")
+bs_s <- read.table("/Users/yuanmeng/Dropbox/popgen_diversity/2022/leaf_specific.prop_muts.txt")
+
+# 4 categories is fine
+bs_s$Category <- "sporophyte-specific (2n)"
+bs_g$Category <- "gametophyte-specific (n)"
+
+bs_all <- rbind(bs_s,bs_g)
+bs_all$V5 <- 1- bs_all$V1
+bs_all <- bs_all[,c(5,6)]
+colnames(bs_all)[2] <- c(">1")
+
+df3 <- data_summary(bs_all, varname=">1", 
+                    groupnames="Category")
+colnames(df3)[2] <- "mean"
+
+prop <- read.table("/Users/yuanmeng/Dropbox/popgen_diversity/2022/dfe_prop_shrink.txt", header = TRUE)
+prop[1,2] <-"gametophyte-specific (n)"
+prop[2,2] <-"sporophyte-specific (2n)"
+
+prop <- left_join(prop, df3, by="Category")
+
+# larger variation than in rumex
+write.csv(prop, file = "/Users/yuanmeng/Dropbox/popgen_diversity/2022/final_prop_shrink.csv", row.names = F, quote = F)
+```
+
+```{r}
+prop$Category <- factor(prop$Category, level=c("gametophyte-specific (n)","sporophyte-specific (2n)")) # haploid is darker
+ggplot(prop, aes(x=Category,y=Prop,fill=Category)) + geom_bar(stat="identity", position=position_dodge()) + theme_classic() +scale_fill_manual(values = c("#238B45","#CCEBC5"))  + labs(y="Proportion of mutations") + geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(.9)) + theme(text = element_text(size = 20))
+
+```
+
+
+
+ 

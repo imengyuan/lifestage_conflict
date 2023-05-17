@@ -1,0 +1,10 @@
+data_path_1     /ohta2/meng.yuan/ceratodon/dfe_a/downloaded_data/data
+data_path_2     /ohta2/meng.yuan/ceratodon/dfe_a/data-three-epoch
+sfs_input_file  sfs_expressed_test.txt
+est_dfe_results_dir     results_dir_neut/
+site_class 0
+fold       1
+epochs     2
+search_n2       1
+t2_variable     1
+t2              50

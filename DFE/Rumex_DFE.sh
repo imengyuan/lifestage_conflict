@@ -17,8 +17,15 @@ done
 
 mv l_specific_noTE_DE*.vcf.txt ../bootstrap/
 mv p_specific_noTE_DE*.vcf.txt ../bootstrap/
+
 # get SFS
 # /ohta2/meng.yuan/rumex/diversity2022/bootstrap
+for sample in "p_specific_noTE_DE" "l_specific_noTE_DE"
+do
+/usr/local/bin/Rscript --vanilla sfs.R ${sample}
+done
+
+
 for sample in "p_specific_noTE_DE" "l_specific_noTE_DE"
 do
 /usr/local/bin/Rscript --vanilla sfs_bootstrap.R ${sample}
@@ -26,13 +33,13 @@ mv ${sample}*.sfs_*.txt bootstrap_specific/
 done
 
 
-
+# run DFE
 # real data
 for sample in "p_specific_noTE_DE" "l_specific_noTE_DE"
 do
-cd /ohta2/meng.yuan/ceratodon/VCF_genes/
-cat head_auto.txt bootstrap_specific/${sample}.nonsyn.sfs.txt bootstrap_specific/${sample}.syn.sfs.txt>/ohta2/meng.yuan/ceratodon/dfe_a/sfs_expressed_test.txt
-cd /ohta2/meng.yuan/ceratodon/dfe_a
+cd /ohta2/meng.yuan/rumex/diversity2022/bootstrap
+cat head.txt ${sample}.nonsyn.sfs.txt ${sample}.syn.sfs.txt>../dfe_a/sfs_expressed_test.txt
+cd /ohta2/meng.yuan/rumex/diversity2022/dfe_a/
 est_dfe -c est_dfe_configfile_neut.txt
 est_dfe -c est_dfe_configfile_sel.txt
 prop_muts_in_s_ranges -c results_dir_sel/est_dfe.out 
@@ -45,10 +52,10 @@ for sample in "p_specific_noTE_DE" "l_specific_noTE_DE"
 do
 for i in {1..200}; do
 # generate sfs.txt for input
-cd /ohta2/meng.yuan/ceratodon/VCF_genes/
-cat head_auto.txt bootstrap_auto/${sample}.nonsyn.sfs_${i}.txt bootstrap_auto/${sample}.syn.sfs_${i}.txt>/ohta2/meng.yuan/ceratodon/dfe_a/sfs_expressed_test.txt
+cd /ohta2/meng.yuan/rumex/diversity2022/bootstrap
+cat head.txt bootstrap_specific/${sample}.nonsyn.sfs_${i}.txt bootstrap_specific/${sample}.syn.sfs_${i}.txt>../dfe_a/sfs_expressed_test.txt
 # run est_dfe
-cd /ohta2/meng.yuan/ceratodon/dfe_a
+cd /ohta2/meng.yuan/rumex/diversity2022/dfe_a/
 est_dfe -c est_dfe_configfile_neut.txt
 est_dfe -c est_dfe_configfile_sel.txt
 prop_muts_in_s_ranges -c results_dir_sel/est_dfe.out 
