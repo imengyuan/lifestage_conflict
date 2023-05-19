@@ -50,6 +50,9 @@ output3 <- output3[order(output3$chrom, output3$physPos),]
 write.table(output3, file = "rumex_input_DAF_May9.txt", row.names = FALSE, quote = FALSE, sep = "\t")
 
 
+
+# niagara rumex
+
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=80
@@ -58,11 +61,38 @@ module load python
 python /scratch/w/wrighste/yuanmeng/ceratodon/ballermix/BallerMixPlus-main/BalLeRMix+_v1.py -i rumex_input_DAF_May9.txt -o rumex_scan_DAF_May9.txt --spect rumex_spect_DAF_May9.txt
 
 
-# ohta
-python3 /ohta2/meng.yuan/apps/BallerMixPlus/BalLeRMix+_v1.py -i rumex_input_DAF_May9.txt --getSpect --spect rumex_spect_DAF_May9.txt
 
+
+# niagara ceratodon
+scp meng.yuan@ohta.eeb.utoronto.ca:/ohta2/meng.yuan/ceratodon/ballermix/ceratodon_spect_DAF.txt ./
+
+#!/bin/bash
+#SBATCH --nodes=10
+#SBATCH --ntasks-per-node=80
+#SBATCH --time=22:00:00
+module load python
+python /scratch/w/wrighste/yuanmeng/ceratodon/ballermix/BallerMixPlus-main/BalLeRMix+_v1.py -i ceratodon_input_DAF.txt  -o ceratodon_scan_DAF.txt --spect ceratodon_spect_DAF.txt --usePhysPos --rec 0.000001
+
+
+
+# ohta ceratodon
+python3 /ohta2/meng.yuan/apps/BallerMixPlus/BalLeRMix+_v1.py -i ceratodon_input_DAF.txt  -o ceratodon_scan_DAF_real.txt --spect ceratodon_spect_DAF.txt --usePhysPos --rec 0.000001
+
+
+4945567 rumex_input_DAF_May9.txt
+7743903 ceratodon_input_DAF.txt
+184834943 ceratodon_input_MAF_full.txt
+
+
+# ohta rumex
+python3 /ohta2/meng.yuan/apps/BallerMixPlus/BalLeRMix+_v1.py -i rumex_input_DAF_May9.txt --getSpect --spect rumex_spect_DAF_May9.txt
 python3 /ohta2/meng.yuan/apps/BallerMixPlus/BalLeRMix+_v1.py -i rumex_input_DAF_May9.txt  -o rumex_scan_DAF_May9.txt --spect rumex_spect_DAF_May9.txt
 
+# ohta try parallel
+
+parallel --dry-run python3 /ohta2/meng.yuan/apps/BallerMixPlus/BalLeRMix+_v1.py -i rumex_input_DAF_May9.txt  -o rumex_scan_DAF_May18.txt --spect rumex_spect_DAF_May9.txt
 
 
+
+python3 BalLeRMix+_v1.py -i rumex_input_DAF_May9.txt  -o rumex_scan_DAF_May18.txt --spect rumex_spect_DAF_May9.txt
 

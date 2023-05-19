@@ -26,6 +26,7 @@ do
 done
 
 
+
 for sample in "p_specific_noTE_DE" "l_specific_noTE_DE"
 do
 /usr/local/bin/Rscript --vanilla sfs_bootstrap.R ${sample}
@@ -46,7 +47,7 @@ prop_muts_in_s_ranges -c results_dir_sel/est_dfe.out
 cut  -d' ' -f 3,6,9,12 prop_muts_in_s_ranges.out>${sample}_real.prop_muts.txt
 done
 
-
+# rerun this too
 # bootstrap data
 for sample in "p_specific_noTE_DE" "l_specific_noTE_DE"
 do

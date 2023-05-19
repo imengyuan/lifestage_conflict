@@ -55,7 +55,7 @@ df3 <- data_summary(bs_all, varname="Prop",
 
 # df3 merge to prop
 colnames(df3)[3] <- "mean"
-prop <- read.table("dfe_prop.txt", header = TRUE)
+prop <- read.table(paste0(directory,"dfe_prop.txt"), header = TRUE)
 
 prop <- left_join(prop, df3, by=c("Category","Nes"))
 write.table(prop, file = paste0(directory,"final_prop.txt"), row.names = F, quote = F)

@@ -202,7 +202,7 @@ write.table(p_specific_DE[,c(13:15)],file=paste0(directory,"p_specific_noTE_DE.b
 > median(genes$p_mean)
 [1] 2.171689
 
-scatterplot of all genes expressed
+
 ```{r}
 genes$category <- ifelse(!is.na(genes$category),"DE","nonDE")
 table(genes$category)
@@ -215,4 +215,13 @@ ggplot(genes, aes(x = p_mean, y = l_mean, color=genes$category)) + geom_point(si
 ggplot(genes, aes(x = mean, y = log2(p_l_ratio),color=genes$category)) + geom_point(size=1,alpha=0.4)+theme_bw()+xlim(1,50000)
 ```
 
+## expression level for p and l specific genes
+boxplot for p specific, l specific, all genes expressed
+```{r}
+p_specific_DE$category <- "p_specific"
+l_specific_DE$category <- "l_specific"
+specific_DE<-rbind(p_specific_DE,l_specific_DE)
+ggplot(specific_DE, aes(category, baseMean)) + geom_boxplot()+ theme_bw()
+ggplot(specific_DE, aes(category, baseMean)) + geom_boxplot()+ theme_bw() +ylim(0,5)
+```
 
