@@ -51,14 +51,19 @@ write.table(output3, file = "rumex_input_DAF_May9.txt", row.names = FALSE, quote
 
 
 
-# niagara rumex
+# niagara rumex may 23
 
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=80
-#SBATCH --time=5:00:00
+#SBATCH --time=0:30:00
+#SBATCH --job-name rumex_scan
 module load python
-python /scratch/w/wrighste/yuanmeng/ceratodon/ballermix/BallerMixPlus-main/BalLeRMix+_v1.py -i rumex_input_DAF_May9.txt -o rumex_scan_DAF_May9.txt --spect rumex_spect_DAF_May9.txt
+module load gnu-parallel/20191122
+module load NiaEnv/2019b gnu-parallel
+parallel -j5 python /scratch/w/wrighste/yuanmeng/ceratodon/ballermix/BallerMixPlus-main/BalLeRMix+_v1.py -i rumex_input_DAF_May9.txt -o rumex_scan_DAF_May9.txt --spect rumex_spect_DAF_May9.txt
+
+
 
 
 
@@ -95,4 +100,14 @@ parallel --dry-run python3 /ohta2/meng.yuan/apps/BallerMixPlus/BalLeRMix+_v1.py 
 
 
 python3 BalLeRMix+_v1.py -i rumex_input_DAF_May9.txt  -o rumex_scan_DAF_May18.txt --spect rumex_spect_DAF_May9.txt
+
+
+
+
+
+parallel --memfree 2G --jobs 15 python3 /ohta2/meng.yuan/apps/BallerMixPlus/BalLeRMix+_v1.py -i rumex_input_DAF_May9.txt -o rumex_scan_DAF_May22.txt --spect rumex_spect_DAF_May9.txt
+
+
+
+
 

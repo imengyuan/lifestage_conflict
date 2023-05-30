@@ -76,6 +76,8 @@ only two categories for the mutations
 ```{r}
 bs_g <- read.table("/Users/yuanmeng/Dropbox/popgen_diversity/2022/pollen_specific.prop_muts.txt")
 bs_s <- read.table("/Users/yuanmeng/Dropbox/popgen_diversity/2022/leaf_specific.prop_muts.txt")
+bs_g <- read.table(paste0(directory,"p_specific_noTE_DE_bs.prop_muts.txt"))
+bs_s <- read.table(paste0(directory,"l_specific_noTE_DE_bs.prop_muts.txt"))
 
 # 4 categories is fine
 bs_s$Category <- "sporophyte-specific (2n)"
@@ -90,14 +92,14 @@ df3 <- data_summary(bs_all, varname=">1",
                     groupnames="Category")
 colnames(df3)[2] <- "mean"
 
-prop <- read.table("/Users/yuanmeng/Dropbox/popgen_diversity/2022/dfe_prop_shrink.txt", header = TRUE)
+prop <- read.table(paste0(directory,"dfe_prop_shrink.txt"), header = TRUE)
 prop[1,2] <-"gametophyte-specific (n)"
 prop[2,2] <-"sporophyte-specific (2n)"
 
 prop <- left_join(prop, df3, by="Category")
 
 # larger variation than in rumex
-write.csv(prop, file = "/Users/yuanmeng/Dropbox/popgen_diversity/2022/final_prop_shrink.csv", row.names = F, quote = F)
+write.csv(prop, file = paste0(directory,"final_prop_shrink.csv"), row.names = F, quote = F)
 ```
 
 ```{r}
