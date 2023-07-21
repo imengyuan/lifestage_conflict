@@ -7,22 +7,28 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/pixy/"
 ```
+
+
 
 
 ## read stats (eg. pi)
 ```{r}
-pixy2 <- read.table("/Users/yuanmeng/Dropbox/Rumex_eQTL/diversity2022/pixy_pi_syn.0329.genewise.txt", header=TRUE) 
-head(pixy2)
-pixy2 <- pixy2[complete.cases(pixy2),]
-pixy2 <- pixy2 %>% select(c(2:8))
-colnames(pixy2)[1:3] <- c("chrom", "start", "end")
+pixy <- read.table(paste0(directory,"pixy_pi_syn.0329.genewise.txt"), header=TRUE) 
+head(pixy)
+pixy <- pixy[complete.cases(pixy),] # 29668
+pixy <- pixy %>% select(c(2:8))
+colnames(pixy)[1:3] <- c("chrom", "start", "end")
 
-gff <-read.table("TE_filtered_REF_LA.gff")
+gff <-read.table(paste0(directory,"TE_filtered_REF_LA.gff"))
 colnames(gff)<-c("Geneid","chrom","start","end")
 
-pixy2 <- left_join(pixy2, gff, by=c("chrom", "start", "end"))
-ratio_pixy<- inner_join(expression_ratio,pixy2,by=c("Geneid","chrom", "start", "end"))
+pixy <- left_join(pixy, gff, by=c("chrom", "start", "end"))
+write.csv(pixy, file = paste0(directory,"pixy_LG_clean.csv"), quote=F)
+
+
+ratio_pixy<- inner_join(expression_ratio,pixy,by=c("Geneid","chrom", "start", "end"))
 write.csv(ratio_pixy, file = "ratio_pixy.csv", row.names = FALSE, quote = FALSE)
 ```
 
@@ -101,4 +107,9 @@ ggplot(data = vgroup, mapping = aes(x=tag,y=avg_pi)) +
 ```
 
 
+ratio > 1: 4 bins
+ratio < 1: 4 bins
+```{r}
+
+```
 

@@ -51,20 +51,6 @@ write.table(output3, file = "rumex_input_DAF_May9.txt", row.names = FALSE, quote
 
 
 
-# niagara rumex may 23
-
-#!/bin/bash
-#SBATCH --nodes=1
-#SBATCH --ntasks-per-node=80
-#SBATCH --time=0:30:00
-#SBATCH --job-name rumex_scan
-module load python
-module load gnu-parallel/20191122
-module load NiaEnv/2019b gnu-parallel
-parallel -j5 python /scratch/w/wrighste/yuanmeng/ceratodon/ballermix/BallerMixPlus-main/BalLeRMix+_v1.py -i rumex_input_DAF_May9.txt -o rumex_scan_DAF_May9.txt --spect rumex_spect_DAF_May9.txt
-
-
-
 
 
 

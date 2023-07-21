@@ -8,6 +8,7 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/deseq2/"
+directory2="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/pixy/"
 ```
 
 ## prep dataset
@@ -77,6 +78,7 @@ DE_tissue<-as.data.frame(subset(result_tissue, padj<0.1))
 DE_tissue<-as.data.frame(subset(result_tissue, padj<0.1 & baseMean >= 1))
 DE_tissue<-as.data.frame(subset(result_tissue))
 write.csv(DE_tissue, file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/plot/DE_tissue.csv", row.names = FALSE, quote = FALSE) 
+DE_tissue <- read.csv("/Users/yuanmeng/Dropbox/Rumex_eQTL/plot/DE_tissue.csv")
 write.table(DE_tissue, file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/plot/DE_tissue_p01.txt", row.names = FALSE, quote = FALSE) 
 
 DE_tissue <- DE_tissue %>% mutate(gene = rownames(DE_tissue))
@@ -160,11 +162,12 @@ nrow(p_specific_DE)/nrow(expressed_noTE) # 0.04074455
 genes<-left_join(cnt,DE_tissue,by="gene")
 write.table(cnt, file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2/cnt.txt", row.names = FALSE, quote = F)
 write.table(genes,file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2/gene_ratio_deseq2.txt", row.names = FALSE, quote = F)
+genes <- read.table(paste0(directory,"gene_ratio_deseq2.txt"),header=T)
 p_specific <- genes %>% filter(is.infinite(p_l_ratio))
 l_specific <- genes %>% filter(p_l_ratio == 0)
 
 # get .bed file
-gff <-read.table("/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2/april2022/TE_filtered_REF_LA.gff")
+gff <-read.table(paste0(directory2,"TE_filtered_REF_LA.gff"))
 colnames(gff)<-c("gene","chrom","start","end")
 p_specific <- inner_join(p_specific,gff, by="gene")
 l_specific <- inner_join(l_specific,gff, by="gene")
@@ -180,6 +183,8 @@ write.table(l_specific,file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2/l_speci
 
 write.table(p_specific_DE,file = paste0(directory,"p_specific_noTE_DE.txt"), row.names = FALSE, quote = F)
 write.table(l_specific_DE,file = paste0(directory,"l_specific_noTE_DE.txt"), row.names = FALSE, quote = F)
+p_specific_DE  
+l_specific_DE
 
 write.table(p_specific_full,file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2/p_specific_full.txt", row.names = FALSE, quote = F)
 write.table(l_specific_full,file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2/l_specific_full.txt", row.names = FALSE, quote = F)
@@ -206,10 +211,11 @@ write.table(p_specific_DE[,c(13:15)],file=paste0(directory,"p_specific_noTE_DE.b
 ```{r}
 genes$category <- ifelse(!is.na(genes$category),"DE","nonDE")
 table(genes$category)
-ggplot(genes, aes(x = p_mean, y = l_mean, color=genes$category)) + geom_point(size=1,alpha=0.4)+theme_bw()+xlim(1,50000)+ylim(1,50000)
+ggplot(genes, aes(x = log2(p_mean), y = log2(l_mean), color=category)) + geom_point(size=1,alpha=0.4)+theme_bw()+xlim(1,50000)+ylim(1,50000)
 
 ```
-
+   DE nonDE 
+38742  9212 
 
 ```{r}
 ggplot(genes, aes(x = mean, y = log2(p_l_ratio),color=genes$category)) + geom_point(size=1,alpha=0.4)+theme_bw()+xlim(1,50000)
@@ -218,6 +224,8 @@ ggplot(genes, aes(x = mean, y = log2(p_l_ratio),color=genes$category)) + geom_po
 ## expression level for p and l specific genes
 boxplot for p specific, l specific, all genes expressed
 ```{r}
+# expressed
+
 p_specific_DE$category <- "p_specific"
 l_specific_DE$category <- "l_specific"
 specific_DE<-rbind(p_specific_DE,l_specific_DE)

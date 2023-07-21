@@ -1,0 +1,69 @@
+---
+title: "topGO for rumx"
+author: "Meng"
+date: '2022-07-19'
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(dplyr)
+library("DESeq2")
+library('RColorBrewer')
+library("stringr")
+library(VennDiagram)
+library(rattle)
+library(topGO)
+library(data.table)
+setwd("/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2")
+```
+
+# topGO
+
+```{r}
+geneID2GO <- readMappings(file="TE_filtered.REF_LA_gene2GO.txt")
+GO2gene <- inverseList(geneID2GO)
+
+str(head(GO2gene))
+str(head(geneID2GO))
+```
+
+```{r}
+# the gene universe (all the genes you have)
+geneNames <- names(geneID2GO)
+head(geneNames)
+
+# get list of interesting genes
+# pollen specifc and leaf specific to start with
+
+# 2826 leaf speccific genes, 1450 pollen specific genes
+myInterestingGenes <- p_specific_DE$gene
+myInterestingGenes <- l_specific_DE$gene
+
+geneList <- factor(as.integer(geneNames %in% myInterestingGenes))
+names(geneList) <- geneNames
+str(geneList)
+
+```
+
+
+```{r}
+sampleGOdata <- new("topGOdata", ontology = "BP",
+                     allGenes = geneList,
+                     annot = annFUN.gene2GO, gene2GO = geneID2GO)
+```
+
+
+```{r}
+resultFisher <- runTest(sampleGOdata, algorithm = "classic", statistic = "fisher")
+
+weight_fisher_result=runTest(sampleGOdata, algorithm='weight01', statistic='fisher')
+weight01.fisher <- runTest(sampleGOdata, statistic = "fisher")
+results_table_l = GenTable(sampleGOdata, P_value=weight01.fisher, orderBy="P_value")
+
+write.csv(results_table, file="p_specific_DE_GO.csv",row.names = FALSE, quote=FALSE )
+write.csv(results_table_l, file="l_specific_DE_GO.csv",row.names = FALSE, quote=FALSE )
+```
+
