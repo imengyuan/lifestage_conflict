@@ -2,7 +2,8 @@
 # /ohta2/meng.yuan/rumex/diversity2022/VCFs
 # l_specific_noTE_DE.bed
 # p_specific_noTE_DE.bed
-for i in "p_specific_noTE_DE" "l_specific_noTE_DE"
+#for i in "p_specific_noTE_DE" "l_specific_noTE_DE"
+for i in ""
 do
 bcftools view -R ${i}.bed eqtl20females.syn.filt0329.vcf.gz -O v -o ${i}.syn.filt0329.vcf --threads 30 
 bcftools view -R ${i}.bed eqtl20females.nonsyn.filt0329.vcf.gz -O v -o ${i}.nonsyn.filt0329.vcf --threads 30 

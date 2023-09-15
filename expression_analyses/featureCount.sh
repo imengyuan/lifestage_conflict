@@ -229,22 +229,3 @@ AnalysisReady_NS.1574.002.NEBNext_dual_i7_H10---NEBNext_dual_i5_H10.4aMLR_.bam \
 AnalysisReady_NS.1574.002.NEBNext_dual_i7_H11---NEBNext_dual_i5_H11.13aMLR_.bam \
 AnalysisReady_NS.1583.002.NEBNext_dual_i7_119---NEBNext_dual_i5_119.43bMLR_.bam \
 AnalysisReady_NS.1583.002.NEBNext_dual_i7_B9---NEBNext_dual_i5_B9.70bMPR_.bam >> /ohta2/meng.yuan/rumex/eqtl/RNA_readcnt/readcnts_eqtl_RNA_sept.out 2>&1
-
-
-# /ohta1/joanna.rifkin/Genomes/Hastatulus_Hi-C_reduced/TE_filtered_exon_filtered_REF_LA_genes.gff
-# get .bed file [dfe]
-cut -f 1,4,5 TE_filtered_exon_filtered_REF_LA_genes.gff>REF_LA.TE_filtered.bed
-
-# redo bed file, grep LG and keep only genes
-grep 'maker\sgene' TE_filtered_exon_filtered_REF_LA_genes.gff>TE_filtered_exon_filtered_REF_LA.onlygenes.gff
-
-grep 'LG' TE_filtered_exon_filtered_REF_LA.onlygenes.gff >TE_filtered_exon_filtered_REF_LA.onlygenes.LG.gff
-
-cut -f 1,4,5 TE_filtered_exon_filtered_REF_LA.onlygenes.gff | grep 'LG' >REF_LA.TEfilt.LG.bed
-
-
-
-grep 'maker\sgene'  REF_LA_filtered_annotation.gff > REF_LA_filtered_annotation.onlygenes.gff
-
-grep 'LG'  REF_LA_filtered_annotation.onlygenes.gff > REF_LA_filtered_annotation.onlygenes.LG.gff
-
