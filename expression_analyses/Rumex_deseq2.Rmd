@@ -15,7 +15,7 @@ library(dplyr)
 
 ## prep dataset
 ```{r}
-readcnt<-read.table("/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2/readcnts_eqtl_RNA.txt",header=T)
+readcnt<-read.table("/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2/readcnts_eqtl_RNA_sept.txt",header=T)
 head(readcnt)
 # get pollen and male leaf samples
 meta_data$id <- seq.int(nrow(meta_data))

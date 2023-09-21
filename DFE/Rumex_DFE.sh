@@ -5,15 +5,19 @@
 #for i in "p_specific_noTE_DE" "l_specific_noTE_DE"
 for i in ""
 do
-bcftools view -R ${i}.bed eqtl20females.syn.filt0329.vcf.gz -O v -o ${i}.syn.filt0329.vcf --threads 30 
-bcftools view -R ${i}.bed eqtl20females.nonsyn.filt0329.vcf.gz -O v -o ${i}.nonsyn.filt0329.vcf --threads 30 
+bcftools view -R ${i}.bed eqtl20females.syn.filt0329.vcf.gz \
+-O v -o ${i}.syn.filt0329.vcf --threads 30 
+bcftools view -R ${i}.bed eqtl20females.nonsyn.filt0329.vcf.gz \
+-O v -o ${i}.nonsyn.filt0329.vcf --threads 30 
 done
 
 
 for i in "p_specific_noTE_DE" "l_specific_noTE_DE"
 do
-bcftools query -f '%CHROM\t%POS[\t%GT]\n' ${i}.syn.filt0329.vcf |sed 's/\//\t/g' > ${i}.syn.filt0329.vcf.txt
-bcftools query -f '%CHROM\t%POS[\t%GT]\n' ${i}.nonsyn.filt0329.vcf |sed 's/\//\t/g' > ${i}.nonsyn.filt0329.vcf.txt
+bcftools query -f '%CHROM\t%POS[\t%GT]\n' ${i}.syn.filt0329.vcf \
+|sed 's/\//\t/g' > ${i}.syn.filt0329.vcf.txt
+bcftools query -f '%CHROM\t%POS[\t%GT]\n' ${i}.nonsyn.filt0329.vcf \
+|sed 's/\//\t/g' > ${i}.nonsyn.filt0329.vcf.txt
 done
 
 mv l_specific_noTE_DE*.vcf.txt ../bootstrap/
@@ -55,7 +59,8 @@ do
 for i in {1..200}; do
 # generate sfs.txt for input
 cd /ohta2/meng.yuan/rumex/diversity2022/bootstrap
-cat head.txt bootstrap_specific/${sample}.nonsyn.sfs_${i}.txt bootstrap_specific/${sample}.syn.sfs_${i}.txt>../dfe_a/sfs_expressed_test.txt
+cat head.txt bootstrap_specific/${sample}.nonsyn.sfs_${i}.txt \
+bootstrap_specific/${sample}.syn.sfs_${i}.txt>../dfe_a/sfs_expressed_test.txt
 # run est_dfe
 cd /ohta2/meng.yuan/rumex/diversity2022/dfe_a/
 est_dfe -c est_dfe_configfile_neut.txt
