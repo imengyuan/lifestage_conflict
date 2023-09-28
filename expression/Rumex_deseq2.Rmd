@@ -1,0 +1,290 @@
+---
+title: "Rumex DE analysis"
+author: "Meng"
+date: "2023-05-15"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/deseq2"
+library(ggplot2)
+library(dplyr)
+library("DESeq2")
+library("stringr")
+library(rattle)
+```
+
+## prep dataset
+```{r}
+readcnt <- read.table(paste0(directory,"/deseq2/readcnts_eqtl_RNA_sept.txt"),header=T)
+head(readcnt)
+readcnt_matrix<-as.matrix(readcnt[ , -c(1:6)]) #
+rownames(readcnt_matrix) <- readcnt[ , 1]
+head(readcnt_matrix)
+str(readcnt_matrix)
+meta_data <- data.frame(colnames(readcnt_matrix))
+write.csv(meta_data, file=paste0(directory,"/deseq2/meta_data.csv"), row.names = FALSE)
+meta_data<-read.csv(paste0(directory,"/deseq2/meta_data.csv"))
+
+gene <- readcnt[,1]
+readcnt <- readcnt[ , -c(1:6)]
+# get pollen and male leaf samples
+meta_data$id <- seq.int(nrow(meta_data))
+l_m <- meta_data %>% filter(sex == "male") %>% select(id)
+# l_f <- meta_data %>% filter(sex == "female") %>% select(id)
+l_p <- meta_data %>% filter(tissue == "pollen") %>% select(id)
+
+readcnt_m <- readcnt[,c(t(l_p),t(l_m))]
+meta_data_m <- meta_data[c(t(l_p),t(l_m)),]
+readcnt_matrix<-as.matrix(readcnt_m) 
+rownames(readcnt_matrix) <- gene
+head(readcnt_matrix)
+str(readcnt_matrix)
+
+write.table(readcnt_m, file=paste0(directory,"/deseq2/readcnts_eqtl_RNA_sept_m.txt"))
+write.csv(meta_data_m, file=paste0(directory,"/deseq2/meta_data_m.csv"), row.names = FALSE)
+
+```
+
+
+
+## run deseq2 (male leaf vs pollen)
+```{r}
+dds_tissue <- DESeqDataSetFromMatrix(countData = readcnt_matrix, 
+                              colData = meta_data_m,
+                              design = ~ tissue)
+dds_tissue <- DESeq(dds_tissue)
+resultsNames(dds_tissue) # "tissue_pollen_vs_leaf"
+res_tissue <- results(dds_tissue)
+head(res_tissue)
+summary(res_tissue)
+result_tissue <- res_tissue[complete.cases(res_tissue),]
+nrow(res_tissue) # 30641
+nrow(result_tissue) # 25050
+
+```
+
+
+PCA plot
+```{r}
+vsdata_tissue <- vst(dds_tissue, blind=FALSE)
+# pdf("pca_tissue.pdf")
+plotPCA(vsdata_tissue, intgroup=c("tissue")) 
+```
+
+MA plot
+```{r}
+plotMA(res_tissue, ylim=c(-2,2))
+resLFC <- lfcShrink(dds_tissue, coef="tissue_pollen_vs_leaf", type="apeglm")
+plotMA(resLFC, ylim=c(-2,2))
+```
+
+## get mean normalized cnts
+```{r}
+normalized_counts <- as.data.frame(counts(dds_tissue, normalized=T))
+normalized_counts <- normalized_counts %>% mutate(gene=rownames(normalized_counts)) 
+normalized_counts <- normalized_counts[,c(153,1:152)]
+normalized_counts$gene <- str_sub(normalized_counts$gene, end=-4)
+write.table(normalized_counts, file = paste0(directory,"normalized_counts_m.txt"), quote = FALSE)
+
+col<-data.frame(colnames(normalized_counts))
+normalized_counts<-normalized_counts %>%  mutate(p_mean = rowMeans(normalized_counts[,c(2:76)] )) %>% mutate(l_mean = rowMeans(normalized_counts[,c(77:153)] ))
+normalized_counts$mean <- rowMeans(normalized_counts[,c(2:153)])
+
+normalized_counts<- normalized_counts %>% mutate(p_l_ratio = p_mean/l_mean)
+cnt<- normalized_counts %>% select(c(1,154:157))
+
+head(cnt)
+write.table(cnt, file = paste0(directory,"cnt.txt"), row.names = FALSE)
+```
+
+### proportion of pollen expressed genes
+```{r}
+pollen_expressed <- normalized_counts %>% filter(p_mean>5) # 15958
+nrow(pollen_expressed)/nrow(normalized_counts) # 0.5208055
+
+expressed <- normalized_counts %>% filter(p_mean>5 | l_mean>5) #17984
+nrow(pollen_expressed)/nrow(expressed) # 0.8873443
+
+mean(expressed$l_mean)
+mean(expressed$p_mean)
+median(expressed$l_mean)
+median(expressed$p_mean)
+
+```
+
+
+## get significant DE genes
+no baseMean cutoff, relaxed p cutoff
+```{r}
+# DE_tissue<-as.data.frame(subset(result_tissue, padj<0.05 & abs(log2FoldChange)>1))
+# DE_tissue<-as.data.frame(subset(result_tissue, padj<0.1))
+DE_tissue<-as.data.frame(result_tissue)
+DE_tissue <- DE_tissue %>% mutate(gene = rownames(DE_tissue))
+DE_tissue$gene <- str_sub(DE_tissue$gene, end=-4)
+DE_tissue <- DE_tissue[,c(7,1:6)]
+head(DE_tissue) 
+
+write.table(DE_tissue, file = paste0(directory,"result_tissue_full.txt"), row.names = FALSE, quote = FALSE)
+# DE_tissue <- read.csv("/Users/yuanmeng/Dropbox/Rumex_eQTL/plot/DE_tissue.csv")
+# DE_tissue<-subset(DE_tissue, padj<0.1 & baseMean >= 1) # 18638
+
+DE_tissue <- left_join(DE_tissue,cnt,by="gene")
+DE_tissue <- DE_tissue %>% filter(p_mean>5 | l_mean>5) # 17982
+DE_tissue <- DE_tissue %>% filter(padj<0.1) # 17124
+write.table(DE_tissue, file = paste0(directory,"DE_tissue_p01_baseMean1_ratio.txt"), row.names = FALSE, quote = FALSE) 
+
+DE_tissue_pollen <-  DE_tissue %>% filter(log2FoldChange>0) # 6823
+DE_tissue_leaf <-  DE_tissue %>% filter(log2FoldChange<0) # 10301
+head(DE_tissue_pollen)
+DE_tissue$category <- "DE"
+```
+
+## expression quantiles and specific genes
+```{r}
+# histogram of logFC
+ggplot(genes, aes(x = log2FoldChange)) + geom_histogram(binwidth=1)+ theme_bw()
+genes_c <- genes[complete.cases(genes),]
+sort(genes_c$log2FoldChange)[.95*length(genes_c$log2FoldChange)] # 7.100064
+sort(genes_c$log2FoldChange)[.05*length(genes_c$log2FoldChange)] # -3.590239
+nrow(genes_c[genes_c$log2FoldChange>=7.100064,]) #1938
+nrow(genes_c[genes_c$log2FoldChange<=-3.590239,]) # 1937
+
+nrow(genes_c[genes_c$log2FoldChange>=7.092041,]) # 1360
+nrow(genes_c[genes_c$log2FoldChange<=-3.95662,]) # 1359
+```
+
+
+```{r}
+# p_specific <- genes %>% filter(is.infinite(p_l_ratio)) #1944
+# l_specific <- genes %>% filter(p_l_ratio == 0) # 1282
+```
+
+```{r}
+# gff <-read.table(paste0(directory,"TE_filtered_REF_LA.gff"))
+sort(DE_tissue$p_l_ratio)[.95*length(genes$p_l_ratio)] # 61.47675
+sort(DE_tissue$p_l_ratio)[.05*length(genes$p_l_ratio)] # 
+nrow(DE_tissue[is.infinite(genes$p_l_ratio),]) # 6202
+nrow(DE_tissue[genes$p_l_ratio == 0,]) # 4188
+```
+
+## use only DE genes forward
+quantiles of expression ratio + DE genes
+see how many, send a table, prep DFE scripts
+```{r}
+quantile(DE_tissue$p_l_ratio, probs = c(0.1, 0.9)) # 0.08399402 82.27061646
+nrow(DE_tissue[DE_tissue$p_l_ratio <= 0.08399402,]) # 1713
+nrow(DE_tissue[DE_tissue$p_l_ratio >= 82.27061646,]) # 1713
+# extract to check the FC
+gff <- read.table(paste0(directory,"/deseq2/REF_LA_filtered_annotation.genes.gff"))
+colnames(gff) <- c("gene","chrom", "start", "end")
+DE_tissue <- left_join(DE_tissue, gff, by="gene")
+
+
+genesl <- DE_tissue[DE_tissue$p_l_ratio <= 0.08399402,]
+genesp <- DE_tissue[DE_tissue$p_l_ratio >= 82.27061646,] 
+
+genesl <- genesl[genesl$log2FoldChange <= -2,]
+genesp <- genesp[genesp$log2FoldChange >= 2,]
+nrow(genesl[genesl$log2FoldChange <= -2,]) 
+nrow(genesp[genesp$log2FoldChange >= 2,]) 
+   
+# unbiased<-genes[genes$p_l_ratio>0.95 & genes$p_l_ratio<1.05,]
+```
+
+
+```{r}
+genesl$category <- "leaf-specific"
+genesp$category <- "pollen-specific"
+genes_specific <- rbind(genesl,genesp)
+genes_specific <- rbind(genesl_final1,genesp_final1)
+ggplot(genes_specific, aes(category, mean))+ geom_boxplot()+ theme_bw() + ylim(0,500)
+
+genesl$mean <- genesl$l_mean
+genesp$mean <- genesp$p_mean
+
+```
+  
+```{r}
+ggplot(genes_specific, aes(category, baseMean))+  theme_bw()+geom_violin(trim=FALSE)+geom_boxplot(width=0.05)+ylim(0,50)+ylab("expression level (baseMean)")
+ggplot(genes_specific, aes(category, baseMean))+  theme_bw()+geom_violin(trim=FALSE)+geom_boxplot(width=0.05)+ylab("expression level (baseMean)")
+#ggplot(genes_specific, aes(category, baseMean))+  theme_bw()+geom_violin(trim=FALSE)+geom_boxplot(width=0.05)
+
+#ggplot(genes_specific, aes(category, mean))+  theme_bw()+geom_violin(trim=FALSE)+geom_boxplot(width=0.05)
+
+ggplot(genes_specific, aes(category, mean))+  theme_bw()+geom_violin(trim=FALSE)+geom_boxplot(width=0.05)+ylim(0,6)+ylab("expression level (baseMean)")
+
+ggplot(genes_specific, aes(x=baseMean,fill=category))+  theme_bw()+geom_histogram(alpha=0.5,position="identity")+ylab("expression level (baseMean)")+xlim(0,1000)
+
+#+ylim(0,250)
+```
+
+remove outlier
+```{r}
+outliersl <- boxplot(genesl$baseMean, plot=FALSE)$out
+l<-genesl
+l<- l[-which(l$baseMean %in% outliersl),]
+
+outliersp <- boxplot(genesp$baseMean, plot=FALSE)$out
+p<-genesp
+p<- p[-which(p$baseMean %in% outliersp),]
+genes_specific2 <-rbind(l,p)
+
+ggplot(genes_specific2, aes(category, baseMean))+  theme_bw()+geom_violin(trim=FALSE)+geom_boxplot(width=0.05)
+
+```
+
+
+
+
+```{r}
+genesl_final1 <- genesl %>% filter(mean>=5) #
+#genesl_final2 <- genesl %>% filter(mean<=20)
+
+genesp_final1 <- genesp %>% filter(mean>=5)
+
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/deseq2/"
+write.table(genesl_final1[,c(13:15)],file=paste0(directory,"l_specific_final1.bed"),sep="\t",row.names = FALSE, col.names = FALSE, quote=FALSE)
+write.table(genesp_final1[,c(13:15)],file=paste0(directory,"p_specific_final1.bed"),sep="\t",row.names = FALSE, col.names = FALSE, quote=FALSE)
+
+```
+
+
+
+# binning based on expression level
+
+
+```{r}
+bin<-binning(DE_tissue$baseMean, bins=4, method="quantile",
+                     labels=NULL, ordered=TRUE, weights=NULL)
+plot(bin)
+
+p_qt1 <- genesp %>% filter(baseMean <= 20.8)
+p_qt2 <- genesp %>% filter(baseMean > 20.8 & baseMean <= 73.2)
+p_qt3 <- genesp %>% filter(baseMean > 73.2 & baseMean <= 226)
+p_qt4 <- genesp %>% filter(baseMean > 226)
+
+l_qt1 <- genesl %>% filter(baseMean <= 20.8)
+l_qt2 <- genesl %>% filter(baseMean > 20.8 & baseMean <= 73.2)
+l_qt3 <- genesl %>% filter(baseMean > 73.2 & baseMean <= 226)
+l_qt4 <- genesl %>% filter(baseMean > 226)
+
+write.table(p_qt1[,13:15],file=paste0(directory,"p_qt1.bed"),sep="\t",row.names = FALSE, col.names = FALSE, quote=FALSE)
+write.table(p_qt2[,13:15],file=paste0(directory,"p_qt2.bed"),sep="\t",row.names = FALSE, col.names = FALSE, quote=FALSE)
+write.table(p_qt3[,13:15],file=paste0(directory,"p_qt3.bed"),sep="\t",row.names = FALSE, col.names = FALSE, quote=FALSE)
+write.table(p_qt4[,13:15],file=paste0(directory,"p_qt4.bed"),sep="\t",row.names = FALSE, col.names = FALSE, quote=FALSE)
+write.table(l_qt1[,13:15],file=paste0(directory,"l_qt1.bed"),sep="\t",row.names = FALSE, col.names = FALSE, quote=FALSE)
+write.table(l_qt2[,13:15],file=paste0(directory,"l_qt2.bed"),sep="\t",row.names = FALSE, col.names = FALSE, quote=FALSE)
+write.table(l_qt3[,13:15],file=paste0(directory,"l_qt3.bed"),sep="\t",row.names = FALSE, col.names = FALSE, quote=FALSE)
+write.table(l_qt4[,13:15],file=paste0(directory,"l_qt4.bed"),sep="\t",row.names = FALSE, col.names = FALSE, quote=FALSE)
+```
+20.8]
+73.2]
+226]
+(
+
+l qt
+330, 411, 466, 504
+p qt
+582, 249, 178, 702

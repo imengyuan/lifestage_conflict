@@ -13,7 +13,19 @@ directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Man
 ```
 ## merge with pi data
 ```{r}
-FC_pixy<- inner_join(DE_tissue,pixy,by=c("gene")) # 10819
+pixy <- read.table(paste0(directory,"pixy_pi_syn.0329.genewise.txt"), header=TRUE) 
+pixy <- pixy %>% filter(no_sites>=50) # 19542
+colnames(pixy)[2:4] <- c("chrom", "start", "end")
+pixy <- inner_join(pixy, gff, by=c("chrom", "start", "end")) # 15049
+write.table(pixy, file = paste0(directory,"pixy_filtered.txt"), quote=F) 
+
+DE_tissue<-as.data.frame(result_tissue)
+DE_tissue <- DE_tissue %>% mutate(gene = rownames(DE_tissue))
+DE_tissue$gene <- str_sub(DE_tissue$gene, end=-4)
+DE_tissue <- left_join(DE_tissue,cnt,by="gene")
+DE_tissue <- DE_tissue %>% filter(p_mean>5 | l_mean>5)
+
+FC_pixy<- inner_join(DE_tissue,pixy,by=c("gene")) # 11735
 write.table(FC_pixy, file = paste0(directory,"FC_pixy_innerjoin.txt"), row.names = FALSE, quote = FALSE)
 ```
 
@@ -24,13 +36,11 @@ then 4 quantiles within each category
 DE gene cutoffs: padj<0.1 & baseMean >= 1
 logFC>0: pollen biased, logFC <-: leaf biased
 ```{r}
-pollen_bias <- FC_pixy %>% filter(log2FoldChange>0) # 3895
-leaf_bias <- FC_pixy %>% filter(log2FoldChange<0) # 6924
+pollen_bias <- FC_pixy %>% filter(log2FoldChange>0) # 4391
+leaf_bias <- FC_pixy %>% filter(log2FoldChange<0) # 7344
 
 bin<-binning(pollen_bias$log2FoldChange, bins=4, method="quantile",
                      labels=NULL, ordered=TRUE, weights=NULL)
-plot(bin)
-
 bin<-binning(leaf_bias$log2FoldChange, bins=4, method="quantile",
                      labels=NULL, ordered=TRUE, weights=NULL)
 plot(bin)
@@ -38,9 +48,9 @@ plot(bin)
 
 break and tags for FC
 ```{r}
-breaks <- c(0,0.00102,0.117,0.224,0.4,0.802,1.82,5.21,27.8)
+breaks <- c(-30,-3.02,-2.16,-1.27,0,1.02,2.54,5.36,30)
 # specify interval/bin labels
-tags <- c("[0-0.239)","[0.239-0.486)", "[0.486-0.705)", "[0.705-0.95)", "[0.95-1.25)", "[1.25-1.8)","[1.8-3.7)", "[3.7-inf)")
+tags <- c("(,-3.02]","(-3.02,-2.16]", "(-2.16,-1.27]", "(-1.27,0)", "(0,1.02]", "(1.02,2.54]","(2.54,5.36]", "(5.36,)")
 
 # bucketing values into bins
 group_tags <- cut(FC_pixy$log2FoldChange, 
@@ -55,35 +65,38 @@ ratio_groups <- factor(group_tags,
                            levels = tags,
                            ordered = TRUE)
 ```
+
 pollen
-1.18]
-2.68]
-5.63]
+1.02]
+2.54]
+5.36]
 26.2]
 
 leaf
--3.06]
--2.22]
--1.39]
+-3.02]
+-2.16]
+-1.27]
 -0.101]
+
+
 
 ## plot
 ```{r}
 v <- FC_pixy %>% select(log2FoldChange,avg_pi) 
 vgroup <- as_tibble(v) %>% 
   mutate(tag = case_when(
-    log2FoldChange > 0 & log2FoldChange <= 1.18 ~ tags[5],
-    log2FoldChange > 1.18 & log2FoldChange <= 2.68 ~ tags[6],
-    log2FoldChange > 2.68 & log2FoldChange <= 5.63 ~ tags[7],
-    log2FoldChange > 5.63   ~ tags[8],
+    log2FoldChange > 0 & log2FoldChange <= 1.02 ~ tags[5],
+    log2FoldChange > 1.02 & log2FoldChange <= 2.54 ~ tags[6],
+    log2FoldChange > 2.54 & log2FoldChange <= 5.36 ~ tags[7],
+    log2FoldChange > 5.36   ~ tags[8],
     
-    log2FoldChange <= -3.06 ~ tags[1],
-    log2FoldChange > -3.06 & log2FoldChange <= -2.22 ~ tags[2],
-    log2FoldChange > -2.22 & log2FoldChange <= -1.39 ~ tags[3],
-    log2FoldChange > -1.39 & log2FoldChange < 0 ~ tags[4]
+    log2FoldChange <= -3.02 ~ tags[1],
+    log2FoldChange > -3.02 & log2FoldChange <= -2.16 ~ tags[2],
+    log2FoldChange > -2.16 & log2FoldChange <= -1.27 ~ tags[3],
+    log2FoldChange > -1.27 & log2FoldChange < 0 ~ tags[4]
 
     ))
-summary(vgroup)
+#summary(vgroup)
 
 vgroup$tag <- factor(vgroup$tag,
                        levels = tags,
@@ -97,9 +110,12 @@ ggplot(data = vgroup, mapping = aes(x=tag,y=avg_pi)) +
     theme_classic() + theme(text = element_text(size = 18))
 
 ```
+ (,-3.02] (-3.02,-2.16] (-2.16,-1.27]     (-1.27,0)      (0,1.02]   (1.02,2.54] 
+         1834          1837          1838          1835          1097          1105 
+  (2.54,5.36]       (5.36,) 
+         1093          1096 
 
-
-
+ 
 
 
 
