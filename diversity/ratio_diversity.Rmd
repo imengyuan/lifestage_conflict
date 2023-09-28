@@ -8,38 +8,30 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/pixy/"
+library(dplyr)
 ```
-
-
 
 
 ## read stats (eg. pi)
 ```{r}
 pixy <- read.table(paste0(directory,"pixy_pi_syn.0329.genewise.txt"), header=TRUE) 
-head(pixy)
-pixy <- pixy[complete.cases(pixy),] # 29668
-pixy <- pixy %>% select(c(2:8))
-colnames(pixy)[1:3] <- c("chrom", "start", "end")
+pixy <- pixy %>% filter(no_sites>=50) # 19542
+colnames(pixy)[2:4] <- c("chrom", "start", "end")
+pixy <- inner_join(pixy, gff, by=c("chrom", "start", "end")) # 15049
+write.table(pixy, file = paste0(directory,"pixy_filtered.txt"), quote=F) # 14282
 
-gff <-read.table(paste0(directory,"TE_filtered_REF_LA.gff"))
-colnames(gff)<-c("Geneid","chrom","start","end")
-
-pixy <- left_join(pixy, gff, by=c("chrom", "start", "end"))
-write.csv(pixy, file = paste0(directory,"pixy_LG_clean.csv"), quote=F)
-
-
-ratio_pixy<- inner_join(expression_ratio,pixy,by=c("Geneid","chrom", "start", "end"))
-write.csv(ratio_pixy, file = "ratio_pixy.csv", row.names = FALSE, quote = FALSE)
+cnt <- cnt %>% filter(mean>0) # 27154
+ratio_pixy<- inner_join(cnt,pixy,by="gene") # 14282
+write.table(ratio_pixy, file = paste0(directory,"ratio_pixy.txt"), row.names = FALSE, quote = FALSE)
 ```
 
 change pollen_leaf_ratio inf to one category, 0 to another category
 change inf to 30000000
 ```{r}
 # get a subset for binning quantiles
-ratio_pixy2<- ratio_pixy %>% filter(pollen_leaf_ratio>0)  %>% filter(is.finite(pollen_leaf_ratio)) 
-
-ratio_pixy[which(!is.finite(ratio_pixy$pollen_leaf_ratio)),] <- 10000000
-ratio_pixy <- do.call(data.frame, lapply(ratio_pixy,function(x) replace(x, is.infinite(x), 10000000)))
+ratio_pixy2<- ratio_pixy %>% filter(p_l_ratio>0)  %>% filter(is.finite(p_l_ratio)) # 13470
+#ratio_pixy[which(!is.finite(ratio_pixy$pollen_leaf_ratio)),] <- 10000000
+#ratio_pixy <- do.call(data.frame, lapply(ratio_pixy,function(x) replace(x, is.infinite(x), 10000000)))
 ```
 
 pollen/leaf  
@@ -53,9 +45,13 @@ ggplot(ratio_pixy, aes(x=log10(pollen_leaf_ratio), y=avg_pi)) + geom_point(colou
 ## plot
 
 ```{r}
-bin<-binning(ratio_pixy2$pollen_leaf_ratio, bins=8, method="quantile",
-                     labels=NULL, ordered=TRUE, weights=NULL)
+ratio_pixy_l <- ratio_pixy2 %>% filter(p_l_ratio<1)
+ratio_pixy_p <- ratio_pixy2 %>% filter(p_l_ratio>1)
 
+bin<-binning(ratio_pixy_l$p_l_ratio, bins=4, method="quantile",
+                     labels=NULL, ordered=TRUE, weights=NULL)
+bin<-binning(ratio_pixy_p$p_l_ratio, bins=4, method="quantile",
+                     labels=NULL, ordered=TRUE, weights=NULL)
 plot(bin)
 ratio_pixy2 <- ratio_pixy2[complete.cases(ratio_pixy2),]
 ratio_pixy <- ratio_pixy[complete.cases(ratio_pixy),]
@@ -64,7 +60,6 @@ breaks <- c(-1, 0,0.00102,0.117,0.224,0.4,0.802,1.82,5.21,27.8,300000000000,1000
 # specify interval/bin labels
 tags <- c("0","[0-0.239)","[0.239-0.486)", "[0.486-0.705)", "[0.705-0.95)", "[0.95-1.25)", "[1.25-1.8)","[1.8-3.7)", "[3.7-inf)","inf")
 
-#cnt_stats_b[1089,18]<-29252
 # bucketing values into bins
 group_tags <- cut(ratio_pixy$pollen_leaf_ratio, 
                   breaks=breaks, 
@@ -73,26 +68,26 @@ group_tags <- cut(ratio_pixy$pollen_leaf_ratio,
                   labels=tags)
 # inspect bins
 summary(group_tags)
-
 ratio_groups <- factor(group_tags, 
                            levels = tags,
                            ordered = TRUE)
+
 # the real graph 0,0.00102,0.117,0.224,0.4,0.802,1.82,5.21,27.8
-v <- ratio_pixy %>% select(pollen_leaf_ratio,avg_pi) #pick the variable 
+v <- ratio_pixy %>% select(p_l_ratio,avg_pi) #pick the variable 
 vgroup <- as_tibble(v) %>% 
   mutate(tag = case_when(
-    pollen_leaf_ratio == 0 ~ tags[1], 
-    pollen_leaf_ratio > 0 & pollen_leaf_ratio <= 0.117 ~ tags[2],
-    pollen_leaf_ratio > 0.117 & pollen_leaf_ratio <= 0.224 ~ tags[3],
-    pollen_leaf_ratio > 0.224 & pollen_leaf_ratio <= 0.4 ~ tags[4],
-    pollen_leaf_ratio > 0.4 & pollen_leaf_ratio <= 0.802 ~ tags[5],
-    pollen_leaf_ratio > 0.802 & pollen_leaf_ratio <= 1.82 ~ tags[6],
-    pollen_leaf_ratio > 1.82 & pollen_leaf_ratio <= 5.21 ~ tags[7],
-    pollen_leaf_ratio > 5.21 & pollen_leaf_ratio <= 27.8 ~ tags[8],
-    pollen_leaf_ratio > 27.8 & pollen_leaf_ratio < 6000000 ~ tags[9],
-    pollen_leaf_ratio == 10000000 ~ tags[10]
+    p_l_ratio == 0 ~ tags[1], 
+    p_l_ratio > 0 & p_l_ratio <= 0.12 ~ tags[2],
+    p_l_ratio > 0.12 & p_l_ratio <= 0.225 ~ tags[3],
+    p_l_ratio > 0.225 & p_l_ratio <= 0.429 ~ tags[4],
+    p_l_ratio > 0.429 & p_l_ratio <= 1 ~ tags[5],
+    p_l_ratio > 1 & p_l_ratio <= 1.97 ~ tags[6],
+    p_l_ratio > 1.97 & p_l_ratio <= 5.11 ~ tags[7],
+    p_l_ratio > 5.11 & p_l_ratio <= 28.3 ~ tags[8],
+    p_l_ratio > 28.3  ~ tags[9],
+    is.infinite(p_l_ratio) == TRUE ~ tags[10]
     ))
-summary(vgroup)
+#summary(vgroup)
 
 vgroup$tag <- factor(vgroup$tag,
                        levels = tags,
@@ -102,14 +97,22 @@ ggplot(data = vgroup, mapping = aes(x=tag,y=avg_pi)) +
   geom_jitter(aes(color='blue'),alpha=0.2) +
   geom_boxplot(fill="bisque",color="black",alpha=0.3) + 
   labs(x='pollen_leaf_ratio') +
-  guides(color=FALSE) + ylim(0,0.2) +
+  guides(color=FALSE) + ylim(0,0.06) +
   theme_minimal() 
+
+ggplot(data = vgroup, mapping = aes(x=tag,y=avg_pi)) + 
+    geom_jitter(color="#1F78B4",alpha=0.2) +
+    geom_boxplot(fill="#1F78B4",color="black",alpha=0.3) + 
+    labs(x='g_s_ratio') +
+    guides(color=FALSE) + ylim(0,0.06)+
+    theme_classic() + theme(text = element_text(size = 18))
+
 ```
-
-
-ratio > 1: 4 bins
-ratio < 1: 4 bins
-```{r}
-
-```
-
+0.12]
+0.225]
+0.429]
+(
+[1, 1.97]
+5.11]
+28.3]
+(

@@ -7,34 +7,44 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/deseq2/"
-directory2="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/pixy/"
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/"
 library(ggplot2)
 library(dplyr)
+library("DESeq2")
+library("stringr")
+library(rattle)
 ```
 
 ## prep dataset
 ```{r}
-readcnt<-read.table("/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2/readcnts_eqtl_RNA_sept.txt",header=T)
+readcnt <- read.table(paste0(directory,"/deseq2/readcnts_eqtl_RNA_sept.txt"),header=T)
 head(readcnt)
+readcnt_matrix<-as.matrix(readcnt[ , -c(1:6)]) #
+rownames(readcnt_matrix) <- readcnt[ , 1]
+head(readcnt_matrix)
+str(readcnt_matrix)
+meta_data <- data.frame(colnames(readcnt_matrix))
+write.csv(meta_data, file=paste0(directory,"/deseq2/meta_data.csv"), row.names = FALSE)
+meta_data<-read.csv(paste0(directory,"/deseq2/meta_data.csv"))
+
+gene <- readcnt[,1]
+readcnt <- readcnt[ , -c(1:6)]
 # get pollen and male leaf samples
 meta_data$id <- seq.int(nrow(meta_data))
 l_m <- meta_data %>% filter(sex == "male") %>% select(id)
 # l_f <- meta_data %>% filter(sex == "female") %>% select(id)
 l_p <- meta_data %>% filter(tissue == "pollen") %>% select(id)
-readcnt <- readcnt[ , -c(1:6)]
 
 readcnt_m <- readcnt[,c(t(l_p),t(l_m))]
+meta_data_m <- meta_data[c(t(l_p),t(l_m)),]
 readcnt_matrix<-as.matrix(readcnt_m) 
-rownames(readcnt_matrix) <- readcnt[ , 1]
+rownames(readcnt_matrix) <- gene
 head(readcnt_matrix)
 str(readcnt_matrix)
-meta_data <- data.frame(colnames(readcnt_matrix))
-write.csv(meta_data, file="/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2/meta_data_m.csv", row.names = FALSE)
-meta_data_m<-read.csv("/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2/meta_data_m.csv")
-write.table(readcnt_matrix, file="/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2/readcnt_m.txt")
-rownames(meta_data_m) <- colnames(readcnt_matrix)
-head(meta_data_m)
+
+write.table(readcnt_m, file=paste0(directory,"/deseq2/readcnts_eqtl_RNA_sept_m.txt"))
+write.csv(meta_data_m, file=paste0(directory,"/deseq2/meta_data_m.csv"), row.names = FALSE)
+
 ```
 
 
@@ -50,8 +60,8 @@ res_tissue <- results(dds_tissue)
 head(res_tissue)
 summary(res_tissue)
 result_tissue <- res_tissue[complete.cases(res_tissue),]
-nrow(res_tissue) # 59120
-nrow(result_tissue) # 38742
+nrow(res_tissue) # 30641
+nrow(result_tissue) # 25050
 
 ```
 
@@ -70,90 +80,70 @@ resLFC <- lfcShrink(dds_tissue, coef="tissue_pollen_vs_leaf", type="apeglm")
 plotMA(resLFC, ylim=c(-2,2))
 ```
 
-
-## get significant DE genes
-no baseMean cutoff, relaxed p cutoff
-```{r}
-DE_tissue<-as.data.frame(subset(result_tissue, padj<0.05 & abs(log2FoldChange)>1))
-DE_tissue<-as.data.frame(subset(result_tissue, padj<0.1))
-# for DFE
-DE_tissue<-as.data.frame(subset(result_tissue, padj<0.1 & baseMean >= 1))
-DE_tissue<-as.data.frame(subset(result_tissue))
-write.csv(DE_tissue, file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/plot/DE_tissue.csv", row.names = FALSE, quote = FALSE) 
-DE_tissue <- read.csv("/Users/yuanmeng/Dropbox/Rumex_eQTL/plot/DE_tissue.csv")
-write.table(DE_tissue, file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/plot/DE_tissue_p01.txt", row.names = FALSE, quote = FALSE) 
-
-DE_tissue <- DE_tissue %>% mutate(gene = rownames(DE_tissue))
-DE_tissue$gene <- str_sub(DE_tissue$gene, end=-4)
-head(DE_tissue) # 38472
-
-DE_tissue <- DE_tissue[,c(7,1:6)]
-
-DE_tissue_pollen <-  DE_tissue %>% filter(log2FoldChange>0) #4326 #14856 #12292
-DE_tissue_leaf <-  DE_tissue %>% filter(log2FoldChange<0) #4136 #11015 #10889
-head(DE_tissue_pollen)
-# write.csv(DE_tissue_pollen, file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/plot/pollen_biased_noFC.csv", row.names = FALSE, quote = FALSE) 
-# write.csv(DE_tissue_leaf, file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/plot/leaf_biased_noFC.csv", row.names = FALSE, quote = FALSE)
-write.csv(DE_tissue_pollen, file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/plot/pollen_biased_p01.csv", row.names = FALSE, quote = FALSE) 
-write.csv(DE_tissue_leaf, file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/plot/leaf_biased_p01.csv", row.names = FALSE, quote = FALSE)
-
-DE_tissue$category <- "DE"
-```
-
-
 ## get mean normalized cnts
 ```{r}
 normalized_counts <- as.data.frame(counts(dds_tissue, normalized=T))
 normalized_counts <- normalized_counts %>% mutate(gene=rownames(normalized_counts)) 
 normalized_counts <- normalized_counts[,c(153,1:152)]
 normalized_counts$gene <- str_sub(normalized_counts$gene, end=-4)
-write.table(normalized_counts, file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2/normalized_counts_m.txt", quote = FALSE)
+write.table(normalized_counts, file = paste0(directory,"normalized_counts_m.txt"), quote = FALSE)
 
 col<-data.frame(colnames(normalized_counts))
 normalized_counts<-normalized_counts %>%  mutate(p_mean = rowMeans(normalized_counts[,c(2:76)] )) %>% mutate(l_mean = rowMeans(normalized_counts[,c(77:153)] ))
+normalized_counts$mean <- rowMeans(normalized_counts[,c(2:153)])
 
 normalized_counts<- normalized_counts %>% mutate(p_l_ratio = p_mean/l_mean)
 cnt<- normalized_counts %>% select(c(1,154:157))
+
 head(cnt)
-cnt$gene <- str_sub(cnt$gene, end=-4)
-write.table(cnt, file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2/cnt.txt", row.names = FALSE)
-cnt <- cnt[complete.cases(cnt),] #47954
+write.table(cnt, file = paste0(directory,"cnt.txt"), row.names = FALSE)
 ```
 
-
-proportion of pollen expressed genes
+### proportion of pollen expressed genes
 ```{r}
-pollen <- cnt %>% filter(p_mean>0) # 43766
-pollen <- genes %>% filter(p_mean>0)
-nrow(normalized_counts) # 59120
-nrow(pollen)/nrow(normalized_counts) # 0.7402909
+pollen_expressed <- normalized_counts %>% filter(p_mean>5) # 15958
+nrow(pollen_expressed)/nrow(normalized_counts) # 0.5208055
 
-
-normalized_counts$mean <- rowMeans(normalized_counts[,c(2:153)])
-expressed <- normalized_counts %>% filter(mean>0)
-nrow(expressed) # 47954
-nrow(pollen)/nrow(expressed) # 0.9126663
-
-
-nrow(p_specific)/nrow(normalized_counts) # 0.1049053
-nrow(p_specific)/nrow(expressed) # 0.1293323
-
-
-# TE filtered gff
-pollen_noTE<- left_join(pollen,gff,by="gene")
-pollen_noTE <- pollen_noTE[complete.cases(pollen_noTE),] #28730
-nrow(pollen_noTE)/nrow(gff) # 0.8501258
-expressed_noTE <- left_join(expressed,gff,by="gene") # 47954
-expressed_noTE <- expressed_noTE[complete.cases(expressed_noTE),] # 30139
-nrow(pollen_noTE)/nrow(expressed_noTE) # 0.9532499
-
-nrow(p_specific_DE)/nrow(gff) # 0.03633674
-nrow(p_specific_DE)/nrow(expressed_noTE) # 0.04074455
-
-
-# new cutoff for expressed 0.1
-
+expressed <- normalized_counts %>% filter(p_mean>5 | l_mean>5) #17984
+nrow(pollen_expressed)/nrow(expressed) # 0.8873443
 ```
+
+
+## get significant DE genes
+no baseMean cutoff, relaxed p cutoff
+```{r}
+# DE_tissue<-as.data.frame(subset(result_tissue, padj<0.05 & abs(log2FoldChange)>1))
+# DE_tissue<-as.data.frame(subset(result_tissue, padj<0.1))
+DE_tissue<-as.data.frame(result_tissue)
+DE_tissue <- DE_tissue %>% mutate(gene = rownames(DE_tissue))
+DE_tissue$gene <- str_sub(DE_tissue$gene, end=-4)
+DE_tissue <- DE_tissue[,c(7,1:6)]
+head(DE_tissue) 
+
+write.table(DE_tissue, file = paste0(directory,"DE_tissue.txt"), row.names = FALSE, quote = FALSE)
+# DE_tissue <- read.csv("/Users/yuanmeng/Dropbox/Rumex_eQTL/plot/DE_tissue.csv")
+
+# DE_tissue<-subset(DE_tissue, padj<0.1 & baseMean >= 1) # 18638
+
+DE_tissue <- left_join(DE_tissue,cnt,by="gene")
+DE_tissue <- DE_tissue %>% filter(p_mean>5 | l_mean>5)
+
+DE_tissue<-subset(DE_tissue, padj<0.1 & baseMean >= 5) # 16081
+write.table(DE_tissue, file = paste0(directory,"DE_tissue_p01_baseMean1.txt"), row.names = FALSE, quote = FALSE) 
+
+DE_tissue_pollen <-  DE_tissue %>% filter(log2FoldChange>0) # 7565 #6231
+DE_tissue_leaf <-  DE_tissue %>% filter(log2FoldChange<0) # 11073 #9850
+head(DE_tissue_pollen)
+
+# write.csv(DE_tissue_pollen, file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/plot/pollen_biased_p01.csv", row.names = FALSE, quote = FALSE)
+# write.csv(DE_tissue_leaf, file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/plot/leaf_biased_p01.csv", row.names = FALSE, quote = FALSE)
+
+DE_tissue$category <- "DE"
+```
+
+
+
+
 
 
 
@@ -161,41 +151,36 @@ nrow(p_specific_DE)/nrow(expressed_noTE) # 0.04074455
 ## get pollen and leaf specific genes
 
 ```{r}
-genes<-left_join(cnt,DE_tissue,by="gene")
-write.table(cnt, file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2/cnt.txt", row.names = FALSE, quote = F)
-write.table(genes,file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2/gene_ratio_deseq2.txt", row.names = FALSE, quote = F)
-genes <- read.table(paste0(directory,"gene_ratio_deseq2.txt"),header=T)
+write.table(genes,file = paste0(directory,"genes_ratio_deseq2.txt"), row.names = FALSE, quote = F)
+#genes <- read.table(paste0(directory,"gene_ratio_deseq2.txt"),header=T)
 p_specific <- genes %>% filter(is.infinite(p_l_ratio))
 l_specific <- genes %>% filter(p_l_ratio == 0)
 
 # get .bed file
-gff <-read.table(paste0(directory2,"TE_filtered_REF_LA.gff"))
-colnames(gff)<-c("gene","chrom","start","end")
-p_specific <- inner_join(p_specific,gff, by="gene")
-l_specific <- inner_join(l_specific,gff, by="gene")
-
-p_specific_DE <- p_specific[complete.cases(p_specific),] # 1228
-l_specific_DE <- l_specific[complete.cases(l_specific),] # 157
-
-p_specific_full <- left_join(p_specific,gff, by="gene")
-l_specific_full <- left_join(l_specific,gff, by="gene")
-
-write.table(p_specific,file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2/p_specific_noTE.txt", row.names = FALSE, quote = F)
-write.table(l_specific,file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2/l_specific_noTE.txt", row.names = FALSE, quote = F)
-
-write.table(p_specific_DE,file = paste0(directory,"p_specific_noTE_DE.txt"), row.names = FALSE, quote = F)
-write.table(l_specific_DE,file = paste0(directory,"l_specific_noTE_DE.txt"), row.names = FALSE, quote = F)
-p_specific_DE  
-l_specific_DE
-
-write.table(p_specific_full,file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2/p_specific_full.txt", row.names = FALSE, quote = F)
-write.table(l_specific_full,file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2/l_specific_full.txt", row.names = FALSE, quote = F)
-
-write.table(l_specific_DE[,c(13:15)],file=paste0(directory,"l_specific_noTE_DE.bed"),sep="\t",row.names = FALSE, col.names = FALSE, quote=FALSE)
-write.table(p_specific_DE[,c(13:15)],file=paste0(directory,"p_specific_noTE_DE.bed"),sep="\t",row.names = FALSE, col.names = FALSE, quote=FALSE)
-
-
-
+# gff <-read.table(paste0(directory2,"TE_filtered_REF_LA.gff"))
+# colnames(gff)<-c("gene","chrom","start","end")
+# p_specific <- inner_join(p_specific,gff, by="gene")
+# l_specific <- inner_join(l_specific,gff, by="gene")
+# 
+# p_specific_DE <- p_specific[complete.cases(p_specific),] # 1228
+# l_specific_DE <- l_specific[complete.cases(l_specific),] # 157
+# 
+# p_specific_full <- left_join(p_specific,gff, by="gene")
+# l_specific_full <- left_join(l_specific,gff, by="gene")
+# 
+# write.table(p_specific,file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2/p_specific_noTE.txt", row.names = FALSE, quote = F)
+# write.table(l_specific,file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2/l_specific_noTE.txt", row.names = FALSE, quote = F)
+# 
+# write.table(p_specific_DE,file = paste0(directory,"p_specific_noTE_DE.txt"), row.names = FALSE, quote = F)
+# write.table(l_specific_DE,file = paste0(directory,"l_specific_noTE_DE.txt"), row.names = FALSE, quote = F)
+# p_specific_DE  
+# l_specific_DE
+# 
+# write.table(p_specific_full,file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2/p_specific_full.txt", row.names = FALSE, quote = F)
+# write.table(l_specific_full,file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2/l_specific_full.txt", row.names = FALSE, quote = F)
+# 
+# write.table(l_specific_DE[,c(13:15)],file=paste0(directory,"l_specific_noTE_DE.bed"),sep="\t",row.names = FALSE, col.names = FALSE, quote=FALSE)
+# write.table(p_specific_DE[,c(13:15)],file=paste0(directory,"p_specific_noTE_DE.bed"),sep="\t",row.names = FALSE, col.names = FALSE, quote=FALSE)
 ```
    DE nonDE 
 38742  9212 
@@ -227,7 +212,6 @@ ggplot(genes, aes(x = mean, y = log2(p_l_ratio),color=genes$category)) + geom_po
 boxplot for p specific, l specific, all genes expressed
 ```{r}
 # expressed
-
 p_specific_DE$category <- "p_specific"
 l_specific_DE$category <- "l_specific"
 specific_DE<-rbind(p_specific_DE,l_specific_DE)
@@ -236,13 +220,9 @@ ggplot(specific_DE, aes(category, baseMean)) + geom_boxplot()+ theme_bw() +ylim(
 ```
 
 
-(check pre-conference discussions on these plots)
+
 ## expression quantiles and specific genes
 ```{r}
-directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/deseq2/"
-# write.table(genes,file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2/gene_ratio_deseq2.txt", row.names = FALSE, quote = F)
-genes <- read.table(paste0(directory,"gene_ratio_deseq2.txt"), header=T)
-write.table(genes,file=paste0(directory,"gene_ratio_deseq2_noTE.txt"), row.names = FALSE, quote = F)
 # histogram of logFC
 ggplot(genes, aes(x = log2FoldChange)) + geom_histogram(binwidth=1)+ theme_bw()
 genes_c <- genes[complete.cases(genes),]
@@ -256,18 +236,14 @@ nrow(genes_c[genes_c$log2FoldChange<=-3.95662,]) # 1359
 ```
 
 
-p_specific <- genes %>% filter(is.infinite(p_l_ratio))
-l_specific <- genes %>% filter(p_l_ratio == 0)
+
 ```{r}
-nrow(genes[is.infinite(genes$p_l_ratio),]) # 6202
-nrow(genes[genes$p_l_ratio == 0,]) # 4188
+p_specific <- genes %>% filter(is.infinite(p_l_ratio)) #1944
+l_specific <- genes %>% filter(p_l_ratio == 0) # 1282
 ```
 
 ```{r}
-directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/pixy/"
-genes <- inner_join(genes,gff, by="gene")
-
-gff <-read.table(paste0(directory,"TE_filtered_REF_LA.gff"))
+# gff <-read.table(paste0(directory,"TE_filtered_REF_LA.gff"))
 sort(genes$p_l_ratio)[.95*length(genes$p_l_ratio)] # inf 23.60025
 sort(genes$p_l_ratio)[.05*length(genes$p_l_ratio)] # 0.03215439 0.2216441
 nrow(genes[is.infinite(genes$p_l_ratio),]) # 6202
@@ -281,43 +257,57 @@ nrow(genes[genes$p_l_ratio >= 511.4639,]) #3015
 
 nrow(genes[genes$p_l_ratio <= 0.01685691,]) #1506
 ```
+
+
 ## use only DE genes forward
 quantiles of expression ratio + DE genes
 see how many, send a table, prep DFE scripts
 ```{r}
-genes <- genes[complete.cases(genes),] # 27189
-sort(genes$p_l_ratio)[.90*length(genes$p_l_ratio)] # 151.3145
-sort(genes$p_l_ratio)[.10*length(genes$p_l_ratio)] # 0.09127343
-nrow(genes[genes$p_l_ratio <= 0.09127343,]) #2718
-nrow(genes[genes$p_l_ratio >= 151.3145,]) #2720
+genes <- genes[complete.cases(genes),] # 27189 -> 16081
 
+# sort(genes$p_l_ratio)[.90*length(genes$p_l_ratio)] # 151.3145
+# sort(genes$p_l_ratio)[.10*length(genes$p_l_ratio)] # 0.09127343
+# nrow(genes[genes$p_l_ratio <= 0.09127343,]) #2718
+# nrow(genes[genes$p_l_ratio >= 151.3145,]) #2720
+# 
+# sort(genes$p_l_ratio)[.95*length(genes$p_l_ratio)] # 94811.01
+# sort(genes$p_l_ratio)[.05*length(genes$p_l_ratio)] # 0.05019033
+# nrow(genes[genes$p_l_ratio <= 0.05019033,]) #1359
+# nrow(genes[genes$p_l_ratio >= 94811.01,]) #1361
+# 
+# nrow(genes[genes$p_l_ratio < 0.05019033,]) #1359
+# nrow(genes[genes$p_l_ratio > 94811.01,]) #1361
+# 
+# quantile(genes$p_l_ratio, probs = c(0.05, 0.95)) # 5.020561e-02 9.612066e+04
+# nrow(genes[genes$p_l_ratio <= 5.020561e-02,]) #1360
+# nrow(genes[genes$p_l_ratio >= 9.612066e+04,]) #1360
+# 
+# genesl<-genes[genes$p_l_ratio <= 5.020561e-02,]
+# genesp<-genes[genes$p_l_ratio >= 9.612066e+04,]
+# summary(genesp$log2FoldChange)
+# summary(genesl$log2FoldChange)
 
-sort(genes$p_l_ratio)[.95*length(genes$p_l_ratio)] # 94811.01
-sort(genes$p_l_ratio)[.05*length(genes$p_l_ratio)] # 0.05019033
-nrow(genes[genes$p_l_ratio <= 0.05019033,]) #1359
-nrow(genes[genes$p_l_ratio >= 94811.01,]) #1361
-
-nrow(genes[genes$p_l_ratio < 0.05019033,]) #1359
-nrow(genes[genes$p_l_ratio > 94811.01,]) #1361
-
-quantile(genes$p_l_ratio, probs = c(0.05, 0.95)) # 5.020561e-02 9.612066e+04
-nrow(genes[genes$p_l_ratio <= 5.020561e-02,]) #1360
-nrow(genes[genes$p_l_ratio >= 9.612066e+04,]) #1360
-
-genesl<-genes[genes$p_l_ratio <= 5.020561e-02,]
-genesp<-genes[genes$p_l_ratio >= 9.612066e+04,]
-summary(genesp$log2FoldChange)
-summary(genesl$log2FoldChange)
-
-quantile(genes$p_l_ratio, probs = c(0.1, 0.9)) # 0.09132165 151.33962523
-nrow(genes[genes$p_l_ratio <= 0.09132165,]) #2719
-nrow(genes[genes$p_l_ratio >= 151.33962523,]) #2719
+quantile(genes$p_l_ratio, probs = c(0.1, 0.9)) # 0.08341861 55.39511315
+nrow(genes[genes$p_l_ratio <= 0.08341861,]) #2719 -> 1608
+nrow(genes[genes$p_l_ratio >= 55.39511315,]) #2719 -> 1608
 # extract to check the FC
+gff <- read.table(paste0(directory,"/deseq2/REF_LA_filtered_annotation.genes.gff"))
+colnames(gff) <- c("gene","chrom", "start", "end")
+genes <- left_join(genes, gff, by="gene")
 
-genesl <- genes[genes$p_l_ratio <= 0.09132165,] 
-genesp <- genes[genes$p_l_ratio >= 151.33962523,] 
 
-    
+genesl <- genes[genes$p_l_ratio <= 0.08341861,] 
+genesp <- genes[genes$p_l_ratio >= 55.39511315,] 
+
+genesl <- genesl[genesl$log2FoldChange <= -2,]
+genesp <- genesp[genesp$log2FoldChange >= 2,]
+
+nrow(genesl[genesl$log2FoldChange <= -2,]) 
+nrow(genesp[genesp$log2FoldChange >= 2,]) 
+   
+
+
+unbiased<-genes[genes$p_l_ratio>0.95 & genes$p_l_ratio<1.05,]
 ```
 summary(genesp$log2FoldChange)
    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
@@ -400,39 +390,49 @@ p 698 150 151 628
 l 606 405 503 773
 
 binning based on expression level (baseMean?)
+
+
 ```{r}
 # genes<-left_join(cnt,DE_tissue,by="gene")
 # write.table(cnt, file = "/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2/cnt.txt", row.names = FALSE, quote = F)
-genes1 <- genes %>% filter(l_mean >=5 & p_mean>=5)
-bin<-binning(genes1$baseMean, bins=4, method="quantile",
+# genes1 <- genes %>% filter(l_mean >=5 & p_mean>=5)
+#genes1 <- genes %>% filter(mean >=5)
+bin<-binning(genes$baseMean, bins=4, method="quantile",
                      labels=NULL, ordered=TRUE, weights=NULL)
+
 
 plot(bin)
 
-p_qt1 <- genesp_final1 %>% filter(baseMean <= 44.8)
-p_qt2 <- genesp_final1 %>% filter(baseMean > 44.8 & baseMean <= 113)
-p_qt3 <- genesp_final1 %>% filter(baseMean > 113 & baseMean <= 310)
-p_qt4 <- genesp_final1 %>% filter(baseMean > 310)
+p_qt1 <- genesp %>% filter(baseMean <= 27)
+p_qt2 <- genesp %>% filter(baseMean > 27 & baseMean <= 83.8)
+p_qt3 <- genesp %>% filter(baseMean > 83.8 & baseMean <= 246)
+p_qt4 <- genesp %>% filter(baseMean > 246)
 
-l_qt1 <- genesl_final1 %>% filter(baseMean <= 44.8)
-l_qt2 <- genesl_final1 %>% filter(baseMean > 44.8 & baseMean <= 113)
-l_qt3 <- genesl_final1 %>% filter(baseMean > 113 & baseMean <= 310)
-l_qt4 <- genesl_final1 %>% filter(baseMean > 310)
+l_qt1 <- genesl %>% filter(baseMean <= 27)
+l_qt2 <- genesl %>% filter(baseMean > 27 & baseMean <= 83.8)
+l_qt3 <- genesl %>% filter(baseMean > 83.8 & baseMean <= 246)
+l_qt4 <- genesl %>% filter(baseMean > 246)
 
-write.table(qt4,file=paste0(directory,"expression_quantile4.bed"),sep="\t",row.names = FALSE, col.names = FALSE, quote=FALSE)
 
-directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/deseq2/"
-
+write.table(p_qt1[,13:15],file=paste0(directory,"DFE/p_qt1.bed"),sep="\t",row.names = FALSE, col.names = FALSE, quote=FALSE)
+write.table(p_qt2[,13:15],file=paste0(directory,"DFE/p_qt2.bed"),sep="\t",row.names = FALSE, col.names = FALSE, quote=FALSE)
+write.table(p_qt3[,13:15],file=paste0(directory,"DFE/p_qt3.bed"),sep="\t",row.names = FALSE, col.names = FALSE, quote=FALSE)
+write.table(p_qt4[,13:15],file=paste0(directory,"DFE/p_qt4.bed"),sep="\t",row.names = FALSE, col.names = FALSE, quote=FALSE)
+write.table(l_qt1[,13:15],file=paste0(directory,"DFE/l_qt1.bed"),sep="\t",row.names = FALSE, col.names = FALSE, quote=FALSE)
+write.table(l_qt2[,13:15],file=paste0(directory,"DFE/l_qt2.bed"),sep="\t",row.names = FALSE, col.names = FALSE, quote=FALSE)
+write.table(l_qt3[,13:15],file=paste0(directory,"DFE/l_qt3.bed"),sep="\t",row.names = FALSE, col.names = FALSE, quote=FALSE)
+write.table(l_qt4[,13:15],file=paste0(directory,"DFE/l_qt4.bed"),sep="\t",row.names = FALSE, col.names = FALSE, quote=FALSE)
 ```
+5.27]
+(27, 83.8]
+(83.8, 246]
+(246, 
+
 2.5]
 (2.5,33.1]
 (33.1,157]
 (157
-
-44.8]
-113]
-310]
-
 genes 27189
 genes1 15323
  
+

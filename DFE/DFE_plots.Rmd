@@ -7,6 +7,7 @@ output: html_document
 
 ```{r setup, include=FALSE}
 library(dplyr)
+library(tidyr)
 library(ggplot2)
 knitr::opts_chunk$set(echo = TRUE)
 setwd("/Users/yuanmeng/Git/rumex_haploid_sel/DFE")
@@ -17,8 +18,8 @@ directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Man
 
 ## get CI from bootstrapping
 ```{r}
-bs_pollen <- read.table(paste0(directory,"p_specific_noTE_DE_bs.prop_muts.txt"))
-bs_leaf <- read.table(paste0(directory,"l_specific_noTE_DE_bs.prop_muts.txt"))
+bs_pollen <- read.table(paste0(directory,"p_qt1_real.prop_muts.txt"))
+bs_leaf <- read.table(paste0(directory,"l_qt1_real.prop_muts.txt"))
 
 bs_pollen$V5 <- rowSums(bs_pollen[,3:4])
 bs_pollen <- bs_pollen[,c(1:2,5)]
@@ -28,8 +29,10 @@ bs_leaf$V5 <- rowSums(bs_leaf[,3:4])
 bs_leaf <- bs_leaf[,c(1:2,5)]
 colnames(bs_leaf) <- c("0~1", "1~10", ">10")
 
-bs_pollen$Category <- "pollen_specific"
-bs_leaf$Category <- "leaf_specific"
+# bs_pollen$Category <- "pollen_specific"
+# bs_leaf$Category <- "leaf_specific"
+bs_leaf$Category <- "sporophyte-specific (2n)"
+bs_pollen$Category <- "gametophyte-specific (n)"
 
 # convert to long format
 pollen_long <- gather(bs_pollen, Nes, Prop, "0~1" : ">10", factor_key=TRUE)
@@ -50,14 +53,35 @@ data_summary <- function(data, varname, groupnames){
 
 bs_all <-rbind(pollen_long,leaf_long)
 
-df3 <- data_summary(bs_all, varname="Prop", 
+prop_qt1 <-rbind(pollen_long,leaf_long)
+
+
+df_p_pt4 <- data_summary(bs_all, varname="Prop", 
                     groupnames=c("Category", "Nes"))
 
 # df3 merge to prop
-colnames(df3)[3] <- "mean"
+colnames(df_p_pt4)[3] <- "mean"
+df_p_pt1$Quantile <- "qt1"
+df_p_pt2$Quantile <- "qt2"
+df_p_pt3$Quantile <- "qt3"
+df_p_pt4$Quantile <- "qt4"
+df_qt <- rbind(df_p_pt1,df_p_pt2,df_p_pt3,df_p_pt4)
+
+prop_qt1$Quantile <- "qt1"
+prop_qt2$Quantile <- "qt2"
+prop_qt3$Quantile <- "qt3"
+prop_qt4$Quantile <- "qt4"
+# read prop
+prop_qt <- rbind(prop_qt1,prop_qt2,prop_qt3,prop_qt4)
+
+
+
+
+
+
 prop <- read.table(paste0(directory,"dfe_prop.txt"), header = TRUE)
 
-prop <- left_join(prop, df3, by=c("Category","Nes"))
+prop <- left_join(prop_qt, df_qt, by=c("Category","Nes","Quantile"))
 write.table(prop, file = paste0(directory,"final_prop.txt"), row.names = F, quote = F)
 write.table(bs_all, file = paste0(directory,"bs_all_long.txt"), row.names = F, quote = F)
 ```
@@ -68,6 +92,9 @@ write.table(bs_all, file = paste0(directory,"bs_all_long.txt"), row.names = F, q
 #prop <- read.table("final_prop.txt", header = TRUE)
 
 ggplot(prop, aes(x=Nes,y=Prop,fill=Category)) + geom_bar(stat="identity", position=position_dodge()) + theme_classic() + scale_x_discrete(limits=c("0~1", "1~10", ">10")) + scale_fill_manual(values = c("#CCEBC5", "#238B45"))  + labs(y="Proportion of mutations") + geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(.9)) + theme(text = element_text(size = 20))
+
+ggplot(prop, aes(x=Nes,y=Prop,fill=Category)) + geom_bar(stat="identity", position=position_dodge()) + theme_classic() + scale_x_discrete(limits=c("0~1", "1~10", ">10")) + scale_fill_manual(values = c("#CCEBC5", "#238B45"))  + labs(y="Proportion of mutations") + geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(.9)) + theme(text = element_text(size = 15))+
+    facet_grid(.~Quantile,scales="free_x", switch = "x", space = "free_x") 
 ```
 
 
