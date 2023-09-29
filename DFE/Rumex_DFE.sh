@@ -34,7 +34,7 @@ done
 
 
 # get SFS
-# /ohta2/meng.yuan/rumex/diversity2022/bootstrap
+cd /ohta2/meng.yuan/rumex/diversity2022/bootstrap
 for sample in "p_qt1" "p_qt2" "p_qt3" "p_qt4" "l_qt1" "l_qt2" "l_qt3" "l_qt4"
 do
 /usr/local/bin/Rscript --vanilla sfs.R ${sample}
