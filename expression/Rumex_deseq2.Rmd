@@ -17,15 +17,15 @@ library(rattle)
 
 ## prep dataset
 ```{r}
-readcnt <- read.table(paste0(directory,"/deseq2/readcnts_eqtl_RNA_sept.txt"),header=T)
+readcnt <- read.table(paste0(directory,"readcnts_eqtl_RNA_sept.txt"),header=T)
 head(readcnt)
 readcnt_matrix<-as.matrix(readcnt[ , -c(1:6)]) #
 rownames(readcnt_matrix) <- readcnt[ , 1]
 head(readcnt_matrix)
 str(readcnt_matrix)
 meta_data <- data.frame(colnames(readcnt_matrix))
-write.csv(meta_data, file=paste0(directory,"/deseq2/meta_data.csv"), row.names = FALSE)
-meta_data<-read.csv(paste0(directory,"/deseq2/meta_data.csv"))
+write.csv(meta_data, file=paste0(directory,"meta_data.csv"), row.names = FALSE)
+meta_data<-read.csv(paste0(directory,"meta_data.csv"))
 
 gene <- readcnt[,1]
 readcnt <- readcnt[ , -c(1:6)]
@@ -42,9 +42,17 @@ rownames(readcnt_matrix) <- gene
 head(readcnt_matrix)
 str(readcnt_matrix)
 
-write.table(readcnt_m, file=paste0(directory,"/deseq2/readcnts_eqtl_RNA_sept_m.txt"))
-write.csv(meta_data_m, file=paste0(directory,"/deseq2/meta_data_m.csv"), row.names = FALSE)
+readcnt_m <- cbind(readcnt[,1], readcnt_m)
+colnames(readcnt_m)[1] <- "gene"
+write.table(readcnt_m, file=paste0(directory,"readcnts_eqtl_RNA_sept_m.txt"))
+write.csv(meta_data_m, file=paste0(directory,"meta_data_m.csv"), row.names = FALSE)
 
+readcnt_m <- read.table(paste0(directory,"readcnts_eqtl_RNA_sept_m.txt"), header = TRUE)
+meta_data_m<- read.csv(paste0(directory,"meta_data_m.csv"), header = TRUE)
+readcnt_matrix<-as.matrix(readcnt_m[,-1]) 
+rownames(readcnt_matrix) <- readcnt_m[,1]
+str(readcnt_matrix)
+rownames(meta_data_m) <- meta_data_m[,1]
 ```
 
 
@@ -66,19 +74,6 @@ nrow(result_tissue) # 25050
 ```
 
 
-PCA plot
-```{r}
-vsdata_tissue <- vst(dds_tissue, blind=FALSE)
-# pdf("pca_tissue.pdf")
-plotPCA(vsdata_tissue, intgroup=c("tissue")) 
-```
-
-MA plot
-```{r}
-plotMA(res_tissue, ylim=c(-2,2))
-resLFC <- lfcShrink(dds_tissue, coef="tissue_pollen_vs_leaf", type="apeglm")
-plotMA(resLFC, ylim=c(-2,2))
-```
 
 ## get mean normalized cnts
 ```{r}
@@ -86,7 +81,6 @@ normalized_counts <- as.data.frame(counts(dds_tissue, normalized=T))
 normalized_counts <- normalized_counts %>% mutate(gene=rownames(normalized_counts)) 
 normalized_counts <- normalized_counts[,c(153,1:152)]
 normalized_counts$gene <- str_sub(normalized_counts$gene, end=-4)
-write.table(normalized_counts, file = paste0(directory,"normalized_counts_m.txt"), quote = FALSE)
 
 col<-data.frame(colnames(normalized_counts))
 normalized_counts<-normalized_counts %>%  mutate(p_mean = rowMeans(normalized_counts[,c(2:76)] )) %>% mutate(l_mean = rowMeans(normalized_counts[,c(77:153)] ))
@@ -97,20 +91,22 @@ cnt<- normalized_counts %>% select(c(1,154:157))
 
 head(cnt)
 write.table(cnt, file = paste0(directory,"cnt.txt"), row.names = FALSE)
+write.table(normalized_counts, file = paste0(directory,"normalized_counts_m.txt"), quote = FALSE)
+# normalized_counts <- read.table(paste0(directory,"normalized_counts_m.txt"))
 ```
 
 ### proportion of pollen expressed genes
 ```{r}
-pollen_expressed <- normalized_counts %>% filter(p_mean>5) # 15958
+pollen_expressed <- cnt %>% filter(p_mean>5) # 15958
 nrow(pollen_expressed)/nrow(normalized_counts) # 0.5208055
 
-expressed <- normalized_counts %>% filter(p_mean>5 | l_mean>5) #17984
+expressed <- cnt %>% filter(p_mean>5 | l_mean>5) #17984
 nrow(pollen_expressed)/nrow(expressed) # 0.8873443
 
-mean(expressed$l_mean)
-mean(expressed$p_mean)
-median(expressed$l_mean)
-median(expressed$p_mean)
+# mean(expressed$l_mean)
+# mean(expressed$p_mean)
+# median(expressed$l_mean)
+# median(expressed$p_mean)
 
 ```
 
@@ -127,18 +123,18 @@ DE_tissue <- DE_tissue[,c(7,1:6)]
 head(DE_tissue) 
 
 write.table(DE_tissue, file = paste0(directory,"result_tissue_full.txt"), row.names = FALSE, quote = FALSE)
-# DE_tissue <- read.csv("/Users/yuanmeng/Dropbox/Rumex_eQTL/plot/DE_tissue.csv")
-# DE_tissue<-subset(DE_tissue, padj<0.1 & baseMean >= 1) # 18638
 
 DE_tissue <- left_join(DE_tissue,cnt,by="gene")
 DE_tissue <- DE_tissue %>% filter(p_mean>5 | l_mean>5) # 17982
 DE_tissue <- DE_tissue %>% filter(padj<0.1) # 17124
-write.table(DE_tissue, file = paste0(directory,"DE_tissue_p01_baseMean1_ratio.txt"), row.names = FALSE, quote = FALSE) 
+# need to fix the file name
+write.table(DE_tissue, file = paste0(directory,"DE_tissue_p01_baseMean5_ratio.txt"), row.names = FALSE, quote = FALSE) 
 
 DE_tissue_pollen <-  DE_tissue %>% filter(log2FoldChange>0) # 6823
 DE_tissue_leaf <-  DE_tissue %>% filter(log2FoldChange<0) # 10301
 head(DE_tissue_pollen)
 DE_tissue$category <- "DE"
+write.table(DE_c, file = paste0(directory,"DE_genes.txt"), row.names = FALSE, quote = FALSE)
 ```
 
 ## expression quantiles and specific genes
@@ -171,7 +167,8 @@ nrow(DE_tissue[genes$p_l_ratio == 0,]) # 4188
 
 ## use only DE genes forward
 quantiles of expression ratio + DE genes
-see how many, send a table, prep DFE scripts
+also require the g-specific genes have g_mean>5
+s-specific genes have s_mean > 5
 ```{r}
 quantile(DE_tissue$p_l_ratio, probs = c(0.1, 0.9)) # 0.08399402 82.27061646
 nrow(DE_tissue[DE_tissue$p_l_ratio <= 0.08399402,]) # 1713
@@ -189,7 +186,8 @@ genesl <- genesl[genesl$log2FoldChange <= -2,]
 genesp <- genesp[genesp$log2FoldChange >= 2,]
 nrow(genesl[genesl$log2FoldChange <= -2,]) 
 nrow(genesp[genesp$log2FoldChange >= 2,]) 
-   
+write.table(genesl[, 13:15], file = paste0(directory,"genesl.bed"), sep = "\t", row.names = FALSE, col.names = FALSE, quote = FALSE)
+write.table(genesp[, 13:15], file = paste0(directory,"genesp.bed"), sep = "\t", row.names = FALSE, col.names = FALSE, quote = FALSE)
 # unbiased<-genes[genes$p_l_ratio>0.95 & genes$p_l_ratio<1.05,]
 ```
 
@@ -220,24 +218,6 @@ ggplot(genes_specific, aes(x=baseMean,fill=category))+  theme_bw()+geom_histogra
 #+ylim(0,250)
 ```
 
-remove outlier
-```{r}
-outliersl <- boxplot(genesl$baseMean, plot=FALSE)$out
-l<-genesl
-l<- l[-which(l$baseMean %in% outliersl),]
-
-outliersp <- boxplot(genesp$baseMean, plot=FALSE)$out
-p<-genesp
-p<- p[-which(p$baseMean %in% outliersp),]
-genes_specific2 <-rbind(l,p)
-
-ggplot(genes_specific2, aes(category, baseMean))+  theme_bw()+geom_violin(trim=FALSE)+geom_boxplot(width=0.05)
-
-```
-
-
-
-
 ```{r}
 genesl_final1 <- genesl %>% filter(mean>=5) #
 #genesl_final2 <- genesl %>% filter(mean<=20)
@@ -254,37 +234,36 @@ write.table(genesp_final1[,c(13:15)],file=paste0(directory,"p_specific_final1.be
 
 # binning based on expression level
 
-
 ```{r}
-bin<-binning(DE_tissue$baseMean, bins=4, method="quantile",
+# use all expressed genes to get the expression level quantiles
+bin<-binning(expressed$mean, bins=4, method="quantile",
                      labels=NULL, ordered=TRUE, weights=NULL)
 plot(bin)
 
-p_qt1 <- genesp %>% filter(baseMean <= 20.8)
-p_qt2 <- genesp %>% filter(baseMean > 20.8 & baseMean <= 73.2)
-p_qt3 <- genesp %>% filter(baseMean > 73.2 & baseMean <= 226)
-p_qt4 <- genesp %>% filter(baseMean > 226)
+p_qt1 <- genesp %>% filter(baseMean <= 20)
+p_qt2 <- genesp %>% filter(baseMean > 20 & baseMean <= 70.4)
+p_qt3 <- genesp %>% filter(baseMean > 70.4 & baseMean <= 217)
+p_qt4 <- genesp %>% filter(baseMean > 217)
 
-l_qt1 <- genesl %>% filter(baseMean <= 20.8)
-l_qt2 <- genesl %>% filter(baseMean > 20.8 & baseMean <= 73.2)
-l_qt3 <- genesl %>% filter(baseMean > 73.2 & baseMean <= 226)
-l_qt4 <- genesl %>% filter(baseMean > 226)
+l_qt1 <- genesl %>% filter(baseMean <= 20)
+l_qt2 <- genesl %>% filter(baseMean > 20 & baseMean <= 70.4)
+l_qt3 <- genesl %>% filter(baseMean > 70.4 & baseMean <= 217)
+l_qt4 <- genesl %>% filter(baseMean > 217)
 
-write.table(p_qt1[,13:15],file=paste0(directory,"p_qt1.bed"),sep="\t",row.names = FALSE, col.names = FALSE, quote=FALSE)
-write.table(p_qt2[,13:15],file=paste0(directory,"p_qt2.bed"),sep="\t",row.names = FALSE, col.names = FALSE, quote=FALSE)
-write.table(p_qt3[,13:15],file=paste0(directory,"p_qt3.bed"),sep="\t",row.names = FALSE, col.names = FALSE, quote=FALSE)
-write.table(p_qt4[,13:15],file=paste0(directory,"p_qt4.bed"),sep="\t",row.names = FALSE, col.names = FALSE, quote=FALSE)
-write.table(l_qt1[,13:15],file=paste0(directory,"l_qt1.bed"),sep="\t",row.names = FALSE, col.names = FALSE, quote=FALSE)
-write.table(l_qt2[,13:15],file=paste0(directory,"l_qt2.bed"),sep="\t",row.names = FALSE, col.names = FALSE, quote=FALSE)
-write.table(l_qt3[,13:15],file=paste0(directory,"l_qt3.bed"),sep="\t",row.names = FALSE, col.names = FALSE, quote=FALSE)
-write.table(l_qt4[,13:15],file=paste0(directory,"l_qt4.bed"),sep="\t",row.names = FALSE, col.names = FALSE, quote=FALSE)
+qt_list <- list(p_qt1, p_qt2, p_qt3, p_qt4, l_qt1, l_qt2, l_qt3, l_qt4)
+file_names <- c("p_qt1", "p_qt2", "p_qt3", "p_qt4", "l_qt1", "l_qt2", "l_qt3", "l_qt4")
+for (i in 1:length(qt_list)) {
+  file_name <- paste0(directory, file_names[i], ".bed")
+  write.table(qt_list[[i]][, 13:15], file = file_name, sep = "\t", row.names = FALSE, col.names = FALSE, quote = FALSE)}
 ```
-20.8]
-73.2]
-226]
+20]
+70.4]
+217]
 (
 
 l qt
 330, 411, 466, 504
+322, 407, 457, 525
 p qt
 582, 249, 178, 702
+570, 254, 180, 707

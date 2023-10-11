@@ -25,8 +25,12 @@ DE_tissue$gene <- str_sub(DE_tissue$gene, end=-4)
 DE_tissue <- left_join(DE_tissue,cnt,by="gene")
 DE_tissue <- DE_tissue %>% filter(p_mean>5 | l_mean>5)
 
+
+
 FC_pixy<- inner_join(DE_tissue,pixy,by=c("gene")) # 11735
 write.table(FC_pixy, file = paste0(directory,"FC_pixy_innerjoin.txt"), row.names = FALSE, quote = FALSE)
+FC_pixy <- read.table(paste0(directory,"FC_pixy_innerjoin.txt"),header = TRUE)
+FC_pixy <- FC_pixy %>% filter(padj<0.1) #11203
 ```
 
 
@@ -36,8 +40,8 @@ then 4 quantiles within each category
 DE gene cutoffs: padj<0.1 & baseMean >= 1
 logFC>0: pollen biased, logFC <-: leaf biased
 ```{r}
-pollen_bias <- FC_pixy %>% filter(log2FoldChange>0) # 4391
-leaf_bias <- FC_pixy %>% filter(log2FoldChange<0) # 7344
+pollen_bias <- FC_pixy %>% filter(log2FoldChange>0) # 4391, 4123
+leaf_bias <- FC_pixy %>% filter(log2FoldChange<0) # 7344, 7080
 
 bin<-binning(pollen_bias$log2FoldChange, bins=4, method="quantile",
                      labels=NULL, ordered=TRUE, weights=NULL)
@@ -105,9 +109,9 @@ vgroup$tag <- factor(vgroup$tag,
 ggplot(data = vgroup, mapping = aes(x=tag,y=avg_pi)) + 
     geom_jitter(color="#1F78B4",alpha=0.2) +
     geom_boxplot(fill="#1F78B4",color="black",alpha=0.3) + 
-    labs(x='g_s_ratio') +
+    labs(x='log2FoldChange') +
     guides(color=FALSE) + ylim(0,0.06)+
-    theme_classic() + theme(text = element_text(size = 18))
+    theme_classic() + theme(text = element_text(size = 12))
 
 ```
  (,-3.02] (-3.02,-2.16] (-2.16,-1.27]     (-1.27,0)      (0,1.02]   (1.02,2.54] 
@@ -115,7 +119,57 @@ ggplot(data = vgroup, mapping = aes(x=tag,y=avg_pi)) +
   (2.54,5.36]       (5.36,) 
          1093          1096 
 
- 
+## applying adjp<0.1 cutoff
+```{r}
+breaks <- c(-30,-3.05,-2.22,-1.39,0,1.25,2.76,5.65,30)
+# specify interval/bin labels
+tags <- c("(,-3.05]","(-3.05,-2.22]", "(-2.22,-1.39]", "(-1.39,0)", "(0,1.25]", "(1.25,2.76]","(2.76,5.65]", "(5.65,)")
+# bucketing values into bins
+group_tags <- cut(FC_pixy$log2FoldChange, 
+                  breaks=breaks, 
+                  include.lowest=TRUE, 
+                  right=FALSE, 
+                  labels=tags)
+# inspect bins
+summary(group_tags)
+ratio_groups <- factor(group_tags, 
+                           levels = tags,
+                           ordered = TRUE)
+
+v <- FC_pixy %>% select(log2FoldChange,avg_pi) 
+vgroup <- as_tibble(v) %>% 
+  mutate(tag = case_when(
+    log2FoldChange > 0 & log2FoldChange <= 1.25 ~ tags[5],
+    log2FoldChange > 1.25 & log2FoldChange <= 2.76 ~ tags[6],
+    log2FoldChange > 2.76 & log2FoldChange <= 5.65 ~ tags[7],
+    log2FoldChange > 5.65   ~ tags[8],
+    log2FoldChange <= -3.05 ~ tags[1],
+    log2FoldChange > -3.05 & log2FoldChange <= -2.22 ~ tags[2],
+    log2FoldChange > -2.22 & log2FoldChange <= -1.39 ~ tags[3],
+    log2FoldChange > -1.39 & log2FoldChange < 0 ~ tags[4]
+    ))
+#summary(vgroup)
+vgroup$tag <- factor(vgroup$tag,
+                       levels = tags,
+                       ordered = FALSE)
+
+ggplot(data = vgroup, mapping = aes(x=tag,y=avg_pi)) + 
+    geom_jitter(color="#1F78B4",alpha=0.2) +
+    geom_boxplot(fill="#1F78B4",color="black",alpha=0.3) + 
+    labs(x='log2FoldChange') +
+    guides(color=FALSE) + ylim(0,0.06)+
+    theme_classic() + theme(text = element_text(size = 12))
+```
+0,1.25]
+2.76]
+5.65]
+26.2]
+(-1.39
+-1.39]
+-2.22]
+-3.05]
+
+
 
 
 
