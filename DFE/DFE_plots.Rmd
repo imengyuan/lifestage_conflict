@@ -9,6 +9,8 @@ output: html_document
 library(dplyr)
 library(tidyr)
 library(ggplot2)
+library(patchwork)
+library("gridExtra")
 knitr::opts_chunk$set(echo = TRUE)
 setwd("/Users/yuanmeng/Git/rumex_haploid_sel/DFE")
 directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/DFE/"
@@ -28,9 +30,7 @@ data_summary <- function(data, varname, groupnames){
 
 
 
-## get CI from bootstrapping
-
-real data
+## real data
 ```{r}
 read_and_process_data <- function(directory, qt_number) {
   bs_pollen <- read.table(paste0(directory, "p_qt", qt_number, "_real.prop_muts.txt"))
@@ -44,8 +44,8 @@ read_and_process_data <- function(directory, qt_number) {
   bs_leaf <- bs_leaf[, c(1:2, 5)]
   colnames(bs_leaf) <- c("0~1", "1~10", ">10")
   
-  bs_leaf$Category <- "sporophyte-specific (2n)"
-  bs_pollen$Category <- "gametophyte-specific (n)"
+  bs_leaf$Category <- "sporophyte-specific"
+  bs_pollen$Category <- "gametophyte-specific"
   
   # Convert to long format
   pollen_long <- gather(bs_pollen, Nes, Prop, "0~1" : ">10", factor_key = TRUE)
@@ -63,10 +63,10 @@ for (qt_number in 1:4) {
   prop_qt_list[[qt_number]] <- prop_qt
 }
 
-prop_qt <- do.call(rbind, prop_qt_list)
+prop <- do.call(rbind, prop_qt_list)
 ```
 
-bootstrapping data
+## bootstrapping data
 ```{r}
 read_and_process_data <- function(directory, qt_number) {
   bs_pollen <- read.table(paste0(directory, "p_qt", qt_number, "_bs.prop_muts.txt"))
@@ -80,8 +80,8 @@ read_and_process_data <- function(directory, qt_number) {
   bs_leaf <- bs_leaf[, c(1:2, 5)]
   colnames(bs_leaf) <- c("0~1", "1~10", ">10")
   
-  bs_leaf$Category <- "sporophyte-specific (2n)"
-  bs_pollen$Category <- "gametophyte-specific (n)"
+  bs_leaf$Category <- "sporophyte-specific"
+  bs_pollen$Category <- "gametophyte-specific"
   
   # Convert to long format
   pollen_long <- gather(bs_pollen, Nes, Prop, "0~1" : ">10", factor_key = TRUE)
@@ -104,27 +104,52 @@ for (qt_number in 1:4) {
   prop_qt_list[[qt_number]] <- prop_qt
 }
 
-df_qt <- do.call(rbind, prop_qt_list)
+df <- do.call(rbind, prop_qt_list)
 ```
 
 
-combine the data
+## combine the data
 ```{r}
 #prop <- read.table(paste0(directory,"dfe_prop.txt"), header = TRUE)
-prop <- left_join(prop_qt, df_qt, by=c("Category","Nes","Quantile"))
-write.table(prop, file = paste0(directory,"final_prop.txt"), row.names = F, quote = F)
+prop <- left_join(prop, df, by=c("Category","Nes","Quantile"))
+write.table(prop, file = paste0(directory,"final_prop_qt_Oct.txt"), row.names = F, quote = F)
 ```
 
 
 ## plot DFE with CI
-change color order later
+change color order 
 ```{r}
-#prop <- read.table("final_prop.txt", header = TRUE)
+prop$Category <- factor(prop$Category)
+prop$Category <- factor(prop$Category, level=c("sporophyte-specific (2n)","gametophyte-specific (n)")) # haploid is darker
+```
 
-ggplot(prop, aes(x=Nes,y=Prop,fill=Category)) + geom_bar(stat="identity", position=position_dodge()) + theme_classic() + scale_x_discrete(limits=c("0~1", "1~10", ">10")) + scale_fill_manual(values = c("#CCEBC5", "#238B45"))  + labs(y="Proportion of mutations") + geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(.9)) + theme(text = element_text(size = 20))
+```{r}
+#ggplot(prop, aes(x=Nes,y=Prop,fill=Category)) + geom_bar(stat="identity", position=position_dodge()) + theme_classic() + scale_x_discrete(limits=c("0~1", "1~10", ">10")) + scale_fill_manual(values = c("#CCEBC5", "#238B45"))  + labs(y="Proportion of mutations") + geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(.9)) + theme(text = element_text(size = 20))
 
-ggplot(prop, aes(x=Nes,y=Prop,fill=Category)) + geom_bar(stat="identity", position=position_dodge()) + theme_classic() + scale_x_discrete(limits=c("0~1", "1~10", ">10")) + scale_fill_manual(values = c("#CCEBC5", "#238B45"))  + labs(y="Proportion of mutations") + geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(.9)) + theme(text = element_text(size = 15))+
+prop <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/DFE/final_prop_qt_Oct.txt", header=T)
+prop$Category <- factor(prop$Category)
+levels(prop$Category)
+prop$Category <- factor(prop$Category, level=c("sporophyte-specific","gametophyte-specific"))
+
+prop_c <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/DFE/final_prop_qt_Oct.txt", header=T)
+prop_c$Category <- factor(prop_c$Category)
+levels(prop_c$Category)
+prop_c$Category <- factor(prop$Category, level=c("sporophyte-specific","gametophyte-specific"))
+
+
+p1 <- ggplot(prop, aes(x=Nes,y=Prop,fill=Category)) + geom_bar(stat="identity", position=position_dodge()) + theme_classic() + scale_x_discrete(limits=c("0~1", "1~10", ">10")) + scale_fill_manual(values = c("#CCEBC5", "#238B45"))  + labs(y="Proportion of mutations") + geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(.9)) + ggtitle("a") + theme(text = element_text(size = 10))+
     facet_grid(.~Quantile,scales="free_x", switch = "x", space = "free_x") 
+
+p2 <- ggplot(prop_c, aes(x=Nes,y=Prop,fill=Category)) + geom_bar(stat="identity", position=position_dodge()) + theme_classic() + scale_x_discrete(limits=c("0~1", "1~10", ">10")) + scale_fill_manual(values = c("#CCEBC5", "#238B45"))  + labs(y="Proportion of mutations") + geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(.9)) + ggtitle("b") + theme(text = element_text(size = 10))+
+    facet_grid(.~Quantile,scales="free_x", switch = "x", space = "free_x") 
+
+grid.arrange(p1, p2, nrow = 2)
+p1 / p2 
+
+
+
+p1 + p2 + plot_layout(nrow = 2,guides = "collect") & theme(legend.position = "right")
+
 ```
 
 
@@ -137,8 +162,8 @@ bs_g <- read.table(paste0(directory,"p_specific_noTE_DE_bs.prop_muts.txt"))
 bs_s <- read.table(paste0(directory,"l_specific_noTE_DE_bs.prop_muts.txt"))
 
 # 4 categories is fine
-bs_s$Category <- "sporophyte-specific (2n)"
-bs_g$Category <- "gametophyte-specific (n)"
+bs_s$Category <- "sporophyte-specific"
+bs_g$Category <- "gametophyte-specific"
 
 bs_all <- rbind(bs_s,bs_g)
 bs_all$V5 <- 1- bs_all$V1
@@ -150,8 +175,8 @@ df3 <- data_summary(bs_all, varname=">1",
 colnames(df3)[2] <- "mean"
 
 prop <- read.table(paste0(directory,"dfe_prop_shrink.txt"), header = TRUE)
-prop[1,2] <-"gametophyte-specific (n)"
-prop[2,2] <-"sporophyte-specific (2n)"
+prop[1,2] <-"gametophyte-specific"
+prop[2,2] <-"sporophyte-specific"
 
 prop <- left_join(prop, df3, by="Category")
 
@@ -165,6 +190,72 @@ ggplot(prop, aes(x=Category,y=Prop,fill=Category)) + geom_bar(stat="identity", p
 
 ```
 
+
+# all quantiles combined/no quantiles
+```{r}
+# real data
+bs_g <- read.table(paste0(directory, "genesp_real.prop_muts.txt"))
+bs_s <- read.table(paste0(directory, "genesl_real.prop_muts.txt"))
+bs_g$V5 <- rowSums(bs_g[, 3:4])
+bs_g <- bs_g[, c(1:2, 5)]
+colnames(bs_g) <- c("0~1", "1~10", ">10")
+bs_s$V5 <- rowSums(bs_s[, 3:4])
+bs_s <- bs_s[, c(1:2, 5)]
+colnames(bs_s) <- c("0~1", "1~10", ">10")
+bs_s$Category <- "sporophyte-specific"
+bs_g$Category <- "gametophyte-specific"
+# Convert to long format
+g_long <- gather(bs_g, Nes, Prop, "0~1" : ">10", factor_key = TRUE)
+s_long <- gather(bs_s, Nes, Prop, "0~1" : ">10", factor_key = TRUE)
+prop <- rbind(g_long, s_long)
+
+# bootstrap data
+bs_g <- read.table(paste0(directory, "genesp_bs.prop_muts.txt"))
+bs_s <- read.table(paste0(directory, "genesl_bs.prop_muts.txt"))
+bs_g$V5 <- rowSums(bs_g[, 3:4])
+bs_g <- bs_g[, c(1:2, 5)]
+colnames(bs_g) <- c("0~1", "1~10", ">10")
+bs_s$V5 <- rowSums(bs_s[, 3:4])
+bs_s <- bs_s[, c(1:2, 5)]
+colnames(bs_s) <- c("0~1", "1~10", ">10")
+bs_s$Category <- "sporophyte-specific"
+bs_g$Category <- "gametophyte-specific"
+# Convert to long format
+g_long <- gather(bs_g, Nes, Prop, "0~1" : ">10", factor_key = TRUE)
+s_long <- gather(bs_s, Nes, Prop, "0~1" : ">10", factor_key = TRUE)
+# get error bar
+bs_all <-rbind(g_long,s_long)
+df <- data_summary(bs_all, varname="Prop", 
+                    groupnames=c("Category", "Nes"))
+colnames(df)[3] <- "mean"
+
+prop <- left_join(prop, df, by=c("Category","Nes"))
+write.table(prop, file = paste0(directory,"final_prop_Oct.txt"), row.names = F, quote = F,sep = "\t")
+```
+
+```{r}
+prop$Category <- factor(prop$Category)
+levels(prop$Category) <- 
+prop$Category <- factor(prop$Category, level=c("sporophyte-specific (2n)","gametophyte-specific (n)")) # haploid is darker
+
+prop <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/DFE/final_prop_Oct.txt", header=T)
+prop$Category <- factor(prop$Category)
+levels(prop$Category)
+prop$Category <- factor(prop$Category, level=c("sporophyte-specific","gametophyte-specific"))
+
+prop_c <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/DFE/final_prop_Oct.txt", header=T)
+prop_c$Category <- factor(prop_c$Category)
+levels(prop_c$Category)
+prop_c$Category <- factor(prop$Category, level=c("sporophyte-specific","gametophyte-specific"))
+
+p3 <- ggplot(prop, aes(x=Nes,y=Prop,fill=Category)) + geom_bar(stat="identity", position=position_dodge()) + theme_classic() + scale_x_discrete(limits=c("0~1", "1~10", ">10")) + scale_fill_manual(values = c("#CCEBC5", "#238B45"))  + labs(y="Proportion of mutations") + geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(.9)) +ggtitle("a") + theme(text = element_text(size = 10))
+
+p4 <- ggplot(prop_c, aes(x=Nes,y=Prop,fill=Category)) + geom_bar(stat="identity", position=position_dodge()) + theme_classic() + scale_x_discrete(limits=c("0~1", "1~10", ">10")) + scale_fill_manual(values = c("#CCEBC5", "#238B45"))  + labs(y="Proportion of mutations") + geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(.9)) +ggtitle("b") + theme(text = element_text(size = 10))
+
+#grid.arrange(p3, p4, nrow = 1)
+# ,legend.position = "none"
+p3 + p4 + plot_layout(guides = "collect") & theme(legend.position = "right")
+```
 
 
  

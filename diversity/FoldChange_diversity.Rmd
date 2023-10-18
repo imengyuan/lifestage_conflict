@@ -7,8 +7,10 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
 library(dplyr)
 library(rattle)
+library("gridExtra")
 directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/pixy/"
 ```
 ## merge with pi data
@@ -24,8 +26,6 @@ DE_tissue <- DE_tissue %>% mutate(gene = rownames(DE_tissue))
 DE_tissue$gene <- str_sub(DE_tissue$gene, end=-4)
 DE_tissue <- left_join(DE_tissue,cnt,by="gene")
 DE_tissue <- DE_tissue %>% filter(p_mean>5 | l_mean>5)
-
-
 
 FC_pixy<- inner_join(DE_tissue,pixy,by=c("gene")) # 11735
 write.table(FC_pixy, file = paste0(directory,"FC_pixy_innerjoin.txt"), row.names = FALSE, quote = FALSE)
@@ -69,7 +69,10 @@ ratio_groups <- factor(group_tags,
                            levels = tags,
                            ordered = TRUE)
 ```
-
+(,-3.02] (-3.02,-2.16] (-2.16,-1.27]     (-1.27,0)      (0,1.02]   (1.02,2.54] 
+         1834          1837          1838          1835          1097          1105 
+  (2.54,5.36]       (5.36,) 
+         1093          1096 
 pollen
 1.02]
 2.54]
@@ -81,6 +84,7 @@ leaf
 -2.16]
 -1.27]
 -0.101]
+
 
 
 
@@ -109,7 +113,8 @@ vgroup$tag <- factor(vgroup$tag,
 ggplot(data = vgroup, mapping = aes(x=tag,y=avg_pi)) + 
     geom_jitter(color="#1F78B4",alpha=0.2) +
     geom_boxplot(fill="#1F78B4",color="black",alpha=0.3) + 
-    labs(x='log2FoldChange') +
+    labs(x='log2FoldChange', y='Synonymous nucleotide diversity') +
+    ggtitle('a')+
     guides(color=FALSE) + ylim(0,0.06)+
     theme_classic() + theme(text = element_text(size = 12))
 
@@ -118,6 +123,7 @@ ggplot(data = vgroup, mapping = aes(x=tag,y=avg_pi)) +
          1834          1837          1838          1835          1097          1105 
   (2.54,5.36]       (5.36,) 
          1093          1096 
+
 
 ## applying adjp<0.1 cutoff
 ```{r}
@@ -156,7 +162,8 @@ vgroup$tag <- factor(vgroup$tag,
 ggplot(data = vgroup, mapping = aes(x=tag,y=avg_pi)) + 
     geom_jitter(color="#1F78B4",alpha=0.2) +
     geom_boxplot(fill="#1F78B4",color="black",alpha=0.3) + 
-    labs(x='log2FoldChange') +
+    labs(x='log2FoldChange', y='Synonymous nucleotide diversity') +
+    ggtitle('a')+
     guides(color=FALSE) + ylim(0,0.06)+
     theme_classic() + theme(text = element_text(size = 12))
 ```
@@ -168,8 +175,72 @@ ggplot(data = vgroup, mapping = aes(x=tag,y=avg_pi)) +
 -1.39]
 -2.22]
 -3.05]
+(,-3.05] (-3.05,-2.22] (-2.22,-1.39]     (-1.39,0)      (0,1.25]   (1.25,2.76] 
+         1779          1754          1775          1772          1024          1037 
+  (2.76,5.65]       (5.65,) 
+         1031          1031 
 
 
 
+## pi - log2FC regression 
+```{r}
+p1 <- ggplot(FC_pixy, aes(x=log2FoldChange, y=avg_pi)) + geom_point(colour="#1F78B4", alpha=0.2) + geom_smooth(color="black", method = lm) + theme_classic() + theme(text = element_text(size = 10))+ labs(x='log2FoldChange', y='nucleotide diversity (syn)') + ggtitle('a')
+
+p3 <- ggplot(FC_pixy, aes(x=abs(log2FoldChange), y=avg_pi)) + geom_point(colour="#1F78B4", alpha=0.2) + geom_smooth(color="black", method = lm) + theme_classic() + theme(text = element_text(size = 10))+ labs(x='abs(log2FoldChange)', y='nucleotide diversity (syn)') + ggtitle('c')
+
+grid.arrange(p1, p2, p3, p4, nrow = 2)
+```
+
+linear regression
+```{r}
+cor(FC_pixy$avg_pi, FC_pixy$log2FoldChange) # 0.04935226
+cor(FC_pixy$avg_pi, abs(FC_pixy$log2FoldChange)) # 0.06233079
+
+model <- lm(avg_pi ~ log2FoldChange, data = FC_pixy)
+summary(model)
+
+model <- lm(avg_pi ~ abs(log2FoldChange), data = FC_pixy)
+summary(model)
+```
+
+lm(formula = avg_pi ~ log2FoldChange, data = FC_pixy)
+
+Residuals:
+      Min        1Q    Median        3Q       Max 
+-0.009455 -0.005023 -0.001796  0.002677  0.098571 
+
+Coefficients:
+                Estimate Std. Error t value Pr(>|t|)    
+(Intercept)    8.034e-03  7.034e-05 114.218  < 2e-16 ***
+log2FoldChange 9.707e-05  1.814e-05   5.352 8.85e-08 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.007619 on 11733 degrees of freedom
+Multiple R-squared:  0.002436,	Adjusted R-squared:  0.002351 
+F-statistic: 28.65 on 1 and 11733 DF,  p-value: 8.847e-08
+
+Call:
+lm(formula = avg_pi ~ abs(log2FoldChange), data = FC_pixy)
+
+Residuals:
+      Min        1Q    Median        3Q       Max 
+-0.010146 -0.005001 -0.001787  0.002662  0.098493 
+
+Coefficients:
+                     Estimate Std. Error t value Pr(>|t|)    
+(Intercept)         7.535e-03  1.022e-04  73.703  < 2e-16 ***
+abs(log2FoldChange) 1.783e-04  2.636e-05   6.765  1.4e-11 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.007614 on 11733 degrees of freedom
+Multiple R-squared:  0.003885,	Adjusted R-squared:  0.0038 
+F-statistic: 45.76 on 1 and 11733 DF,  p-value: 1.399e-11
+
+## linear regression exp level vs pn/ps
+```{r}
+
+```
 
 
