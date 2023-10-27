@@ -13,6 +13,7 @@ library(dplyr)
 library("DESeq2")
 library("stringr")
 library(rattle)
+library(VennDiagram)
 ```
 
 ## prep dataset
@@ -87,17 +88,18 @@ normalized_counts<-normalized_counts %>%  mutate(p_mean = rowMeans(normalized_co
 normalized_counts$mean <- rowMeans(normalized_counts[,c(2:153)])
 
 normalized_counts<- normalized_counts %>% mutate(p_l_ratio = p_mean/l_mean)
-cnt<- normalized_counts %>% select(c(1,154:157))
+cnt<- normalized_counts %>% select(c(1,154:156))
 
 head(cnt)
 write.table(cnt, file = paste0(directory,"cnt.txt"), row.names = FALSE)
 write.table(normalized_counts, file = paste0(directory,"normalized_counts_m.txt"), quote = FALSE)
-# normalized_counts <- read.table(paste0(directory,"normalized_counts_m.txt"))
+normalized_counts <- read.table(paste0(directory,"normalized_counts_m.txt"))
 ```
 
 ### proportion of pollen expressed genes
 ```{r}
 pollen_expressed <- cnt %>% filter(p_mean>5) # 15958
+leaf_expressed <- cnt %>% filter(l_mean>5) 
 nrow(pollen_expressed)/nrow(normalized_counts) # 0.5208055
 
 expressed <- cnt %>% filter(p_mean>5 | l_mean>5) #17984
@@ -107,6 +109,14 @@ nrow(pollen_expressed)/nrow(expressed) # 0.8873443
 # mean(expressed$p_mean)
 # median(expressed$l_mean)
 # median(expressed$p_mean)
+v1<-pollen_expressed$gene
+v2<-leaf_expressed$gene
+venn.diagram(
+  x = list(v1, v2),
+  category.names = c("pollen" , "leaf" ),
+  filename = '/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/deseq2/venn_diagramm.png',
+  output=TRUE
+)
 
 ```
 

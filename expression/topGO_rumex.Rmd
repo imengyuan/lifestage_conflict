@@ -17,13 +17,13 @@ library(VennDiagram)
 library(rattle)
 library(topGO)
 library(data.table)
-setwd("/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2")
+#setwd("/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2")
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/deseq2/"
 ```
 
 # topGO
-
 ```{r}
-geneID2GO <- readMappings(file="TE_filtered.REF_LA_gene2GO.txt")
+geneID2GO <- readMappings(file=paste0(directory, "TE_filtered.REF_LA_gene2GO.txt"))
 GO2gene <- inverseList(geneID2GO)
 
 str(head(GO2gene))
@@ -36,11 +36,8 @@ geneNames <- names(geneID2GO)
 head(geneNames)
 
 # get list of interesting genes
-# pollen specifc and leaf specific to start with
-
-# 2826 leaf speccific genes, 1450 pollen specific genes
-myInterestingGenes <- p_specific_DE$gene
-myInterestingGenes <- l_specific_DE$gene
+myInterestingGenes <- genesp$gene
+myInterestingGenes <- genesl$gene
 
 geneList <- factor(as.integer(geneNames %in% myInterestingGenes))
 names(geneList) <- geneNames
