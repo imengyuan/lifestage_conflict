@@ -23,9 +23,13 @@ directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Man
 
 # topGO
 ```{r}
+gene2GO <- read.table(paste0(directory, "TE_filtered.REF_LA_gene2GO.txt"))
+gff <- read.table(paste0(directory,"REF_LA_filtered_annotation.genes.gff"))
+gene2GO <- inner_join(gene2GO, gff, by="V1")
+write.table(gene2GO[,1:2], file = paste0(directory, "REF_LA_filtered_annotation_gene2GO.txt"))
+    
 geneID2GO <- readMappings(file=paste0(directory, "TE_filtered.REF_LA_gene2GO.txt"))
 GO2gene <- inverseList(geneID2GO)
-
 str(head(GO2gene))
 str(head(geneID2GO))
 ```
@@ -54,13 +58,15 @@ sampleGOdata <- new("topGOdata", ontology = "BP",
 
 
 ```{r}
-resultFisher <- runTest(sampleGOdata, algorithm = "classic", statistic = "fisher")
+# resultFisher <- runTest(sampleGOdata, algorithm = "classic", statistic = "fisher")
+# weight_fisher_result=runTest(sampleGOdata, algorithm='weight01', statistic='fisher')
 
-weight_fisher_result=runTest(sampleGOdata, algorithm='weight01', statistic='fisher')
 weight01.fisher <- runTest(sampleGOdata, statistic = "fisher")
+results_table_p = GenTable(sampleGOdata, P_value=weight01.fisher, orderBy="P_value")
+
 results_table_l = GenTable(sampleGOdata, P_value=weight01.fisher, orderBy="P_value")
 
-write.csv(results_table, file="p_specific_DE_GO.csv",row.names = FALSE, quote=FALSE )
-write.csv(results_table_l, file="l_specific_DE_GO.csv",row.names = FALSE, quote=FALSE )
+write.csv(results_table_p, file=paste0(directory, "p_specific_DE_GO.csv"),row.names = FALSE, quote=FALSE )
+write.csv(results_table_l, file=paste0(directory, "l_specific_DE_GO.csv"),row.names = FALSE, quote=FALSE )
 ```
 

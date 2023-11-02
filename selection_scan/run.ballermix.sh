@@ -88,7 +88,8 @@ parallel --dry-run python3 /ohta2/meng.yuan/apps/BallerMixPlus/BalLeRMix+_v1.py 
 python3 BalLeRMix+_v1.py -i rumex_input_DAF_May9.txt  -o rumex_scan_DAF_May18.txt --spect rumex_spect_DAF_May9.txt
 
 
-
+# rumex on each LG
+python3 /ohta2/meng.yuan/apps/BallerMixPlus/BalLeRMix+_v1.py -i rumex_input_DAF_Jul6_LG${i}.txt  -o rumex_scan_DAF_Jul6_LG${i}.txt --spect rumex_spect_DAF_May9.txt --findBal
 
 
 parallel --memfree 2G --jobs 15 python3 /ohta2/meng.yuan/apps/BallerMixPlus/BalLeRMix+_v1.py -i rumex_input_DAF_May9.txt -o rumex_scan_DAF_May22.txt --spect rumex_spect_DAF_May9.txt

@@ -16,7 +16,7 @@ directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Man
 ## merge with pi data
 ```{r}
 pixy <- read.table(paste0(directory,"pixy_pi_syn.0329.genewise.txt"), header=TRUE) 
-pixy <- pixy %>% filter(no_sites>=50) # 19542
+pixy <- pixy %>% filter(no_sites>=50) #
 colnames(pixy)[2:4] <- c("chrom", "start", "end")
 pixy <- inner_join(pixy, gff, by=c("chrom", "start", "end")) # 15049
 write.table(pixy, file = paste0(directory,"pixy_filtered.txt"), quote=F) 
@@ -238,9 +238,32 @@ Residual standard error: 0.007614 on 11733 degrees of freedom
 Multiple R-squared:  0.003885,	Adjusted R-squared:  0.0038 
 F-statistic: 45.76 on 1 and 11733 DF,  p-value: 1.399e-11
 
-## linear regression exp level vs pn/ps
+## pi_n / pi_s and expression
 ```{r}
+pixy_nonsyn <- read.table(paste0(directory,"pixy_pi_nonsyn.0329.genewise.txt"), header=TRUE) #27026
+colnames(pixy_nonsyn)[2:5] <- c("chrom", "start", "end", "avg_pi_nonsyn")
+pixy_nonsyn <- pixy_nonsyn %>% filter(no_sites>=50) # 22186
 
+FC_pixy <- read.table(paste0(directory,"FC_pixy_innerjoin.txt"),header = TRUE)
+
+statsr <- inner_join(FC_pixy, pixy_nonsyn, by=c("chrom", "start", "end")) # 11734
+statsr <- statsr %>% dplyr::select(gene, avg_pi, avg_pi_nonsyn)
+statsr$pn_ps <-  statsr$avg_pi_nonsyn / statsr$avg_pi
+
+statsr <- statsr[complete.cases(statsr),]
+statsr <- statsr %>% filter(pn_ps > 0) %>% filter(is.finite(pn_ps)) # 10834
+
+stats_genesl <- inner_join(genesl, statsr, by="gene")
+stats_genesp <- inner_join(genesp, statsr, by="gene")
+
+mean(stats_genesl$pn_ps) # 0.5975733
+mean(stats_genesp$pn_ps) # 0.7590268
+
+unbiased <- FC_pixy %>% filter(padj>0.1) # 532
+stats_unbiased <- inner_join(unbiased, statsr, by="gene") 
+mean(stats_unbiased$pn_ps) # 0.737404
+
+# box plots
 ```
 
 
