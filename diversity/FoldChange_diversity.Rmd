@@ -16,18 +16,16 @@ directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Man
 ## merge with pi data
 ```{r}
 pixy <- read.table(paste0(directory,"pixy_pi_syn.0329.genewise.txt"), header=TRUE) 
-pixy <- pixy %>% filter(no_sites>=50) #
-colnames(pixy)[2:4] <- c("chrom", "start", "end")
-pixy <- inner_join(pixy, gff, by=c("chrom", "start", "end")) # 15049
-write.table(pixy, file = paste0(directory,"pixy_filtered.txt"), quote=F) 
+pixy <- pixy %>% filter(no_sites>=50) 
+colnames(pixy)[2:4] <- c("chrom", "start", "end") # 15048
+pixy <- inner_join(pixy, gff, by = c("chrom","start","end"))
 
-DE_tissue<-as.data.frame(result_tissue)
-DE_tissue <- DE_tissue %>% mutate(gene = rownames(DE_tissue))
-DE_tissue$gene <- str_sub(DE_tissue$gene, end=-4)
+#DE_tissue<-as.data.frame(result_tissue)
+DE_tissue <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/deseq2/result_tissue_full.txt", header=T)
 DE_tissue <- left_join(DE_tissue,cnt,by="gene")
 DE_tissue <- DE_tissue %>% filter(p_mean>5 | l_mean>5)
 
-FC_pixy<- inner_join(DE_tissue,pixy,by=c("gene")) # 11735
+FC_pixy<- inner_join(DE_tissue,pixy,by="gene") # 11735
 write.table(FC_pixy, file = paste0(directory,"FC_pixy_innerjoin.txt"), row.names = FALSE, quote = FALSE)
 FC_pixy <- read.table(paste0(directory,"FC_pixy_innerjoin.txt"),header = TRUE)
 FC_pixy <- FC_pixy %>% filter(padj<0.1) #11203
@@ -244,9 +242,11 @@ pixy_nonsyn <- read.table(paste0(directory,"pixy_pi_nonsyn.0329.genewise.txt"), 
 colnames(pixy_nonsyn)[2:5] <- c("chrom", "start", "end", "avg_pi_nonsyn")
 pixy_nonsyn <- pixy_nonsyn %>% filter(no_sites>=50) # 22186
 
-FC_pixy <- read.table(paste0(directory,"FC_pixy_innerjoin.txt"),header = TRUE)
+FC_pixy <- read.table(paste0(directory,"FC_pixy_innerjoin.txt"),header = TRUE) #11735
 
 statsr <- inner_join(FC_pixy, pixy_nonsyn, by=c("chrom", "start", "end")) # 11734
+write.table(statsr, file = paste0(directory,"pi_stats_rumex.txt"), row.names = FALSE, quote = FALSE)
+
 statsr <- statsr %>% dplyr::select(gene, avg_pi, avg_pi_nonsyn)
 statsr$pn_ps <-  statsr$avg_pi_nonsyn / statsr$avg_pi
 
@@ -260,10 +260,24 @@ mean(stats_genesl$pn_ps) # 0.5975733
 mean(stats_genesp$pn_ps) # 0.7590268
 
 unbiased <- FC_pixy %>% filter(padj>0.1) # 532
-stats_unbiased <- inner_join(unbiased, statsr, by="gene") 
+stats_unbiased <- inner_join(unbiased, statsr, by="gene") # 500
 mean(stats_unbiased$pn_ps) # 0.737404
-
+mean(statsr$pn_ps)
 # box plots
+sd(stats_genesl$pn_ps) # 0.5975733
+sd(stats_genesp$pn_ps) # 0.7590268
+sd(stats_unbiased$pn_ps) # 0.737404
+sd(statsr$pn_ps)
+
+```
+
+
+```{r}
+ggplot(statsr, aes(x=baseMean, y=pn_ps)) + geom_point(colour="#1F78B4", alpha=0.2) + geom_smooth(color="black") + theme_classic() + theme(text = element_text(size = 10)) + xlim(0,1000)
+
+ggplot(statsr, aes(x=l_mean, y=pn_ps)) + geom_point(colour="#1F78B4", alpha=0.2) + geom_smooth(color="black") + theme_classic() + theme(text = element_text(size = 10)) + xlim(0,1000)
+
+ggplot(statsr, aes(x=p_mean, y=pn_ps)) + geom_point(colour="#1F78B4", alpha=0.2) + geom_smooth(color="black") + theme_classic() + theme(text = element_text(size = 10)) + xlim(0,1000)
 ```
 
 

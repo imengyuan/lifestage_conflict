@@ -42,7 +42,9 @@ head(geneNames)
 # get list of interesting genes
 myInterestingGenes <- genesp$gene
 myInterestingGenes <- genesl$gene
-
+myInterestingGenes <- genes$gene
+myInterestingGenes <- pollen_bias$gene
+    
 geneList <- factor(as.integer(geneNames %in% myInterestingGenes))
 names(geneList) <- geneNames
 str(geneList)
@@ -65,6 +67,9 @@ weight01.fisher <- runTest(sampleGOdata, statistic = "fisher")
 results_table_p = GenTable(sampleGOdata, P_value=weight01.fisher, orderBy="P_value")
 
 results_table_l = GenTable(sampleGOdata, P_value=weight01.fisher, orderBy="P_value")
+
+
+write.csv(results_table_p, file=paste0(directory, "balsel_genes_GO.csv"),row.names = FALSE, quote=FALSE )
 
 write.csv(results_table_p, file=paste0(directory, "p_specific_DE_GO.csv"),row.names = FALSE, quote=FALSE )
 write.csv(results_table_l, file=paste0(directory, "l_specific_DE_GO.csv"),row.names = FALSE, quote=FALSE )

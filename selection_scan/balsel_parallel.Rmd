@@ -1,0 +1,177 @@
+---
+title: "balsel scan in parallel"
+author: "Meng"
+date: "2023-07-07"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# library(GenomicRanges)
+library(dplyr)
+library(ggplot2)
+library(patchwork)
+```
+
+
+just get the phys and gen Pos to see where are our informative sites
+and how to bin the windows
+```{r}
+pos <- read.table("/Users/yuanmeng/Dropbox/balsel/parallelization/rumex_input_DAF_May9_justPos.txt", header = T)
+head(pos)
+ggplot(pos, aes(x = physPos/1000000, y = genPos))+
+    facet_grid(.~chrom,scales="free_x", switch = "x", space = "free_x") + geom_point(size=0.5, alpha=0.5)+
+    xlab("Physical position on Chromosome (Mb)")+ylab("Genetic position (cM)")+theme_bw()+theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside",legend.position ="none")+ theme(text = element_text(size = 10))
+```
+
+```{r}
+lg1 <- filter(pos, chrom == 'LG1')
+lg2 <- filter(pos, chrom == 'LG2')
+lg3 <- filter(pos, chrom == 'LG3')
+lg4 <- filter(pos, chrom == 'LG4')
+lg5 <- filter(pos, chrom == 'LG5')
+
+summary(lg1$genPos)
+summary(lg2$genPos)
+summary(lg3$genPos)
+summary(lg4$genPos)
+summary(lg5$genPos)
+
+write.table(lg1, file="lg1.txt",quote = FALSE,row.names = FALSE)
+```
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   0.00   49.46   53.49   52.38   57.53  104.57 
+      Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  13.06   21.31   62.71   47.75   62.71   67.82 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   0.00   43.01   51.88   57.86   83.60   91.67 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+  4.839   6.989  13.172  20.956  26.345  81.451 
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   0.00   20.44   36.56   38.58   61.29   69.09 
+
+
+1cM windows for LG1 to start with
+genPos 0-1
+
+```{r}
+lg1 <- filter(pos, chrom == 'LG1')
+lg1_1 <- filter(lg1, genPos>=0 & genPos<1)
+plot <- ggplot(lg1, aes(x = genPos)) + geom_histogram(binwidth=1)
+plot
+    ```
+
+
+set step size, extract postion from histogram?
+
+## generate overlapping sliding windows
+window size 2cM, step size 1cM
+
+
+  1392591 rumex_input_DAF_Jul6_LG1.txt
+   724999 rumex_input_DAF_Jul6_LG2.txt
+  1314155 rumex_input_DAF_Jul6_LG3.txt
+   639076 rumex_input_DAF_Jul6_LG4.txt
+   874745 rumex_input_DAF_Jul6_LG5.txt
+
+   962562 rumex_scan_DAF_Jul6_LG1.txt
+   724999 rumex_scan_DAF_Jul6_LG2.txt
+   960221 rumex_scan_DAF_Jul6_LG3.txt
+   639076 rumex_scan_DAF_Jul6_LG4.txt
+   874745 rumex_scan_DAF_Jul6_LG5.txt
+   
+   385827 rumex_scan_DAF_May9.txt
+  4945567 rumex_input_DAF_May9.txt
+  
+  7743903 ceratodon_input_DAF.txt
+   127659 ceratodon_scan_DAF_real.txt
+finished: LG5, LG4, LG2
+still running LG1, LG3, whole genome, ceratodon
+
+## plot the finished LGs, still need to try parallelizing
+```{r}
+scan1 <- read.table("rumex_scan_DAF_Jul6_LG1.txt", header = T)
+scan2 <- read.table("rumex_scan_DAF_Jul6_LG2.txt", header = T)
+scan3 <- read.table("rumex_scan_DAF_Jul6_LG3.txt", header = T)
+scan4 <- read.table("rumex_scan_DAF_Jul6_LG4.txt", header = T)
+scan5 <- read.table("rumex_scan_DAF_Jul6_LG5.txt", header = T)
+scan1$chrom <- "LG1"
+scan2$chrom <- "LG2"
+scan3$chrom <- "LG3"
+scan4$chrom <- "LG4"
+scan5$chrom <- "LG5"
+
+scan <- rbind(scan1, scan2, scan3, scan4, scan5)
+scan<- scan %>% mutate(chrom = factor(chrom))
+levels(scan$chrom)
+levels(scan$chrom)<- c("A1", "A4", "A2", "XY", "A3")
+scan <- scan[order(scan$chrom),]
+scan <- scan %>% mutate(chrom = factor(chrom, levels = c("A1","A2","A3","A4","XY")))
+
+# ggplot(scan, aes(x = physPos/1000000, y = CLR))+geom_line(aes(colour="red"),size = 0.3)+
+#     facet_grid(.~chrom,scales="free_x", switch = "x", space = "free_x") + 
+#     xlab("Position on Chromosome (Mb)")+ylab("Composite Likelihood Ratio")+theme_bw()+theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside",legend.position ="none")
+
++theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside",legend.position ="none")
+```
+
+
+```{r}
+p7 <- ggplot(scan, aes(x = physPos/1000000, y = genPos))+
+    facet_grid(.~chrom,scales="free_x", switch = "x", space = "free_x") + geom_point(size=0.3, alpha=0.5)+
+    xlab("Physical position on Chromosome (Mb)")+ylab("Genetic position (cM)")+theme_bw()+theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside",legend.position ="none")+ theme(text = element_text(size = 10))
+
+p8 <- ggplot(scan, aes(x = physPos/1000000, y = CLR))+geom_point(aes(colour=log10(s_hat)),size = 0.3)+
+    facet_grid(.~chrom,scales="free_x", switch = "x", space = "free_x") + 
+    xlab("Position on Chromosome (Mb)")+ylab("Composite Likelihood Ratio")+theme_bw() +scale_color_gradient2(name = expression('log'[10]~hat(italic(a))), limits = c(-3, 9), midpoint = 0, high="red", mid = 'white', low="blue")+ theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside")+ theme(text = element_text(size = 10))
+
+
+p7 / p8 + plot_layout(guides = "collect") & theme(legend.position = "right")
+```
+
+```{r}
+ggplot(scan1, aes(x = physPos/1000000, y = CLR))+geom_point(aes(colour=log10(s_hat)),size = 0.3)+ 
+    xlab("Position on Chromosome (Mb)")+ylab("Composite Likelihood Ratio")+theme_bw() +scale_color_gradient2(name = expression('log'[10]~hat(italic(a))), limits = c(-3, 9), midpoint = 0, high="red", mid = 'white', low="blue")+ggtitle("Rumex")
+```
+
+```{r}
+scanr <- read.table("rumex_scan_DAF_May9.txt",header = T)
+scanr1 <-scan1[1:534110,]
+
+p5 <- ggplot(scanr, aes(x = physPos/1000000, y = CLR))+geom_point(aes(colour=log10(s_hat)),size = 0.3)+ 
+    xlab("Position on Chromosome (Mb)")+ylab("CLR")+theme_bw() +scale_color_gradient2(name = expression('log'[10]~hat(italic(a))), limits = c(-3, 9), midpoint = 0, high="red", mid = 'white', low="blue")+ggtitle("Rumex - whole genome, balancing sel + positive sel")
+
+p6 <- ggplot(scanr1, aes(x = physPos/1000000, y = CLR))+geom_point(aes(colour=log10(s_hat)),size = 0.3)+ 
+    xlab("Position on Chromosome (Mb)")+ylab("CLR")+theme_bw() +scale_color_gradient2(name = expression('log'[10]~hat(italic(a))), limits = c(-3, 9), midpoint = 0, high="red", mid = 'white', low="blue")+ggtitle("Rumex - A1 only, balancing sel only")
+
+p5 / p6 + plot_layout(guides = "collect") & theme(legend.position = "right")
+```
+
+
+```{r}
+quantile(scan$CLR, probs = 0.95)
+summary(scan$CLR)
+
+scan95 <- filter(scan, CLR>5.367076)
+```
+95% 
+5.367076 
+
+     Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
+   0.0000    0.0000    0.0000    1.5090    0.8816 2558.8470 
+4945561 sites tested
+240029 sites in 95% quantile
+
+ceratodon_input_DAF_chrom_real.txt
+ceratodon_scan_DAF_real.txt
+```{r}
+inputc <- read.table("ceratodon_input_DAF_chrom_real.txt",header = T)
+scanc <- read.table("ceratodon_scan_DAF_real.txt",header = T)
+scanc <- cbind(scanc, inputc)
+scanc <- scanc[,1:8]
+
+ggplot(scanc, aes(x = physPos/1000000, y = CLR))+geom_point(aes(colour=log10(s_hat)),size = 0.3)+
+    facet_grid(.~chrom,scales="free_x", switch = "x", space = "free_x") + 
+    xlab("Position on Chromosome (Mb)")+ylab("Composite Likelihood Ratio")+theme_bw() + scale_color_gradient2(name = expression('log'[10]~hat(italic(a))), limits = c(-3, 9), midpoint = 0, high="red", mid = 'white', low="blue") + ggtitle("Ceratodon")
+```
+

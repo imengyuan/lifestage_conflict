@@ -7,12 +7,32 @@ output<- output %>% select(chrom, physPos, genPos, cnt_derived, n)
 output <- output %>% filter(cnt_derived != 0)
 write.table(output, file = "ceratodon_input_DAF.txt", row.names = FALSE, quote = FALSE, sep = "\t"
 
+# nov
+library(dplyr)
+output <- read.table("ceratodon_gDNA.auto.filt.vcf.allele.cnt", header=T)
+output$cnt_derived <- ifelse(output$outgroup == "0", output$cnt_alt, output$cnt_ref)
+output$genPos <- 0
+output<- output %>% select(chrom, physPos, genPos, cnt_derived, n)
+colnames(output)[4] <- "x"
+output <- output %>% filter(x != 0)
+write.table(output, file = "ceratodon_input_DAF_chrom.txt", row.names = FALSE, quote = FALSE, sep = "\t")
+
+grep 'Chr01' ceratodon_input_DAF_chrom.txt | cut -f 2-5 > ceratodon_input_DAF_Chr01.txt
+grep 'chr02' ceratodon_input_DAF_chrom.txt> ceratodon_input_DAF_chr02.txt
+
+838285 ceratodon_input_DAF_Chr01.txt
+
+cut -f 2-5
 
 python3 /ohta2/meng.yuan/apps/BallerMixPlus/BalLeRMix+_v1.py -i ceratodon_input_DAF.txt --getSpect --spect ceratodon_spect_DAF.txt
 
 python3 /ohta2/meng.yuan/apps/BallerMixPlus/BalLeRMix+_v1.py -i ceratodon_input_DAF.txt  -o ceratodon_scan_DAF.txt --spect ceratodon_spect_DAF.txt
 
 
+#nov get 14 running and renice them
+python3 /ohta2/meng.yuan/apps/BallerMixPlus/BalLeRMix+_v1.py -i ceratodon_input_DAF_Chr01.txt  -o ceratodon_scan_DAF_Chr01.txt --spect ceratodon_spect_DAF.txt --usePhysPos --rec 0.000001
+
+python3 /ohta2/meng.yuan/apps/BallerMixPlus/BalLeRMix+_v1.py -i ceratodon_input_DAF_chr02.txt  -o ceratodon_scan_DAF_chr02.txt --spect ceratodon_spect_DAF.txt --usePhysPos --rec 0.000001
 
 
 
@@ -69,10 +89,14 @@ python /scratch/w/wrighste/yuanmeng/ceratodon/ballermix/BallerMixPlus-main/BalLe
 # ohta ceratodon
 python3 /ohta2/meng.yuan/apps/BallerMixPlus/BalLeRMix+_v1.py -i ceratodon_input_DAF.txt  -o ceratodon_scan_DAF_real.txt --spect ceratodon_spect_DAF.txt --usePhysPos --rec 0.000001
 
+# break into chroms
 
 4945567 rumex_input_DAF_May9.txt
 7743903 ceratodon_input_DAF.txt
 184834943 ceratodon_input_MAF_full.txt
+
+  7743903 ceratodon_input_DAF.txt
+   160154 ceratodon_scan_DAF_real.txt
 
 
 # ohta rumex

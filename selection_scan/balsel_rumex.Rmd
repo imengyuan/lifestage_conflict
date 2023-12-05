@@ -1,0 +1,173 @@
+---
+title: "balancing selection in rumex"
+author: "Meng"
+date: "2023-11-27"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(dplyr)
+library(ggplot2)
+library(patchwork)
+library(tidyr)
+
+```
+
+## get 95% of CLR
+```{r}
+quantile(scan$CLR, probs = 0.95)
+summary(scan$CLR)
+
+scan0 <- filter(scan, CLR>0)
+nrow(scan0)
+
+quantile(scan0$CLR, probs = 0.95)
+summary(scan0$CLR)
+
+scan95 <- filter(scan0, CLR>9.500813)
+nrow(scan95)
+write.table(scan95, file=paste0(directory,"balsel_scan95.txt"), row.names = FALSE, quote = FALSE)
+
+quantile(scan0$CLR, probs = 0.99) # 67.94058 
+
+table(scan95$chrom)[1:5]
+```
+95% 
+5.367076 
+
+     Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
+   0.0000    0.0000    0.0000    1.5090    0.8816 2558.8470 
+4945561 sites tested
+240029 sites in 95% quantile
+1621040 with non-zero CLR
+79431 sites in the 95% quantile of non-zero CLR
+31882 in genic regions, 449 genes
+155 significant pollen biased genes
+
+     95% 
+9.500813 
+     Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
+   0.0000    0.8816    1.9159    4.6037    4.2158 2558.8470 
+   
+## extract the genes in the region
+```{r}
+ggplot(scan95, aes(x = physPos/1000000, y = CLR))+geom_point(aes(colour=log10(s_hat)),size = 0.3)+
+    facet_grid(.~chrom,scales="free_x", switch = "x", space = "free_x") + 
+    xlab("Position on Chromosome (Mb)")+ylab("Composite Likelihood Ratio")+theme_bw() +scale_color_gradient2(name = expression('log'[10]~hat(italic(a))), limits = c(-3, 9), midpoint = 0, high="red", mid = 'white', low="blue")+ theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside")+ theme(text = element_text(size = 10))
+```
+
+## get the list of candidate genes
+perform GO enrichment of these candidate genes
+how many of these genes are gemetophyte-expressed / gametophyte-biased? what are the functions?
+```{r}
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/deseq2/"
+gff <- read.table(paste0(directory,"REF_LA_filtered_annotation.genes.gff"))
+colnames(gff) <- c("gene","chrom", "start", "end")
+
+gff<- gff %>% mutate(chrom = factor(chrom))
+levels(gff$chrom)
+levels(gff$chrom)[1:5]<- c("A1", "A4", "A2", "XY", "A3")
+
+#test <- scan95[1:50,]
+result <- scan95 %>% inner_join(gff, by = "chrom") %>%
+    filter(physPos >= start & physPos <= end) 
+write.table(result, file=paste0(directory,"balsel_sites.txt"), row.names = FALSE, quote = FALSE)
+result <- read.table(paste0(directory,"balsel_sites.txt"), header = T)
+
+result99 <- result %>% filter(CLR > 67.94058) # 3394
+
+mean_CLR <- result %>%
+  group_by(gene) %>%
+  summarise_at(vars(CLR), list(name = mean))
+colnames(mean_CLR)[2] <- "mean_CLR"
+test <- filter(mean_CLR, mean_CLR> 67.94058) #45
+
+genes <- as.data.frame(table(result$gene)) # 449
+colnames(genes)[1] <- "gene" 
+
+result_tissue <- read.table(paste0(directory,"result_tissue_full.txt"), header=T)
+cnt <- read.table(paste0(directory,"cnt.txt"), header=T)
+
+gene2GO <- read.table(paste0(directory,"TE_filtered.REF_LA_gene2GO.txt"))
+colnames(gene2GO) <- c("gene", "GO")
+
+full_gff <- read.csv(paste0(directory,"function.csv"))
+colnames(full_gff) <- c("gene", "function")
+
+genes <- left_join(genes, mean_CLR, by = "gene")
+genes <- left_join(genes, result_tissue, by = "gene")
+genes <- left_join(genes, cnt, by = "gene")
+genes <- left_join(genes, cnt, by = "gene")
+genes <- left_join(genes, gff, by = "gene")
+genes <- left_join(genes, gene2GO, by = "gene")
+genes <- left_join(genes, full_gff, by = "gene")
+
+
+table(genes$chrom)[1:5]
+write.table(genes, file=paste0(directory,"balsel_genes_new.csv"), row.names = FALSE, quote = FALSE)
+genes <- read.csv("/Users/yuanmeng/Downloads/balsel_genes.csv")
+genes <- genes[,c(1:16)]
+
+pollen_bias <- genes %>% filter(log2FoldChange>0 & padj < 0.1) # 155
+table(pollen_bias$chrom)[1:5]
+write.table(pollen_bias, file=paste0(directory,"balsel_pollen_bias.txt"), row.names = FALSE, quote = FALSE)
+
+#pollen_bias_GO <- pollen_bias[complete.cases(pollen_bias),]
+#write.csv(pollen_bias_GO, file=paste0(directory,"balsel_pollen_bias_GO.csv"), row.names = FALSE, quote = FALSE)
+
+```
+ A1  A4  A2  XY  A3 
+122  34 130  73  90 
+
+A1 A4 A2 XY A3 
+43  6 50 27 29 
+
+## GO rnrichment of 155 pollen biased genes
+
+
+
+## gametophyte-biased genes have higher CLR than unbiased genes?
+```{r}
+pollen_bias <- genes %>% filter(log2FoldChange>0 & padj < 0.1) # 155
+unbiased <- genes %>% filter(padj >= 0.1) # 35
+leaf_bias <- genes %>% filter(log2FoldChange<0 & padj < 0.1) # 251
+pollen_bias$category <- "pollen_bias"
+unbiased$category <- "unbiased"
+leaf_bias$category <- "leaf_bias"
+bias <- rbind(pollen_bias,unbiased,leaf_bias)
+
+ggplot(bias, aes(x=category, y=mean_CLR)) + 
+  geom_boxplot() + ylim(0,250) +theme_bw()+theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside",legend.position ="none")+ theme(text = element_text(size = 15))
+
+
+```
+
+
+```{r}
+pollen_bias <- result_tissue %>% filter(log2FoldChange>0 & padj < 0.1) # 8998
+unbiased <- result_tissue %>% filter(padj >= 0.1) # 4677
+leaf_bias <- result_tissue %>% filter(log2FoldChange<0 & padj < 0.1) # 11375
+
+unbiased <- inner_join(unbiased, gff, by = "gene")
+
+scan1$chrom <- "A1"
+test<-scan1[1:100,]
+result_unbiased <- scan1 %>% inner_join(unbiased, by = "chrom") %>%
+    filter(physPos >= start & physPos <= end) 
+```
+## contigency test
+pollen-biased, unbiased, leaf-biased
+155, 35, 251
+8998, 4677, 11375
+
+fisher's exact test
+```{r}
+bias_table <- read.csv("biased_genes.txt")
+```
+
+chi square test
+```{r}
+
+```
+
+

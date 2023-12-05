@@ -1,0 +1,119 @@
+---
+title: "pi_n and pi_s"
+author: "Meng"
+date: "2023-11-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+```
+
+
+## pi_n / pi_s and expression in ceratodon
+don't actually need pi for U and V here
+```{r}
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/deseq2/"
+
+geness <- read.table(paste0(directory,"geness.txt"), header = T)
+genesg <- read.table(paste0(directory,"genesg.txt"), header = T)
+geness_a <- geness %>% filter(chrom.x != "U" & chrom.x != "V") #1656
+genesg_a <- genesg %>% filter(chrom.x != "U" & chrom.x != "V") #1514
+
+ratio_pixy <- read.csv( "/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/diversity/ratio_pixy_innerjoin.txt")
+unbiased <- ratio_pixy %>% filter(padj>0.1) # 5281
+```
+
+use autosomal genes only
+```{r}
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/diversity/"
+pixy <- read.table(paste0(directory,"auto_nonsyn_geneWise_pi.txt"), header=TRUE) 
+pixy <- pixy[complete.cases(pixy),] # 32725
+pixy <- pixy %>% filter(no_sites >= 50) #32349
+head(pixy)
+colnames(pixy)[2:4] <- c("chrom", "start", "end")
+colnames(pixy)[5] <- "avg_pi_nonsyn"
+
+ratio_pixy <- inner_join(ratio_pixy, pixy, by=c("pop", "chrom", "start", "end")) # 21084 (18615 no UV)
+ratio_pixy$pn_ps <-  ratio_pixy$avg_pi_nonsyn / ratio_pixy$avg_pi
+
+ratio_pixy$weighted_pn_ps <-  (ratio_pixy$avg_pi_nonsyn/ratio_pixy$no_sites.x) / (ratio_pixy$avg_pi/ratio_pixy$no_sites.x)
+
+
+#stats <- ratio_pixy %>% select(gene, avg_pi, avg_pi_nonsyn, pn_ps)
+ratio_pixy <- ratio_pixy[complete.cases(ratio_pixy),]
+ratio_pixy <- ratio_pixy %>% filter(pn_ps > 0) %>% filter(is.finite(pn_ps)) # 16346 (15982)
+write.csv(ratio_pixy, file = paste0(directory,"ceratodon_pi_n_pi_s.csv"), row.names = FALSE, quote = FALSE)
+
+genesg_a <- as.data.frame(genesg_a[,1])
+colnames(genesg_a) <- "gene"
+
+stats_genesg_a <- inner_join(genesg_a, ratio_pixy, by="gene")
+stats_geness_a <- inner_join(geness_a, ratio_pixy, by="gene")
+stats_unbiased <- inner_join(unbiased, ratio_pixy, by="gene") # 3884
+
+mean(stats_genesg_a$pn_ps) # 0.4412011
+mean(stats_geness_a$pn_ps) # 0.523926
+mean(stats_unbiased$pn_ps) # 0.4682432
+mean(ratio_pixy$pn_ps) # 0.4337559
+
+sd(stats_genesg_a$pn_ps)
+sd(stats_geness_a$pn_ps)
+sd(stats_unbiased$pn_ps)
+sd(ratio_pixy$pn_ps)
+
+mean(stats_genesg_a$weighted_pn_ps) # 0.4412011
+mean(stats_geness_a$weighted_pn_ps) # 0.523926
+mean(stats_unbiased$weighted_pn_ps) # 0.4682432
+mean(ratio_pixy$weighted_pn_ps) # 0.4337559
+
+sd(stats_genesg_a$weighted_pn_ps)
+sd(stats_geness_a$weighted_pn_ps)
+sd(stats_unbiased$weighted_pn_ps)
+sd(ratio_pixy$weighted_pn_ps)
+```
+
+
+## pi_n / pi_s and expression in rumex
+
+```{r}
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/deseq2/"
+genesl <- read.table(paste0(directory,"genesl.bed"))
+genesp <- read.table(paste0(directory,"genesp.bed"))
+colnames(genesl) <-c("chrom", "start", "end")
+colnames(genesp) <-c("chrom", "start", "end")
+
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/pixy/"
+FC_pixy <- read.table(paste0(directory,"FC_pixy_innerjoin.txt"),header = TRUE) #11735
+pixy_nonsyn <- read.table(paste0(directory,"pixy_pi_nonsyn.0329.genewise.txt"), header=TRUE) #27026
+unbiasedr <- FC_pixy %>% filter(padj>0.1) # 532
+```
+
+
+```{r}
+colnames(pixy_nonsyn)[2:5] <- c("chrom", "start", "end", "avg_pi_nonsyn")
+pixy_nonsyn <- pixy_nonsyn %>% filter(no_sites>=50) # 22186
+statsr <- inner_join(FC_pixy, pixy_nonsyn, by=c("pop", "chrom", "start", "end")) # 11734
+statsr$pn_ps <-  statsr$avg_pi_nonsyn / statsr$avg_pi
+
+statsr <- statsr[complete.cases(statsr),]
+statsr <- statsr %>% filter(pn_ps > 0) %>% filter(is.finite(pn_ps)) # 10834
+write.csv(statsr, file = paste0(directory,"rumex_pi_n_pi_s.csv"), row.names = FALSE, quote = FALSE)
+
+stats_genesl <- inner_join(genesl, statsr, by=c("chrom", "start", "end"))
+stats_genesp <- inner_join(genesp, statsr, by=c("chrom", "start", "end"))
+stats_unbiasedr <- inner_join(unbiasedr, statsr, by="gene") # 500
+
+mean(stats_genesl$pn_ps) # 0.5975733
+mean(stats_genesp$pn_ps) # 0.7590268
+mean(stats_unbiasedr$pn_ps) # 0.737404
+mean(statsr$pn_ps)
+
+sd(stats_genesl$pn_ps) # 0.5975733
+sd(stats_genesp$pn_ps) # 0.7590268
+sd(stats_unbiasedr$pn_ps) # 0.737404
+sd(statsr$pn_ps)
+
+```
+
