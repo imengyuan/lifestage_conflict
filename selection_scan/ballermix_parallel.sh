@@ -124,10 +124,15 @@ cat chrom08_list.txt | parallel --joblog runtask.log --resume 'python /scratch/w
 
 
 
+# chrom 12, 02 done
+
+cat chrom12_list.txt | parallel -j 10 'python3 /ohta2/meng.yuan/apps/BallerMixPlus/BalLeRMix+_v1.py -i ceratodon_input_DAF_Chr12_{}.txt -o ceratodon_scan_DAF_Chr12_{}.txt --spect ceratodon_spect_DAF.txt --usePhysPos --rec 0.000001 --findBal' > out.txt
+
+cat chrom02_list.txt | parallel -j 20 'python3 /ohta2/meng.yuan/apps/BallerMixPlus/BalLeRMix+_v1.py -i ceratodon_input_DAF_Chr02_{}.txt -o ceratodon_scan_DAF_Chr02_{}.txt --spect ceratodon_spect_DAF.txt --usePhysPos --rec 0.000001 --findBal' > out.txt
 
 
-
-
+# chrom01
+cat chrom01_list.txt | parallel -j 20 'python3 /ohta2/meng.yuan/apps/BallerMixPlus/BalLeRMix+_v1.py -i ceratodon_input_DAF_Chr01_{}.txt -o ceratodon_scan_DAF_Chr01_{}.txt --spect ceratodon_spect_DAF.txt --usePhysPos --rec 0.000001 --findBal' > out.txt
 
 
 

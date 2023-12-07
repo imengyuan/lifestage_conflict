@@ -133,6 +133,8 @@ DE_tissue <- DE_tissue[,c(7,1:6)]
 head(DE_tissue) 
 
 write.table(DE_tissue, file = paste0(directory,"result_tissue_full.txt"), row.names = FALSE, quote = FALSE)
+DE_tissue <- read.table(paste0(directory,"result_tissue_full.txt"), header=T) # 25050
+cnt <- read.table(paste0(directory,"cnt.txt"), header=T)
 
 DE_tissue <- left_join(DE_tissue,cnt,by="gene")
 DE_tissue <- DE_tissue %>% filter(p_mean>5 | l_mean>5) # 17982
@@ -144,8 +146,39 @@ DE_tissue_pollen <-  DE_tissue %>% filter(log2FoldChange>0) # 6823
 DE_tissue_leaf <-  DE_tissue %>% filter(log2FoldChange<0) # 10301
 head(DE_tissue_pollen)
 DE_tissue$category <- "DE"
-write.table(DE_c, file = paste0(directory,"DE_genes.txt"), row.names = FALSE, quote = FALSE)
+#write.table(DE_c, file = paste0(directory,"DE_genes.txt"), row.names = FALSE, quote = FALSE)
+
+# number of biased genes
+gff <- read.table(paste0(directory,"REF_LA_filtered_annotation.genes.gff"))
+colnames(gff) <- c("gene","chrom", "start", "end")
+DE_tissue <- inner_join(DE_tissue, gff, by = "gene")
+pollen <- DE_tissue %>% filter(log2FoldChange > 0 & padj < 0.1) # 8998 - 6823
+unbias <- DE_tissue %>% filter(padj >= 0.1) # 4677 858
+leaf <- DE_tissue %>% filter(log2FoldChange < 0 & padj < 0.1) # 11375 - 10301
+as.data.frame(table(pollen$chrom))
+as.data.frame(table(unbias$chrom))
+as.data.frame(table(leaf$chrom))
+
+write.table(pollen, file = paste0(directory,"pollen_biased_p01.txt"), row.names = FALSE, quote = FALSE)
+write.table(leaf, file = paste0(directory,"leaf_biased_p01.txt"), row.names = FALSE, quote = FALSE)
+write.table(unbias, file = paste0(directory,"unbiased_p01.txt"), row.names = FALSE, quote = FALSE)
+
+pollen <- DE_tissue %>% filter(log2FoldChange > 1 & padj < 0.1) # 7680 5635
+leaf <- DE_tissue %>% filter(log2FoldChange < -1 & padj < 0.1) # 9496 8653
+as.data.frame(table(pollen$chrom))
+as.data.frame(table(leaf$chrom))
+write.table(pollen, file = paste0(directory,"pollen_biased_p01_FC2.txt"), row.names = FALSE, quote = FALSE)
+write.table(leaf, file = paste0(directory,"leaf_biased_p01_FC2.txt"), row.names = FALSE, quote = FALSE)
 ```
+
+## PCA of genes
+
+```{r}
+vsdata <- vst(dds_tissue, blind=FALSE)
+# pdf("all_pca.pdf")
+plotPCA(vsdata, intgroup=c("tissue")) + geom_text(aes(label=name),vjust=2)
+```
+
 
 ## expression quantiles and specific genes
 ```{r}
@@ -180,6 +213,8 @@ quantiles of expression ratio + DE genes
 also require the g-specific genes have g_mean>5
 s-specific genes have s_mean > 5
 ```{r}
+DE_tissue <- DE_tissue %>% filter(p_mean>5 | l_mean>5) # 17982
+DE_tissue <- DE_tissue %>% filter(padj<0.1) # 17124
 quantile(DE_tissue$p_l_ratio, probs = c(0.1, 0.9)) # 0.08399402 82.27061646
 nrow(DE_tissue[DE_tissue$p_l_ratio <= 0.08399402,]) # 1713
 nrow(DE_tissue[DE_tissue$p_l_ratio >= 82.27061646,]) # 1713
@@ -191,11 +226,15 @@ DE_tissue <- left_join(DE_tissue, gff, by="gene")
 
 genesl <- DE_tissue[DE_tissue$p_l_ratio <= 0.08399402,]
 genesp <- DE_tissue[DE_tissue$p_l_ratio >= 82.27061646,] 
+as.data.frame(table(genesl$chrom))
+as.data.frame(table(genesp$chrom))
 
 genesl <- genesl[genesl$log2FoldChange <= -2,]
 genesp <- genesp[genesp$log2FoldChange >= 2,]
-nrow(genesl[genesl$log2FoldChange <= -2,]) 
-nrow(genesp[genesp$log2FoldChange >= 2,]) 
+
+write.table(genesl, file = paste0(directory,"genesl.txt"), sep = "\t", row.names = FALSE, quote = FALSE)
+write.table(genesp, file = paste0(directory,"genesp.txt"), sep = "\t", row.names = FALSE, quote = FALSE)
+
 write.table(genesl[, 13:15], file = paste0(directory,"genesl.bed"), sep = "\t", row.names = FALSE, col.names = FALSE, quote = FALSE)
 write.table(genesp[, 13:15], file = paste0(directory,"genesp.bed"), sep = "\t", row.names = FALSE, col.names = FALSE, quote = FALSE)
 # unbiased<-genes[genes$p_l_ratio>0.95 & genes$p_l_ratio<1.05,]
@@ -228,17 +267,6 @@ ggplot(genes_specific, aes(x=baseMean,fill=category))+  theme_bw()+geom_histogra
 #+ylim(0,250)
 ```
 
-```{r}
-genesl_final1 <- genesl %>% filter(mean>=5) #
-#genesl_final2 <- genesl %>% filter(mean<=20)
-
-genesp_final1 <- genesp %>% filter(mean>=5)
-
-directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/deseq2/"
-write.table(genesl_final1[,c(13:15)],file=paste0(directory,"l_specific_final1.bed"),sep="\t",row.names = FALSE, col.names = FALSE, quote=FALSE)
-write.table(genesp_final1[,c(13:15)],file=paste0(directory,"p_specific_final1.bed"),sep="\t",row.names = FALSE, col.names = FALSE, quote=FALSE)
-
-```
 
 
 

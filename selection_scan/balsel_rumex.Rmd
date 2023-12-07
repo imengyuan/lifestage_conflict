@@ -10,7 +10,7 @@ library(dplyr)
 library(ggplot2)
 library(patchwork)
 library(tidyr)
-
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/balsel/"
 ```
 
 ## get 95% of CLR
@@ -160,14 +160,88 @@ pollen-biased, unbiased, leaf-biased
 155, 35, 251
 8998, 4677, 11375
 
-fisher's exact test
+contigency table
 ```{r}
-bias_table <- read.csv("biased_genes.txt")
+bias_table <- read.csv(paste0(directory,"biased_genes.txt"))
+bias_table
+row.names(bias_table) <- c("balancing_sel", "whole_genome")
+tablep <- bias_table[,2:3]
+tablel <- bias_table[,3:4]
+table <- bias_table[,c(2,4)]
+
+
+cnts <- read.table(paste0(directory,"biased_cnts.txt"), header =T)
+cnts <- cnts[1:4,]
+hcols <- c("black",  "white")
+ggplot(cnts) +
+geom_col(aes(x = category, y = count, fill = lifestage), position = "fill", colour ="black")  + xlab("") + ylab("Proportion of specific genes") + theme_light() + scale_fill_manual(values = hcols) + theme(axis.text=element_text(size=18), axis.title=element_text(size=18)) + guides(fill = guide_legend(override.aes = list(size = 12)))
+
+ggplot(cnts) +
+geom_col(aes(x = category, y = count, fill = lifestage), colour ="black")  + xlab("") + ylab("Number of specific genes") + theme_light() + scale_fill_manual(values = hcols) + theme(axis.text=element_text(size=18), axis.title=element_text(size=18)) + guides(fill = guide_legend(override.aes = list(size = 12)))
 ```
+
+
 
 chi square test
 ```{r}
-
+chisq.test(tablep)
+chisq.test(tablel)
+chisq.test(table)
 ```
+	Pearson's Chi-squared test with Yates' continuity correction
 
+data:  tablep
+X-squared = 20.102, df = 1, p-value = 7.342e-06
+
+
+	Pearson's Chi-squared test with Yates' continuity correction
+
+data:  tablel
+X-squared = 38.28, df = 1, p-value = 6.128e-10
+
+
+	Pearson's Chi-squared test with Yates' continuity correction
+
+data:  table
+X-squared = 5.5527, df = 1, p-value = 0.01845
+
+
+fisher's exact test
+```{r}
+fisher.test(tablep)
+fisher.test(tablel)
+fisher.test(table)
+```
+	Fisher's Exact Test for Count Data
+
+data:  tablep
+p-value = 2.098e-06
+alternative hypothesis: true odds ratio is not equal to 1
+95 percent confidence interval:
+ 1.583400 3.430144
+sample estimates:
+odds ratio 
+  2.301773 
+
+	Fisher's Exact Test for Count Data
+
+data:  tablel
+p-value = 2.332e-11
+alternative hypothesis: true odds ratio is not equal to 1
+95 percent confidence interval:
+ 0.2306425 0.4852674
+sample estimates:
+odds ratio 
+ 0.3391736 
+ 
+	Fisher's Exact Test for Count Data
+
+data:  table
+p-value = 0.01757
+alternative hypothesis: true odds ratio is not equal to 1
+95 percent confidence interval:
+ 0.6335969 0.9594397
+sample estimates:
+odds ratio 
+ 0.7806725 
 
