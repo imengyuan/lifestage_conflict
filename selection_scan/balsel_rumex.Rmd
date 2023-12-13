@@ -71,6 +71,7 @@ levels(gff$chrom)[1:5]<- c("A1", "A4", "A2", "XY", "A3")
 #test <- scan95[1:50,]
 result <- scan95 %>% inner_join(gff, by = "chrom") %>%
     filter(physPos >= start & physPos <= end) 
+
 write.table(result, file=paste0(directory,"balsel_sites.txt"), row.names = FALSE, quote = FALSE)
 result <- read.table(paste0(directory,"balsel_sites.txt"), header = T)
 

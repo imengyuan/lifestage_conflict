@@ -1,0 +1,50 @@
+---
+title: "FC diversity and bootstrapping"
+author: "Meng"
+date: "2023-12-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## weighted average pi_s within each bin
+```{r}
+calculate_pi <- function(data) {
+  data <- data %>%
+    mutate(pi_syn = avg_pi * no_sites)
+  
+  sum_pi_syn <- sum(data$pi_syn)
+  sum_no_sites <- sum(data$no_sites)
+  weighted_pi_syn <- sum_pi_syn / sum_no_sites
+
+  return(weighted_pi_syn)
+}
+
+data = data[sample(nrow(data), nrow(data), replace=TRUE), ]
+
+
+
+
+pi_values <- vgroup %>%
+  group_by(tag) %>%
+  summarise(weighted_pi_syn = calculate_pi(cur_data()))
+write.table(pi_values, file=paste0(directory,"pi_values_weighted.txt"), sep = "\t",row.names = FALSE, quote = FALSE)
+
+pi_values <- read.table(paste0(directory,"pi_values_weighted.txt"), header=T)
+
+ggplot(data = pi_values, mapping = aes(x=log2FoldChange, y=weighted_pi_s)) + 
+    geom_point()+
+    theme_classic() + theme(text = element_text(size = 12))
+
+ggplot(data = pi_values, mapping = aes(x=log2FoldChange, y=pi_s_mean)) + 
+    geom_point()+ 
+    theme_classic() + theme(text = element_text(size = 12))
+
+table(vgroup$tag)
+```
+ bootstrap 1000 times with in bins
+
+

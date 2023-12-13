@@ -15,7 +15,6 @@ library(dplyr)
 
 ```{r}
 directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/diversity/"
-
 ratio_pixy <- read.csv(paste0(directory,"ratio_pixy_innerjoin.txt"))
 pixy <- read.table(paste0(directory,"auto_nonsyn_geneWise_pi.txt"), header=TRUE) 
 pixy <- pixy[complete.cases(pixy),] # 32725
@@ -24,20 +23,19 @@ head(pixy)
 colnames(pixy)[2:5] <- c("chrom", "start", "end","avg_pi_nonsyn")
 
 ratio_pixy <- inner_join(ratio_pixy, pixy, by=c("pop", "chrom", "start", "end")) #  (18615 no UV)
-ratio_pixy$pn_ps <-  ratio_pixy$avg_pi_nonsyn / ratio_pixy$avg_pi
-
-#stats <- ratio_pixy %>% select(gene, avg_pi, avg_pi_nonsyn, pn_ps)
-ratio_pixy <- ratio_pixy[complete.cases(ratio_pixy),]
-ratio_pixy <- ratio_pixy %>% filter(pn_ps > 0) %>% filter(is.finite(pn_ps)) # 16346 (15982)
 write.csv(ratio_pixy, file = paste0(directory,"ceratodon_pi_n_pi_s.csv"), row.names = FALSE, quote = FALSE)
 stats  <- read.csv(paste0(directory,"ceratodon_pi_n_pi_s.csv"))
 
 geness_a <- geness_a %>% dplyr::select(1)
 genesg_a <- genesg_a %>% dplyr::select(1)
 unbiased <- unbiased %>% dplyr::select(1)
-stats_genesg_a <- inner_join(genesg_a, stats, by="gene") # 1091
-stats_geness_a <- inner_join(geness_a, stats, by="gene") # 1049
-stats_unbiased <- inner_join(unbiased, stats, by="gene") # 3715
+stats_genesg_a <- inner_join(genesg_a, stats, by="gene") # 1091 1217
+stats_geness_a <- inner_join(geness_a, stats, by="gene") # 1049 1232
+stats_unbiased <- inner_join(unbiased, stats, by="gene") # 3715 4319
+
+write.table(stats_genesg_a, file = paste0(directory,"stats_genesg_a.txt"), sep = "\t", row.names = FALSE, quote = FALSE)
+write.table(stats_geness_a, file = paste0(directory,"stats_geness_a.txt"), sep = "\t", row.names = FALSE, quote = FALSE)
+write.table(stats_unbiased, file = paste0(directory,"stats_unbiased.txt"), sep = "\t", row.names = FALSE, quote = FALSE)
 ```
 
 
@@ -83,7 +81,7 @@ pi_unbiased <- calculate_pi(stats_unbiased)
 pi_unbiased$category <- "unbiased" 
 
 pi_c <- rbind(pi_genesg_a, pi_geness_a, pi_unbiased)
-write.table(pi_c, file = paste0(directory,"weighted_pi_c.txt"), row.names = FALSE, quote = FALSE)
+write.table(pi_c, file = paste0(directory,"weighted_pi_c.txt"), row.names = FALSE, sep = "\t", quote = FALSE)
 
 ```
 
@@ -104,120 +102,80 @@ pixy_nonsyn <- read.table(paste0(directory,"pixy_pi_nonsyn.0329.genewise.txt"), 
 colnames(pixy_nonsyn)[2:5] <- c("chrom", "start", "end", "avg_pi_nonsyn")
 pixy_nonsyn <- pixy_nonsyn %>% filter(no_sites>=50) # 22186
 
-
 statsr <- inner_join(FC_pixy, pixy_nonsyn, by=c("pop", "chrom", "start", "end")) # 11734
-statsr$pn_ps <-  statsr$avg_pi_nonsyn / statsr$avg_pi
-
-statsr <- statsr[complete.cases(statsr),]
-statsr <- statsr %>% filter(pn_ps > 0) %>% filter(is.finite(pn_ps)) # 10834
 write.csv(statsr, file = paste0(directory,"rumex_pi_n_pi_s.csv"), row.names = FALSE, quote = FALSE)
 statsr <- read.csv(paste0(directory,"rumex_pi_n_pi_s.csv"))
 
 genesl <- genesl %>% dplyr::select(1)
 genesp <- genesp %>% dplyr::select(1)
 unbias <- unbias %>% dplyr::select(1)
-statsr_genesl <- inner_join(genesl, statsr, by="gene") # 1076
-statsr_genesp <- inner_join(genesp, statsr, by="gene") # 869
-statsr_unbiased <- inner_join(unbias, statsr, by="gene") # 500
+statsr_genesl <- inner_join(genesl, statsr, by="gene") # 1076 1149
+statsr_genesp <- inner_join(genesp, statsr, by="gene") # 869 920
+statsr_unbiased <- inner_join(unbias, statsr, by="gene") # 500 532
 
-write.table(statsr_genesl, file = paste0(directory,"statsr_genesl.txt"), sep = "\t", row.names = FALSE, col.names = FALSE, quote = FALSE)
-write.table(statsr_genesp, file = paste0(directory,"statsr_genesp.txt"), sep = "\t", row.names = FALSE, col.names = FALSE, quote = FALSE)
-write.table(statsr_unbiased, file = paste0(directory,"statsr_unbiased.txt"), sep = "\t", row.names = FALSE, col.names = FALSE, quote = FALSE)
+write.table(statsr_genesl, file = paste0(directory,"statsr_genesl.txt"), sep = "\t", row.names = FALSE, quote = FALSE)
+write.table(statsr_genesp, file = paste0(directory,"statsr_genesp.txt"), sep = "\t", row.names = FALSE, quote = FALSE)
+write.table(statsr_unbiased, file = paste0(directory,"statsr_unbiased.txt"), sep = "\t", row.names = FALSE, quote = FALSE)
 ```
 
 
 ## calculate weighted average of pi_n and pi_s
 
-unbiased
 ```{r}
-statsr_unbiased  <- statsr_unbiased %>% mutate(pi_syn = avg_pi * no_sites.x) %>% mutate(pi_nonsyn = avg_pi_nonsyn * no_sites.y) 
+pi_genesp <- calculate_pi(statsr_genesp)
+pi_genesp$category <- "genesp" 
+    
+pi_genesl <- calculate_pi(statsr_genesl)
+pi_genesl$category <- "genesl" 
 
-sum(statsr_unbiased$pi_syn)
-sum(statsr_unbiased$pi_nonsyn)
+pi_unbiased <- calculate_pi(statsr_unbiased)
+pi_unbiased$category <- "unbiased" 
 
-sum(statsr_unbiased$no_sites.x)
-sum(statsr_unbiased$no_sites.y)
-
-weighted_pi_syn <- sum(statsr_unbiased$pi_syn) / sum(statsr_unbiased$no_sites.x)
-weighted_pi_nonsyn <- sum(statsr_unbiased$pi_nonsyn) / sum(statsr_unbiased$no_sites.y)
-
-mean(statsr_unbiased$avg_pi)
-mean(statsr_unbiased$avg_pi_nonsyn)
-weighted_pi_syn
-weighted_pi_nonsyn
-weighted_pi_nonsyn / weighted_pi_syn # 0.3585932
+pi_r <- rbind(pi_genesp, pi_genesl, pi_unbiased)
+write.table(pi_r, file = paste0(directory,"weighted_pi_r.txt"), row.names = FALSE, sep = "\t", quote = FALSE)
 ```
-[1] 583.5619
-[1] 829.2925
-[1] 70799
-[1] 280573
-[1] 0.009109239
-[1] 0.003409098
-[1] 0.008242517
-[1] 0.00295571
-[1] 0.3585932
 
-pollen
+
+
+## count SNPs
 ```{r}
-statsr_genesp  <- statsr_genesp %>% mutate(pi_syn = avg_pi * no_sites.x) %>% mutate(pi_nonsyn = avg_pi_nonsyn * no_sites.y) 
+snp <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/diversity/SNP_conuts.txt", header = T)
+rumex <- snp[1:2,]
+rownames(rumex) <- rumex[,2]
+rumex <- rumex[,3:4]
+fisher.test(rumex)
 
-sum(statsr_genesp$pi_syn)
-sum(statsr_genesp$pi_nonsyn)
+ceratodon <- snp[3:4,]
+rownames(ceratodon) <- ceratodon[,2]
+ceratodon <- ceratodon[,3:4]
+fisher.test(ceratodon)
 
-sum(statsr_genesp$no_sites.x)
-sum(statsr_genesp$no_sites.y)
-
-weighted_pi_syn <- sum(statsr_genesp$pi_syn) / sum(statsr_genesp$no_sites.x)
-weighted_pi_nonsyn <- sum(statsr_genesp$pi_nonsyn) / sum(statsr_genesp$no_sites.y)
-
-mean(statsr_genesp$avg_pi)
-mean(statsr_genesp$avg_pi_nonsyn)
-weighted_pi_syn
-weighted_pi_nonsyn
-weighted_pi_nonsyn / weighted_pi_syn 
 ```
-[1] 1070.531
-[1] 1562.955
-[1] 111795
-[1] 453895
-[1] 0.01006183
-[1] 0.00396235
-[1] 0.009575843
-[1] 0.003443429
-[1] 0.3595954
+data:  rumex
+p-value = 3.795e-13
+alternative hypothesis: true odds ratio is not equal to 1
+95 percent confidence interval:
+ 0.8518378 0.9121155
+sample estimates:
+odds ratio 
+ 0.8814661 
+ 
+data:  ceratodon
+p-value = 0.2117
+alternative hypothesis: true odds ratio is not equal to 1
+95 percent confidence interval:
+ 0.949515 1.011663
+sample estimates:
+odds ratio 
+ 0.9800688
 
-leaf
 ```{r}
-statsr_genesl  <- statsr_genesl %>% mutate(pi_syn = avg_pi * no_sites.x) %>% mutate(pi_nonsyn = avg_pi_nonsyn * no_sites.y) 
+rumex_cnt <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/diversity/SNP_conuts2.txt", header = T)
+hcols <- c("black",  "white")
+ggplot(rumex_cnt) +
+geom_col(aes(x = lifestage, y = count, fill = category), colour ="black")  + xlab("") + ylab("") + theme_light() + scale_fill_manual(values = hcols) + theme(axis.text=element_text(size=18), axis.title=element_text(size=18)) + guides(fill = guide_legend(override.aes = list(size = 12)))
 
-sum(statsr_genesl$pi_syn)
-sum(statsr_genesl$pi_nonsyn)
+ggplot(rumex_cnt) +geom_col(aes(x = lifestage, y = count, fill = category),position = "fill", colour ="black")  + xlab("") + ylab("") + theme_light() + scale_fill_manual(values = hcols) + theme(axis.text=element_text(size=18), axis.title=element_text(size=18)) + guides(fill = guide_legend(override.aes = list(size = 12)))
 
-sum(statsr_genesl$no_sites.x)
-sum(statsr_genesl$no_sites.y)
-
-weighted_pi_syn <- sum(statsr_genesl$pi_syn) / sum(statsr_genesl$no_sites.x)
-weighted_pi_nonsyn <- sum(statsr_genesl$pi_nonsyn) / sum(statsr_genesl$no_sites.y)
-
-mean(statsr_genesl$avg_pi)
-mean(statsr_genesl$avg_pi_nonsyn)
-weighted_pi_syn
-weighted_pi_nonsyn
-weighted_pi_nonsyn / weighted_pi_syn 
 ```
-[1] 1274.565
-[1] 1522.433
-[1] 152122
-[1] 583728
-[1] 0.008923739
-[1] 0.002860056
-[1] 0.008378568
-[1] 0.002608121
-[1] 0.3112848
-
-
-
-
-
-
 

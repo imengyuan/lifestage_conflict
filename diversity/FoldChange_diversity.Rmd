@@ -13,6 +13,7 @@ library(rattle)
 library("gridExtra")
 directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/pixy/"
 ```
+
 ## merge with pi data
 ```{r}
 pixy <- read.table(paste0(directory,"pixy_pi_syn.0329.genewise.txt"), header=TRUE) 
@@ -22,13 +23,13 @@ pixy <- inner_join(pixy, gff, by = c("chrom","start","end"))
 
 #DE_tissue<-as.data.frame(result_tissue)
 DE_tissue <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/deseq2/result_tissue_full.txt", header=T)
-DE_tissue <- left_join(DE_tissue,cnt,by="gene")
+#DE_tissue <- left_join(DE_tissue,cnt,by="gene")
 DE_tissue <- DE_tissue %>% filter(p_mean>5 | l_mean>5)
 
-FC_pixy<- inner_join(DE_tissue,pixy,by="gene") # 11735
+FC_pixy<- inner_join(DE_tissue,pixy,by="gene") # 11734
 write.table(FC_pixy, file = paste0(directory,"FC_pixy_innerjoin.txt"), row.names = FALSE, quote = FALSE)
 FC_pixy <- read.table(paste0(directory,"FC_pixy_innerjoin.txt"),header = TRUE)
-FC_pixy <- FC_pixy %>% filter(padj<0.1) #11203
+#FC_pixy <- FC_pixy %>% filter(padj<0.1) #11203
 ```
 
 
@@ -88,8 +89,8 @@ leaf
 
 ## plot
 ```{r}
-v <- FC_pixy %>% select(log2FoldChange,avg_pi) 
-vgroup <- as_tibble(v) %>% 
+v <- FC_pixy %>% dplyr::select(log2FoldChange,avg_pi) 
+vgroup <- as_tibble(FC_pixy) %>% 
   mutate(tag = case_when(
     log2FoldChange > 0 & log2FoldChange <= 1.02 ~ tags[5],
     log2FoldChange > 1.02 & log2FoldChange <= 2.54 ~ tags[6],
@@ -236,48 +237,102 @@ Residual standard error: 0.007614 on 11733 degrees of freedom
 Multiple R-squared:  0.003885,	Adjusted R-squared:  0.0038 
 F-statistic: 45.76 on 1 and 11733 DF,  p-value: 1.399e-11
 
-## pi_n / pi_s and expression
+##
 ```{r}
-pixy_nonsyn <- read.table(paste0(directory,"pixy_pi_nonsyn.0329.genewise.txt"), header=TRUE) #27026
-colnames(pixy_nonsyn)[2:5] <- c("chrom", "start", "end", "avg_pi_nonsyn")
-pixy_nonsyn <- pixy_nonsyn %>% filter(no_sites>=50) # 22186
+calculate_pi <- function(data) {
+  data <- data %>%
+    mutate(pi_syn = avg_pi * no_sites)
+  
+  sum_pi_syn <- sum(data$pi_syn)
+  sum_no_sites <- sum(data$no_sites)
+  weighted_pi_syn <- sum_pi_syn / sum_no_sites
 
-FC_pixy <- read.table(paste0(directory,"FC_pixy_innerjoin.txt"),header = TRUE) #11735
+  return(weighted_pi_syn)
+}
 
-statsr <- inner_join(FC_pixy, pixy_nonsyn, by=c("chrom", "start", "end")) # 11734
-write.table(statsr, file = paste0(directory,"pi_stats_rumex.txt"), row.names = FALSE, quote = FALSE)
+pi_values <- vgroup %>%
+  group_by(tag) %>%
+  summarise(weighted_pi_syn = calculate_pi(cur_data()))
+write.table(pi_values, file=paste0(directory,"pi_values_weighted.txt"), sep = "\t",row.names = FALSE, quote = FALSE)
 
-statsr <- statsr %>% dplyr::select(gene, avg_pi, avg_pi_nonsyn)
-statsr$pn_ps <-  statsr$avg_pi_nonsyn / statsr$avg_pi
+pi_values <- read.table(paste0(directory,"pi_values_weighted.txt"), header=T)
 
-statsr <- statsr[complete.cases(statsr),]
-statsr <- statsr %>% filter(pn_ps > 0) %>% filter(is.finite(pn_ps)) # 10834
+ggplot(data = pi_values, mapping = aes(x=log2FoldChange, y=weighted_pi_s)) + 
+    geom_point()+
+    theme_classic() + theme(text = element_text(size = 12))
 
-stats_genesl <- inner_join(genesl, statsr, by="gene")
-stats_genesp <- inner_join(genesp, statsr, by="gene")
+ggplot(data = pi_values, mapping = aes(x=log2FoldChange, y=pi_s_mean)) + 
+    geom_point()+ 
+    theme_classic() + theme(text = element_text(size = 12))
 
-mean(stats_genesl$pn_ps) # 0.5975733
-mean(stats_genesp$pn_ps) # 0.7590268
+table(vgroup$tag)
+```
+ bootstrap 1000 times with in bins
 
-unbiased <- FC_pixy %>% filter(padj>0.1) # 532
-stats_unbiased <- inner_join(unbiased, statsr, by="gene") # 500
-mean(stats_unbiased$pn_ps) # 0.737404
-mean(statsr$pn_ps)
-# box plots
-sd(stats_genesl$pn_ps) # 0.5975733
-sd(stats_genesp$pn_ps) # 0.7590268
-sd(stats_unbiased$pn_ps) # 0.737404
-sd(statsr$pn_ps)
 
+## pi_n / pi_s and expression bias
+removed zero in pi_s pi_n
+```{r}
+tags <- c("(,-3.02]","(-3.02,-2.16]", "(-2.16,-1.27]", "(-1.27,0)", "(0,1.02]", "(1.02,2.54]","(2.54,5.36]", "(5.36,)")
+statsr_group <- as_tibble(statsr) %>% 
+  mutate(tag = case_when(
+    log2FoldChange > 0 & log2FoldChange <= 1.02 ~ tags[5],
+    log2FoldChange > 1.02 & log2FoldChange <= 2.54 ~ tags[6],
+    log2FoldChange > 2.54 & log2FoldChange <= 5.36 ~ tags[7],
+    log2FoldChange > 5.36   ~ tags[8],
+    
+    log2FoldChange <= -3.02 ~ tags[1],
+    log2FoldChange > -3.02 & log2FoldChange <= -2.16 ~ tags[2],
+    log2FoldChange > -2.16 & log2FoldChange <= -1.27 ~ tags[3],
+    log2FoldChange > -1.27 & log2FoldChange < 0 ~ tags[4]
+    ))
+
+calculate_pi <- function(data) {
+  data <- data %>%
+    mutate(pi_syn = avg_pi * no_sites.x) %>%
+    mutate(pi_nonsyn = avg_pi_nonsyn * no_sites.y)
+  sum_pi_syn <- sum(data$pi_syn)
+  sum_pi_nonsyn <- sum(data$pi_nonsyn)
+  sum_no_sites_x <- sum(data$no_sites.x)
+  sum_no_sites_y <- sum(data$no_sites.y)
+  weighted_pi_syn <- sum_pi_syn / sum_no_sites_x
+  weighted_pi_nonsyn <- sum_pi_nonsyn / sum_no_sites_y
+  mean_avg_pi <- mean(data$avg_pi)
+  mean_avg_pi_nonsyn <- mean(data$avg_pi_nonsyn)
+  result <- data.frame(
+    sum_pi_syn = sum_pi_syn,
+    sum_pi_nonsyn = sum_pi_nonsyn,
+    sum_no_sites_x = sum_no_sites_x,
+    sum_no_sites_y = sum_no_sites_y,
+    mean_avg_pi = mean_avg_pi,
+    mean_avg_pi_nonsyn = mean_avg_pi_nonsyn,
+    weighted_pi_syn = weighted_pi_syn,
+    weighted_pi_nonsyn = weighted_pi_nonsyn,
+    ratio_weighted_pis = weighted_pi_nonsyn / weighted_pi_syn
+  )
+  return(result)
+}
+
+write.table(statsr_group, file=paste0(directory,"statsr_group.txt"), row.names = FALSE, quote = FALSE)
+write.table(pi_values, file=paste0(directory,"pi_values.txt"), row.names = FALSE, quote = FALSE)
+write.table(pi_values_old, file=paste0(directory,"pi_values_old.txt"), sep = "\t",row.names = FALSE, quote = FALSE)
+
+pi_values_old <- vgroup %>%
+  group_by(tag) %>%
+  summarise(mean = mean(avg_pi), sd = sd(avg_pi))
+
+# for each tag, run calculate_pi()
+pi_values <- statsr_group %>%
+  group_by(tag) %>%
+  summarise(stats = list(calculate_pi(cur_data())))%>%
+  unnest(stats)
+
+table(statsr_group$tag)
+
+ggplot(data = pi_values, mapping = aes(x=tag,y=ratio_weighted_pis)) + 
+    geom_point()+
+    theme_classic() + theme(text = element_text(size = 12))
 ```
 
-
-```{r}
-ggplot(statsr, aes(x=baseMean, y=pn_ps)) + geom_point(colour="#1F78B4", alpha=0.2) + geom_smooth(color="black") + theme_classic() + theme(text = element_text(size = 10)) + xlim(0,1000)
-
-ggplot(statsr, aes(x=l_mean, y=pn_ps)) + geom_point(colour="#1F78B4", alpha=0.2) + geom_smooth(color="black") + theme_classic() + theme(text = element_text(size = 10)) + xlim(0,1000)
-
-ggplot(statsr, aes(x=p_mean, y=pn_ps)) + geom_point(colour="#1F78B4", alpha=0.2) + geom_smooth(color="black") + theme_classic() + theme(text = element_text(size = 10)) + xlim(0,1000)
-```
 
 
