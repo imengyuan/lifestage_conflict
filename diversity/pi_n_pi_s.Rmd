@@ -97,7 +97,7 @@ genesl <- read.table(paste0(directory,"genesl.txt"))
 genesp <- read.table(paste0(directory,"genesp.txt"))
 
 directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/pixy/"
-FC_pixy <- read.table(paste0(directory,"FC_pixy_innerjoin.txt"),header = TRUE) #11735
+FC_pixy <- read.table(paste0(directory,"FC_pixy_innerjoin.txt"),header = TRUE) #11734
 pixy_nonsyn <- read.table(paste0(directory,"pixy_pi_nonsyn.0329.genewise.txt"), header=TRUE) #27026
 colnames(pixy_nonsyn)[2:5] <- c("chrom", "start", "end", "avg_pi_nonsyn")
 pixy_nonsyn <- pixy_nonsyn %>% filter(no_sites>=50) # 22186

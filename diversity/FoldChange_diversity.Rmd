@@ -16,17 +16,17 @@ directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Man
 
 ## merge with pi data
 ```{r}
-pixy <- read.table(paste0(directory,"pixy_pi_syn.0329.genewise.txt"), header=TRUE) 
-pixy <- pixy %>% filter(no_sites>=50) 
-colnames(pixy)[2:4] <- c("chrom", "start", "end") # 15048
+pixy <- read.table(paste0(directory,"pixy_pi_syn.0329.genewise.txt"), header=TRUE) #27026
+pixy <- pixy %>% filter(no_sites>=50) # 15048
+colnames(pixy)[2:4] <- c("chrom", "start", "end") 
 pixy <- inner_join(pixy, gff, by = c("chrom","start","end"))
 
 #DE_tissue<-as.data.frame(result_tissue)
 DE_tissue <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/deseq2/result_tissue_full.txt", header=T)
 #DE_tissue <- left_join(DE_tissue,cnt,by="gene")
-DE_tissue <- DE_tissue %>% filter(p_mean>5 | l_mean>5)
+DE_tissue <- DE_tissue %>% filter(p_mean>5 | l_mean>5) #17982
 
-FC_pixy<- inner_join(DE_tissue,pixy,by="gene") # 11734
+FC_pixy<- inner_join(DE_tissue,pixy,by=c("gene","chrom","start","end")) # 11734
 write.table(FC_pixy, file = paste0(directory,"FC_pixy_innerjoin.txt"), row.names = FALSE, quote = FALSE)
 FC_pixy <- read.table(paste0(directory,"FC_pixy_innerjoin.txt"),header = TRUE)
 #FC_pixy <- FC_pixy %>% filter(padj<0.1) #11203
@@ -40,7 +40,7 @@ DE gene cutoffs: padj<0.1 & baseMean >= 1
 logFC>0: pollen biased, logFC <-: leaf biased
 ```{r}
 pollen_bias <- FC_pixy %>% filter(log2FoldChange>0) # 4391, 4123
-leaf_bias <- FC_pixy %>% filter(log2FoldChange<0) # 7344, 7080
+leaf_bias <- FC_pixy %>% filter(log2FoldChange<0) # 7343, 7080
 
 bin<-binning(pollen_bias$log2FoldChange, bins=4, method="quantile",
                      labels=NULL, ordered=TRUE, weights=NULL)
@@ -89,8 +89,7 @@ leaf
 
 ## plot
 ```{r}
-v <- FC_pixy %>% dplyr::select(log2FoldChange,avg_pi) 
-vgroup <- as_tibble(FC_pixy) %>% 
+FC_pixy_group <- as_tibble(FC_pixy) %>% 
   mutate(tag = case_when(
     log2FoldChange > 0 & log2FoldChange <= 1.02 ~ tags[5],
     log2FoldChange > 1.02 & log2FoldChange <= 2.54 ~ tags[6],
@@ -105,11 +104,14 @@ vgroup <- as_tibble(FC_pixy) %>%
     ))
 #summary(vgroup)
 
-vgroup$tag <- factor(vgroup$tag,
+FC_pixy_group$tag <- factor(FC_pixy_group$tag,
                        levels = tags,
                        ordered = FALSE)
 
-ggplot(data = vgroup, mapping = aes(x=tag,y=avg_pi)) + 
+table(FC_pixy_group$tag)
+
+
+ggplot(data = FC_pixy_group, mapping = aes(x=tag,y=avg_pi)) + 
     geom_jitter(color="#1F78B4",alpha=0.2) +
     geom_boxplot(fill="#1F78B4",color="black",alpha=0.3) + 
     labs(x='log2FoldChange', y='Synonymous nucleotide diversity') +
