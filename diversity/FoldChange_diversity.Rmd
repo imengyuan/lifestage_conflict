@@ -273,7 +273,7 @@ table(vgroup$tag)
 
 
 ## pi_n / pi_s and expression bias
-removed zero in pi_s pi_n
+
 ```{r}
 tags <- c("(,-3.02]","(-3.02,-2.16]", "(-2.16,-1.27]", "(-1.27,0)", "(0,1.02]", "(1.02,2.54]","(2.54,5.36]", "(5.36,)")
 statsr_group <- as_tibble(statsr) %>% 

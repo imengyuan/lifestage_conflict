@@ -53,7 +53,7 @@ calculate_pi <- function(data) {
   }
   
 
-bootstrap_calculate_pi <- function(data, iterations = 5) {
+bootstrap_calculate_pi <- function(data, iterations = 1000) {
     results <- data.frame(weighted_pi_syn = numeric(), weighted_pi_nonsyn = numeric(),   ratio_weighted_pis = numeric(), stringsAsFactors = FALSE)
     for (i in 1:iterations) {
       resampled_data <- data[sample(nrow(data), replace = TRUE), ]
@@ -91,6 +91,7 @@ test_data <- statsr[statsr$tag == "(-3.02,-2.16]", ]
 pi <- bootstrap_calculate_pi(test_data)
 pi$tag <- "(-3.02,-2.16]"
 
+
 pi_r <- data.frame(
             mean_pi_syn = numeric(),
             mean_pi_nonsyn = numeric(),
@@ -125,7 +126,8 @@ for (tag in unique_tags) {
 
 ## run on rumex data and plots
 ```{r}
-write.table(pi_r, file=paste0(directory,"pi_values_weighted.txt"), sep = "\t",row.names = FALSE, quote = FALSE)
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/pixy/"
+write.table(pi_r, file=paste0(directory,"pi_sd_weighted.txt"), sep = "\t",row.names = FALSE, quote = FALSE)
 
 pi_r$tag <- factor(pi_r$tag,
                        levels = tags,
@@ -133,13 +135,13 @@ pi_r$tag <- factor(pi_r$tag,
 
 
 p1 <- ggplot(data = pi_r, mapping = aes(x=tag, y=mean_pi_syn)) + 
-    geom_point()+ geom_errorbar(aes(ymin=mean_pi_syn-sd_pi_syn, ymax=mean_pi_syn+sd_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("a") +labs(x ="log2FoldChange",y ="pi_syn")+ theme_classic() + theme(text = element_text(size = 10))
+    geom_point()+ geom_errorbar(aes(ymin=mean_pi_syn-sd_pi_syn, ymax=mean_pi_syn+sd_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("a") +labs(x ="log2FoldChange",y ="pi_syn")+ theme_classic() + theme(text = element_text(size = 8))
 
 p2 <- ggplot(data = pi_r, mapping = aes(x=tag, y=mean_pi_nonsyn)) + 
-    geom_point()+ geom_errorbar(aes(ymin=mean_pi_nonsyn-sd_pi_nonsyn, ymax=mean_pi_nonsyn+sd_pi_nonsyn), width=.2, position=position_dodge(.9))+ ggtitle("a") +labs(x ="log2FoldChange",y ="pi_nonsyn")+ theme_classic() + theme(text = element_text(size = 10))
+    geom_point()+ geom_errorbar(aes(ymin=mean_pi_nonsyn-sd_pi_nonsyn, ymax=mean_pi_nonsyn+sd_pi_nonsyn), width=.2, position=position_dodge(.9))+ ggtitle("b") +labs(x ="log2FoldChange",y ="pi_nonsyn")+ theme_classic() + theme(text = element_text(size = 8))
 
 p3 <- ggplot(data = pi_r, mapping = aes(x=tag, y=mean_ratio_pis)) + 
-    geom_point()+ geom_errorbar(aes(ymin=mean_ratio_pis-sd_ratio_pis, ymax=mean_ratio_pis+sd_ratio_pis), width=.2, position=position_dodge(.9))+ ggtitle("a") +labs(x ="log2FoldChange",y ="pi_n / pi_s")+ theme_classic() + theme(text = element_text(size = 10))
+    geom_point()+ geom_errorbar(aes(ymin=mean_ratio_pis-sd_ratio_pis, ymax=mean_ratio_pis+sd_ratio_pis), width=.2, position=position_dodge(.9))+ ggtitle("c") +labs(x ="log2FoldChange",y ="pi_n / pi_s")+ theme_classic() + theme(text = element_text(size = 8))
 
 
 p1 + p2 + p3 + plot_layout(nrow = 3,guides = "collect") 
