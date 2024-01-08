@@ -25,6 +25,8 @@ pixy <- inner_join(pixy, gff, by = c("chrom","start","end"))
 DE_tissue <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/deseq2/result_tissue_full.txt", header=T)
 #DE_tissue <- left_join(DE_tissue,cnt,by="gene")
 DE_tissue <- DE_tissue %>% filter(p_mean>5 | l_mean>5) #17982
+DE_tissue <- DE_tissue %>% select(gene, chrom, start, end)
+write.table(DE_tissue, file="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/deseq2/REF_LA_filtered_annotation.expressed_genes.gff", row.names = FALSE, quote = FALSE, sep = "\t")
 
 FC_pixy<- inner_join(DE_tissue,pixy,by=c("gene","chrom","start","end")) # 11734
 write.table(FC_pixy, file = paste0(directory,"FC_pixy_innerjoin.txt"), row.names = FALSE, quote = FALSE)

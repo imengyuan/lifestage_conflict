@@ -198,6 +198,14 @@ python3 ../splitfile.py ceratodon_input_DAF_Chr11.txt 11 8674 16655102 > chrom11
 
 python3 splitfile.py ceratodon_input_DAF_Chr12.txt 12 2095 16452710 > chrom12_list.txt
 
+i=12
+start=2095
+end=16452710
+
+i=11
+start=8674
+end=16655102
+
 
 i=01
 start=2066

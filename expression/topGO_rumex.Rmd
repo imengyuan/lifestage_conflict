@@ -22,19 +22,36 @@ directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Man
 ```
 
 # topGO
+filter interesting genes (only include genes that are expressed)
 ```{r}
 gene2GO <- read.table(paste0(directory, "TE_filtered.REF_LA_gene2GO.txt"))
-gff <- read.table(paste0(directory,"REF_LA_filtered_annotation.genes.gff"))
-gene2GO <- inner_join(gene2GO, gff, by="V1")
-write.table(gene2GO[,1:2], file = paste0(directory, "REF_LA_filtered_annotation_gene2GO.txt"))
-    
-geneID2GO <- readMappings(file=paste0(directory, "TE_filtered.REF_LA_gene2GO.txt"))
+#gff <- read.table(paste0(directory,"REF_LA_filtered_annotation.genes.gff"))
+#gene2GO <- inner_join(gene2GO, gff, by="V1")
+#write.table(gene2GO[,1:2], file = paste0(directory, "REF_LA_filtered_annotation_gene2GO.txt"))
+
+expressed <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/deseq2/REF_LA_filtered_annotation.expressed_genes.gff", header = T)
+expressed <- data.frame(expressed[,1])
+colnames(expressed) <-"V1"
+gene2GO <- inner_join(expressed, gene2GO, by = "V1") # 11339 -> 6912
+write.table(gene2GO, file = paste0(directory, "TE_filtered.REF_LA_gene2GO_expressed.txt"), row.names = F, col.names = F, quote = F, sep = "\t")
+
+balsel_genes <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/balsel/balsel_genes_new.csv", header = T)
+
+pollen_bias <- balsel_genes  %>% filter(log2FoldChange>0 & padj < 0.1) 
+
+balsel_genes <- balsel_genes %>% filter(p_mean>5 | l_mean>5) # 405
+pollen_bias <- pollen_bias  %>% filter(p_mean>5 | l_mean>5) # 142
+
+genesl <- read.table(paste0(directory, "genesl.txt"), header =T)
+genesp <- read.table(paste0(directory, "genesp.txt"), header =T)
+```
+
+
+```{r}
+geneID2GO <- readMappings(file=paste0(directory, "TE_filtered.REF_LA_gene2GO_expressed.txt"))
 GO2gene <- inverseList(geneID2GO)
 str(head(GO2gene))
 str(head(geneID2GO))
-```
-
-```{r}
 # the gene universe (all the genes you have)
 geneNames <- names(geneID2GO)
 head(geneNames)
@@ -42,7 +59,8 @@ head(geneNames)
 # get list of interesting genes
 myInterestingGenes <- genesp$gene
 myInterestingGenes <- genesl$gene
-myInterestingGenes <- genes$gene
+
+myInterestingGenes <- balsel_genes$gene
 myInterestingGenes <- pollen_bias$gene
     
 geneList <- factor(as.integer(geneNames %in% myInterestingGenes))
@@ -58,7 +76,7 @@ sampleGOdata <- new("topGOdata", ontology = "BP",
                      annot = annFUN.gene2GO, gene2GO = geneID2GO)
 ```
 
-
+fisher's exact test
 ```{r}
 # resultFisher <- runTest(sampleGOdata, algorithm = "classic", statistic = "fisher")
 # weight_fisher_result=runTest(sampleGOdata, algorithm='weight01', statistic='fisher')
@@ -70,6 +88,7 @@ results_table_l = GenTable(sampleGOdata, P_value=weight01.fisher, orderBy="P_val
 
 
 write.csv(results_table_p, file=paste0(directory, "balsel_genes_GO.csv"),row.names = FALSE, quote=FALSE )
+write.csv(results_table_p, file=paste0(directory, "pollen_bias_GO.csv"),row.names = FALSE, quote=FALSE )
 
 write.csv(results_table_p, file=paste0(directory, "p_specific_DE_GO.csv"),row.names = FALSE, quote=FALSE )
 write.csv(results_table_l, file=paste0(directory, "l_specific_DE_GO.csv"),row.names = FALSE, quote=FALSE )

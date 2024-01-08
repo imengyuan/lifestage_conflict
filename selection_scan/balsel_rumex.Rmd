@@ -13,6 +13,8 @@ library(tidyr)
 directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/balsel/"
 ```
 
+
+
 ## get 95% of CLR
 ```{r}
 quantile(scan$CLR, probs = 0.95)
@@ -80,6 +82,7 @@ result99 <- result %>% filter(CLR > 67.94058) # 3394
 mean_CLR <- result %>%
   group_by(gene) %>%
   summarise_at(vars(CLR), list(name = mean))
+
 colnames(mean_CLR)[2] <- "mean_CLR"
 test <- filter(mean_CLR, mean_CLR> 67.94058) #45
 
@@ -123,11 +126,9 @@ write.table(pollen_bias, file=paste0(directory,"balsel_pollen_bias.txt"), row.na
 A1 A4 A2 XY A3 
 43  6 50 27 29 
 
-## GO rnrichment of 155 pollen biased genes
-
-
 
 ## gametophyte-biased genes have higher CLR than unbiased genes?
+even fewwer with baseMean>5?
 ```{r}
 pollen_bias <- genes %>% filter(log2FoldChange>0 & padj < 0.1) # 155
 unbiased <- genes %>% filter(padj >= 0.1) # 35

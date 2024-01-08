@@ -121,7 +121,7 @@ pip install numpy --no-index
 cat chrom08_list.txt | parallel --joblog runtask.log --resume 'python /scratch/w/wrighste/yuanmeng/ceratodon/ballermix/BallerMixPlus/BalLeRMix+_v1.py -i /scratch/w/wrighste/yuanmeng/ceratodon/chroms/chrom08/ceratodon_input_DAF_Chr08_{}.txt -o /scratch/w/wrighste/yuanmeng/ceratodon/chroms/chrom08/ceratodon_scan_DAF_Chr08_{}.txt --spect /scratch/w/wrighste/yuanmeng/ceratodon/ballermix/ceratodon_spect_DAF.txt --usePhysPos --rec 0.000001 --findBal' > out.txt
 
 
-
+01 02 03 5 6 7 12
 
 ln -s ../../ceratodon_spect_DAF.txt ./
 # chrom 12, 02 done
@@ -135,32 +135,34 @@ cat chrom02_list.txt | parallel -j 20 'python3 /ohta2/meng.yuan/apps/BallerMixPl
 cat chrom01_list.txt | parallel -j 20 'python3 /ohta2/meng.yuan/apps/BallerMixPlus/BalLeRMix+_v1.py -i ceratodon_input_DAF_Chr01_{}.txt -o ceratodon_scan_DAF_Chr01_{}.txt --spect ceratodon_spect_DAF.txt --usePhysPos --rec 0.000001 --findBal' > out.txt
 
 
-# chrom03
+# chrom03 done
 cat chrom03_list.txt | parallel -j 20 'python3 /ohta2/meng.yuan/apps/BallerMixPlus/BalLeRMix+_v1.py -i ceratodon_input_DAF_Chr03_{}.txt -o ceratodon_scan_DAF_Chr03_{}.txt --spect ceratodon_spect_DAF.txt --usePhysPos --rec 0.000001 --findBal' > out.txt
 
-# chrom04
+# chrom04 a few left
 cat chrom04_list.txt | parallel -j 10 'python3 /ohta2/meng.yuan/apps/BallerMixPlus/BalLeRMix+_v1.py -i ceratodon_input_DAF_Chr04_{}.txt -o ceratodon_scan_DAF_Chr04_{}.txt --spect ceratodon_spect_DAF.txt --usePhysPos --rec 0.000001 --findBal' > out.txt
 
-# chrom05
+# chrom05 done
 cat chrom05_list.txt | parallel -j 15 'python3 /ohta2/meng.yuan/apps/BallerMixPlus/BalLeRMix+_v1.py -i ceratodon_input_DAF_Chr05_{}.txt -o ceratodon_scan_DAF_Chr05_{}.txt --spect ceratodon_spect_DAF.txt --usePhysPos --rec 0.000001 --findBal' > out.txt
 
-# chrom06
+# chrom06 done
 cat chrom06_list.txt | parallel -j 20 'python3 /ohta2/meng.yuan/apps/BallerMixPlus/BalLeRMix+_v1.py -i ceratodon_input_DAF_Chr06_{}.txt -o ceratodon_scan_DAF_Chr06_{}.txt --spect ceratodon_spect_DAF.txt --usePhysPos --rec 0.000001 --findBal' > out.txt
 
-# chrom07
+# chrom07 done
 cat chrom07_list.txt | parallel -j 20 'python3 /ohta2/meng.yuan/apps/BallerMixPlus/BalLeRMix+_v1.py -i ceratodon_input_DAF_Chr07_{}.txt -o ceratodon_scan_DAF_Chr07_{}.txt --spect ceratodon_spect_DAF.txt --usePhysPos --rec 0.000001 --findBal' > out.txt
 
-# chrom08
+# chrom08 6 left
 cat chrom08_list.txt | parallel -j 10 'python3 /ohta2/meng.yuan/apps/BallerMixPlus/BalLeRMix+_v1.py -i ceratodon_input_DAF_Chr08_{}.txt -o ceratodon_scan_DAF_Chr08_{}.txt --spect ceratodon_spect_DAF.txt --usePhysPos --rec 0.000001 --findBal' > out.txt
 
 
-# chrom09
+# chrom09 21/36
 cat chrom09_list.txt | parallel -j 10 'python3 /ohta2/meng.yuan/apps/BallerMixPlus/BalLeRMix+_v1.py -i ceratodon_input_DAF_Chr09_{}.txt -o ceratodon_scan_DAF_Chr09_{}.txt --spect ceratodon_spect_DAF.txt --usePhysPos --rec 0.000001 --findBal' > out.txt
 
 # next
 # chrom10
+cat chrom10_list.txt | parallel -j 12 'python3 /ohta2/meng.yuan/apps/BallerMixPlus/BalLeRMix+_v1.py -i ceratodon_input_DAF_Chr10_{}.txt -o ceratodon_scan_DAF_Chr10_{}.txt --spect ceratodon_spect_DAF.txt --usePhysPos --rec 0.000001 --findBal' > out.txt
 
 # chrom11
+cat chrom11_list.txt | parallel -j 12 'python3 /ohta2/meng.yuan/apps/BallerMixPlus/BalLeRMix+_v1.py -i ceratodon_input_DAF_Chr11_{}.txt -o ceratodon_scan_DAF_Chr11_{}.txt --spect ceratodon_spect_DAF.txt --usePhysPos --rec 0.000001 --findBal' > out.txt
 
 
 

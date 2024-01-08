@@ -190,6 +190,7 @@ ggplot(prop, aes(x=Category,y=Prop,fill=Category)) + geom_bar(stat="identity", p
 
 
 
+
 # all quantiles combined/no quantiles
 ```{r}
 # real data
