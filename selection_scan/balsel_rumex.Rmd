@@ -10,9 +10,45 @@ library(dplyr)
 library(ggplot2)
 library(patchwork)
 library(tidyr)
-directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/balsel/"
+data="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/balsel/"
 ```
 
+## plot finished scans
+
+read data
+```{r}
+scan1 <- read.table(paste0(data,"rumex_scan_DAF_Jul6_LG1.txt"), header = T)
+scan2 <- read.table(paste0(data,"rumex_scan_DAF_Jul6_LG2.txt"), header = T)
+scan3 <- read.table(paste0(data,"rumex_scan_DAF_Jul6_LG3.txt"), header = T)
+scan4 <- read.table(paste0(data,"rumex_scan_DAF_Jul6_LG4.txt"), header = T)
+scan5 <- read.table(paste0(data,"rumex_scan_DAF_Jul6_LG5.txt"), header = T)
+scan1$chrom <- "LG1"
+scan2$chrom <- "LG2"
+scan3$chrom <- "LG3"
+scan4$chrom <- "LG4"
+scan5$chrom <- "LG5"
+
+scan <- rbind(scan1, scan2, scan3, scan4, scan5)
+scan<- scan %>% mutate(chrom = factor(chrom))
+levels(scan$chrom)
+levels(scan$chrom)<- c("A1", "A4", "A2", "XY", "A3")
+scan <- scan[order(scan$chrom),]
+scan <- scan %>% mutate(chrom = factor(chrom, levels = c("A1","A2","A3","A4","XY")))
+```
+
+plot the scans
+```{r}
+p7 <- ggplot(scan, aes(x = physPos/1000000, y = genPos))+
+    facet_grid(.~chrom,scales="free_x", switch = "x", space = "free_x") + geom_point(size=0.3, alpha=0.5)+
+    xlab("Physical position on Chromosome (Mb)")+ylab("Genetic position (cM)")+theme_bw()+theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside",legend.position ="none")+ theme(text = element_text(size = 10))
+
+p8 <- ggplot(scan, aes(x = physPos/1000000, y = CLR))+geom_point(aes(colour=log10(s_hat)),size = 0.3)+
+    facet_grid(.~chrom,scales="free_x", switch = "x", space = "free_x") + 
+    xlab("Position on Chromosome (Mb)")+ylab("Composite Likelihood Ratio")+theme_bw() +scale_color_gradient2(name = expression('log'[10]~hat(italic(a))), limits = c(-3, 9), midpoint = 0, high="red", mid = 'white', low="blue")+ theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside")+ theme(text = element_text(size = 10))
+
+
+p7 / p8 + plot_layout(guides = "collect") & theme(legend.position = "right")
+```
 
 
 ## get 95% of CLR
@@ -28,9 +64,8 @@ summary(scan0$CLR)
 
 scan95 <- filter(scan0, CLR>9.500813)
 nrow(scan95)
-write.table(scan95, file=paste0(directory,"balsel_scan95.txt"), row.names = FALSE, quote = FALSE)
-
-quantile(scan0$CLR, probs = 0.99) # 67.94058 
+write.table(scan95, file=paste0(data,"balsel_scan95.txt"), row.names = FALSE, quote = FALSE)
+scan95 <- read.table(paste0(data,"balsel_scan95.txt"), header = T)
 
 table(scan95$chrom)[1:5]
 ```
@@ -51,12 +86,6 @@ table(scan95$chrom)[1:5]
      Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
    0.0000    0.8816    1.9159    4.6037    4.2158 2558.8470 
    
-## extract the genes in the region
-```{r}
-ggplot(scan95, aes(x = physPos/1000000, y = CLR))+geom_point(aes(colour=log10(s_hat)),size = 0.3)+
-    facet_grid(.~chrom,scales="free_x", switch = "x", space = "free_x") + 
-    xlab("Position on Chromosome (Mb)")+ylab("Composite Likelihood Ratio")+theme_bw() +scale_color_gradient2(name = expression('log'[10]~hat(italic(a))), limits = c(-3, 9), midpoint = 0, high="red", mid = 'white', low="blue")+ theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside")+ theme(text = element_text(size = 10))
-```
 
 ## get the list of candidate genes
 perform GO enrichment of these candidate genes
@@ -67,110 +96,133 @@ gff <- read.table(paste0(directory,"REF_LA_filtered_annotation.genes.gff"))
 colnames(gff) <- c("gene","chrom", "start", "end")
 
 gff<- gff %>% mutate(chrom = factor(chrom))
-levels(gff$chrom)
+levels(gff$chrom)[1:5]
 levels(gff$chrom)[1:5]<- c("A1", "A4", "A2", "XY", "A3")
 
-#test <- scan95[1:50,]
-result <- scan95 %>% inner_join(gff, by = "chrom") %>%
-    filter(physPos >= start & physPos <= end) 
+# result <- scan95 %>% inner_join(gff, by = "chrom") %>%
+#     filter(physPos >= start & physPos <= end) 
 
-write.table(result, file=paste0(directory,"balsel_sites.txt"), row.names = FALSE, quote = FALSE)
-result <- read.table(paste0(directory,"balsel_sites.txt"), header = T)
+window_size <- 7000
+num_windows <- floor(nrow(scan95) / window_size) # 11
+results <- list()
+for (i in 1:12) {
+    start <- (i - 1) * window_size + 1
+    end <- i * window_size
+    window_df <- scan95[start:end, ]
+    
+    result <- window_df %>% inner_join(gff, by = "chrom") %>%
+        filter(physPos >= start & physPos <= end) 
+    
+    results[[i]] <- result}
 
-result99 <- result %>% filter(CLR > 67.94058) # 3394
+result <- do.call(rbind, results)
 
-mean_CLR <- result %>%
-  group_by(gene) %>%
-  summarise_at(vars(CLR), list(name = mean))
+write.table(result, file=paste0(data,"balsel_sites.txt"), row.names = FALSE, quote = FALSE)
+result <- read.table(paste0(data,"balsel_sites.txt"), header = T)
 
-colnames(mean_CLR)[2] <- "mean_CLR"
-test <- filter(mean_CLR, mean_CLR> 67.94058) #45
-
-genes <- as.data.frame(table(result$gene)) # 449
-colnames(genes)[1] <- "gene" 
+result_CLR <- result %>%
+    group_by(gene) %>%
+    summarise(mean_CLR = mean(CLR), max_CLR = max(CLR), no_sites = length(CLR))
 
 result_tissue <- read.table(paste0(directory,"result_tissue_full.txt"), header=T)
-cnt <- read.table(paste0(directory,"cnt.txt"), header=T)
+result_tissue <- result_tissue %>% filter(l_mean > 5 | p_mean > 5)
 
-gene2GO <- read.table(paste0(directory,"TE_filtered.REF_LA_gene2GO.txt"))
-colnames(gene2GO) <- c("gene", "GO")
-
-full_gff <- read.csv(paste0(directory,"function.csv"))
-colnames(full_gff) <- c("gene", "function")
-
-genes <- left_join(genes, mean_CLR, by = "gene")
-genes <- left_join(genes, result_tissue, by = "gene")
-genes <- left_join(genes, cnt, by = "gene")
-genes <- left_join(genes, cnt, by = "gene")
-genes <- left_join(genes, gff, by = "gene")
-genes <- left_join(genes, gene2GO, by = "gene")
-genes <- left_join(genes, full_gff, by = "gene")
+genes <- left_join(result_CLR, result_tissue, by = "gene")
 
 
 table(genes$chrom)[1:5]
-write.table(genes, file=paste0(directory,"balsel_genes_new.csv"), row.names = FALSE, quote = FALSE)
-genes <- read.csv("/Users/yuanmeng/Downloads/balsel_genes.csv")
-genes <- genes[,c(1:16)]
+write.table(genes, file=paste0(data,"balsel_genes_expressed.txt"), sep = "\t",row.names = FALSE, quote = FALSE)
 
-pollen_bias <- genes %>% filter(log2FoldChange>0 & padj < 0.1) # 155
-table(pollen_bias$chrom)[1:5]
-write.table(pollen_bias, file=paste0(directory,"balsel_pollen_bias.txt"), row.names = FALSE, quote = FALSE)
-
-#pollen_bias_GO <- pollen_bias[complete.cases(pollen_bias),]
-#write.csv(pollen_bias_GO, file=paste0(directory,"balsel_pollen_bias_GO.csv"), row.names = FALSE, quote = FALSE)
-
-```
- A1  A4  A2  XY  A3 
-122  34 130  73  90 
-
-A1 A4 A2 XY A3 
-43  6 50 27 29 
+pollen_bias <- result_tissue %>% filter(log2FoldChange>0 & padj < 0.1) # 6823
+unbiased <- result_tissue %>% filter(padj >= 0.1) # 858
+leaf_bias <- result_tissue %>% filter(log2FoldChange<0 & padj < 0.1) # 10301
 
 
-## gametophyte-biased genes have higher CLR than unbiased genes?
-even fewwer with baseMean>5?
-```{r}
-pollen_bias <- genes %>% filter(log2FoldChange>0 & padj < 0.1) # 155
-unbiased <- genes %>% filter(padj >= 0.1) # 35
-leaf_bias <- genes %>% filter(log2FoldChange<0 & padj < 0.1) # 251
+pollen_bias <- genes %>% filter(log2FoldChange>0 & padj < 0.1) # 142
+unbiased <- genes %>% filter(padj >= 0.1) # 21
+leaf_bias <- genes %>% filter(log2FoldChange<0 & padj < 0.1) # 242
 pollen_bias$category <- "pollen_bias"
 unbiased$category <- "unbiased"
 leaf_bias$category <- "leaf_bias"
 bias <- rbind(pollen_bias,unbiased,leaf_bias)
 
+write.table(bias, file=paste0(data,"balsel_genes_bias.txt"), row.names = FALSE, quote = FALSE)
+```
+LG1 LG2 LG3 LG4 LG5 
+106  32 119  64  84 
+
+A1 A4 A2 XY A3 
+43  6 50 27 29 
+
+
+## get max_CLR per gene for the whole genome
+
+```{r}
+window_size <- 7000
+num_windows <- floor(nrow(scan) / window_size) # 706
+results <- list()
+for (i in 1:707) {
+    start <- (i - 1) * window_size + 1
+    end <- i * window_size
+    window_df <- scan[start:end, ]
+    
+    result <- window_df %>% inner_join(gff, by = "chrom") %>%
+        filter(physPos >= start & physPos <= end) 
+    
+    results[[i]] <- result}
+
+result <- do.call(rbind, results) # 937846
+length(results) # 318, half way thru
+write.table(result, file=paste0(data,"balsel_sites_wholegenome.txt"), row.names = FALSE, quote = FALSE)
+```
+
+
+
+## gametophyte-biased genes have higher CLR than unbiased genes?
+
+```{r}
+group_by(bias, category) %>%
+  summarise(
+    count = n(),
+    mean = mean(max_CLR, na.rm = TRUE),
+    sd = sd(max_CLR, na.rm = TRUE)
+  )
+
+aov <- aov(max_CLR ~ category, data = bias)
+summary(aov)
+
 ggplot(bias, aes(x=category, y=mean_CLR)) + 
   geom_boxplot() + ylim(0,250) +theme_bw()+theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside",legend.position ="none")+ theme(text = element_text(size = 15))
-
-
 ```
+category count mean sd 
+leaf_bias	242	54.55001	99.11744	
+pollen_bias	142	52.56474	106.45978	
+unbiased	21	150.48489	553.22779	
+
+            Df   Sum Sq Mean Sq F value Pr(>F)  
+category      2   186420   93210   3.715 0.0252 *
+Residuals   402 10086918   25092                 
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
 
-```{r}
-pollen_bias <- result_tissue %>% filter(log2FoldChange>0 & padj < 0.1) # 8998
-unbiased <- result_tissue %>% filter(padj >= 0.1) # 4677
-leaf_bias <- result_tissue %>% filter(log2FoldChange<0 & padj < 0.1) # 11375
-
-unbiased <- inner_join(unbiased, gff, by = "gene")
-
-scan1$chrom <- "A1"
-test<-scan1[1:100,]
-result_unbiased <- scan1 %>% inner_join(unbiased, by = "chrom") %>%
-    filter(physPos >= start & physPos <= end) 
-```
 ## contigency test
-pollen-biased, unbiased, leaf-biased
-155, 35, 251
-8998, 4677, 11375
+(old)
+category, pollen-biased, unbiased, leaf-biased
+balancing_sel, 155, 35, 251
+whole_genome, 8998, 4677, 11375
 
-contigency table
+category, p_biased, unbiased, l_biased
+balancing_sel, 142, 21, 242
+whole_genome, 6823, 858, 10301
+
 ```{r}
-bias_table <- read.csv(paste0(directory,"biased_genes.txt"))
+bias_table <- read.csv(paste0(data,"biased_genes.txt"))
 bias_table
-row.names(bias_table) <- c("balancing_sel", "whole_genome")
+row.names(bias_table) <- bias_table[,1]
 tablep <- bias_table[,2:3]
 tablel <- bias_table[,3:4]
 table <- bias_table[,c(2,4)]
-
 
 cnts <- read.table(paste0(directory,"biased_cnts.txt"), header =T)
 cnts <- cnts[1:4,]
@@ -193,20 +245,19 @@ chisq.test(table)
 	Pearson's Chi-squared test with Yates' continuity correction
 
 data:  tablep
-X-squared = 20.102, df = 1, p-value = 7.342e-06
+X-squared = 0.3143, df = 1, p-value = 0.5751
 
 
 	Pearson's Chi-squared test with Yates' continuity correction
 
 data:  tablel
-X-squared = 38.28, df = 1, p-value = 6.128e-10
+X-squared = 0.0037144, df = 1, p-value = 0.9514
 
 
 	Pearson's Chi-squared test with Yates' continuity correction
 
 data:  table
-X-squared = 5.5527, df = 1, p-value = 0.01845
-
+X-squared = 1.1705, df = 1, p-value = 0.2793
 
 fisher's exact test
 ```{r}
@@ -217,33 +268,34 @@ fisher.test(table)
 	Fisher's Exact Test for Count Data
 
 data:  tablep
-p-value = 2.098e-06
+p-value = 0.4533
 alternative hypothesis: true odds ratio is not equal to 1
 95 percent confidence interval:
- 1.583400 3.430144
+ 0.5320146 1.4241511
 sample estimates:
 odds ratio 
-  2.301773 
+ 0.8503417 
+
 
 	Fisher's Exact Test for Count Data
-
 data:  tablel
-p-value = 2.332e-11
+p-value = 0.815
 alternative hypothesis: true odds ratio is not equal to 1
 95 percent confidence interval:
- 0.2306425 0.4852674
+ 0.6298322 1.6396362
 sample estimates:
 odds ratio 
- 0.3391736 
- 
+  1.041836 
+
+
 	Fisher's Exact Test for Count Data
 
 data:  table
-p-value = 0.01757
+p-value = 0.2685
 alternative hypothesis: true odds ratio is not equal to 1
 95 percent confidence interval:
- 0.6335969 0.9594397
+ 0.7133327 1.0969436
 sample estimates:
 odds ratio 
- 0.7806725 
+ 0.8858652 
 
