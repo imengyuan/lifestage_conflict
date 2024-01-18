@@ -12,18 +12,8 @@ library(dplyr)
 
 
 # pi_n / pi_s and expression in ceratodon
-
 ```{r}
 directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/diversity/"
-ratio_pixy <- read.csv(paste0(directory,"ratio_pixy_innerjoin.txt"))
-pixy <- read.table(paste0(directory,"auto_nonsyn_geneWise_pi.txt"), header=TRUE) 
-pixy <- pixy[complete.cases(pixy),] # 32725
-pixy <- pixy %>% filter(no_sites >= 50) #32349
-head(pixy)
-colnames(pixy)[2:5] <- c("chrom", "start", "end","avg_pi_nonsyn")
-
-ratio_pixy <- inner_join(ratio_pixy, pixy, by=c("pop", "chrom", "start", "end")) #  (18615 no UV)
-write.csv(ratio_pixy, file = paste0(directory,"ceratodon_pi_n_pi_s.csv"), row.names = FALSE, quote = FALSE)
 stats  <- read.csv(paste0(directory,"ceratodon_pi_n_pi_s.csv"))
 
 geness_a <- geness_a %>% dplyr::select(1)
@@ -36,60 +26,157 @@ stats_unbiased <- inner_join(unbiased, stats, by="gene") # 3715 4319
 write.table(stats_genesg_a, file = paste0(directory,"stats_genesg_a.txt"), sep = "\t", row.names = FALSE, quote = FALSE)
 write.table(stats_geness_a, file = paste0(directory,"stats_geness_a.txt"), sep = "\t", row.names = FALSE, quote = FALSE)
 write.table(stats_unbiased, file = paste0(directory,"stats_unbiased.txt"), sep = "\t", row.names = FALSE, quote = FALSE)
+
+stats_genesg_a <- read.table(paste0(directory,"stats_genesg_a.txt"), header = T)
+stats_geness_a <- read.table(paste0(directory,"stats_geness_a.txt"), header = T)
+stats_unbiased <- read.table(paste0(directory,"stats_unbiased.txt"), header = T)
+```
+
+
+## functions to get weighted average pi
+```{r}
+# a function to calculate the weighted average of pi_n pi_s
+calculate_pi <- function(data) {
+    data <- data %>%
+      mutate(pi_syn = avg_pi * no_sites.x) %>%
+      mutate(pi_nonsyn = avg_pi_nonsyn * no_sites.y)
+    sum_pi_syn <- sum(data$pi_syn)
+    sum_pi_nonsyn <- sum(data$pi_nonsyn)
+    sum_no_sites_x <- sum(data$no_sites.x)
+    sum_no_sites_y <- sum(data$no_sites.y)
+    weighted_pi_syn <- sum_pi_syn / sum_no_sites_x
+    weighted_pi_nonsyn <- sum_pi_nonsyn / sum_no_sites_y
+    ratio_weighted_pis <- weighted_pi_nonsyn / weighted_pi_syn
+    result <- data.frame(
+      weighted_pi_syn = weighted_pi_syn,
+      weighted_pi_nonsyn = weighted_pi_nonsyn,
+      ratio_weighted_pis = ratio_weighted_pis
+    )
+    return(result)
+  }
+  
+# bootstrap and calculate the mean and 95% of weighted average of pi_n pi_s pi_n/pi_s
+bootstrap_calculate_pi <- function(data, iterations = 1000) {
+    # set up the output format
+    results <- data.frame(weighted_pi_syn = numeric(), weighted_pi_nonsyn = numeric(),   ratio_weighted_pis = numeric(), stringsAsFactors = FALSE)
+    
+    # bootstrap 1000 times and save to result
+    for (i in 1:iterations) {
+      resampled_data <- data[sample(nrow(data), replace = TRUE), ]
+      calculated_values <- calculate_pi(resampled_data)
+      if (nrow(results) == 0) {
+        results <- calculated_values
+      } else {
+        results <- rbind(results, calculated_values)}
+    }
+
+    # calculate the mean and 95% CI from bootstrapped values
+    output <- data.frame(
+            mean_pi_syn = mean(results$weighted_pi_syn),
+            mean_pi_nonsyn = mean(results$weighted_pi_nonsyn),
+            mean_ratio_pis = mean(results$ratio_weighted_pis),
+            lower_pi_syn = quantile(results$weighted_pi_syn, 0.025),
+            higher_pi_syn = quantile(results$weighted_pi_syn, 0.975),
+            lower_pi_nonsyn = quantile(results$weighted_pi_nonsyn, 0.025),
+            higher_pi_nonsyn = quantile(results$weighted_pi_nonsyn, 0.975),
+            lower_ratio_pis = quantile(results$ratio_weighted_pis, 0.025),
+            higher_ratio_pis = quantile(results$ratio_weighted_pis, 0.975)
+    )
+    return(output)
+  }
 ```
 
 
 ```{r}
-calculate_pi <- function(data) {
-  data <- data %>%
-    mutate(pi_syn = avg_pi * no_sites.x) %>%
-    mutate(pi_nonsyn = avg_pi_nonsyn * no_sites.y)
-  
-  sum_pi_syn <- sum(data$pi_syn)
-  sum_pi_nonsyn <- sum(data$pi_nonsyn)
-  sum_no_sites_x <- sum(data$no_sites.x)
-  sum_no_sites_y <- sum(data$no_sites.y)
-  
-  weighted_pi_syn <- sum_pi_syn / sum_no_sites_x
-  weighted_pi_nonsyn <- sum_pi_nonsyn / sum_no_sites_y
-  
-  mean_avg_pi <- mean(data$avg_pi)
-  mean_avg_pi_nonsyn <- mean(data$avg_pi_nonsyn)
-  
-  result <- data.frame(
-    sum_pi_syn = sum_pi_syn,
-    sum_pi_nonsyn = sum_pi_nonsyn,
-    sum_no_sites_x = sum_no_sites_x,
-    sum_no_sites_y = sum_no_sites_y,
-    mean_avg_pi = mean_avg_pi,
-    mean_avg_pi_nonsyn = mean_avg_pi_nonsyn,
-    weighted_pi_syn = weighted_pi_syn,
-    weighted_pi_nonsyn = weighted_pi_nonsyn,
-    ratio_weighted_pis = weighted_pi_nonsyn / weighted_pi_syn
-  )
-  
-  return(result)
-}
-
-pi_genesg_a <- calculate_pi(stats_genesg_a)
+pi_genesg_a <- bootstrap_calculate_pi(stats_genesg_a)
 pi_genesg_a$category <- "genesg_a" 
     
-pi_geness_a <- calculate_pi(stats_geness_a)
+pi_geness_a <- bootstrap_calculate_pi(stats_geness_a)
 pi_geness_a$category <- "geness_a" 
 
-pi_unbiased <- calculate_pi(stats_unbiased)
+pi_unbiased <- bootstrap_calculate_pi(stats_unbiased)
 pi_unbiased$category <- "unbiased" 
 
-pi_c <- rbind(pi_genesg_a, pi_geness_a, pi_unbiased)
-write.table(pi_c, file = paste0(directory,"weighted_pi_c.txt"), row.names = FALSE, sep = "\t", quote = FALSE)
+pi_genes_c <- rbind(pi_genesg_a, pi_geness_a, pi_unbiased)
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/diversity/"
+write.table(pi_genes_c, file = paste0(directory,"specific_genes_pi.txt"), row.names = FALSE, sep = "\t", quote = FALSE)
 
+# 
+pi_genesg_a <- calculate_pi_real(stats_genesg_a)
+pi_genesg_a$category <- "genesg_a" 
+    
+pi_geness_a <- calculate_pi_real(stats_geness_a)
+pi_geness_a$category <- "geness_a" 
+
+pi_unbiased <- calculate_pi_real(stats_unbiased)
+pi_unbiased$category <- "unbiased" 
+
+pi_genes_c_real <- rbind(pi_genesg_a, pi_geness_a, pi_unbiased)
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/diversity/"
+write.table(pi_genes_c_real, file = paste0(directory,"specific_genes_pi_real.txt"), row.names = FALSE, sep = "\t", quote = FALSE)
+```
+
+
+plot
+```{r}
+pi_genes_c$category <- factor(pi_genes_c$category)
+levels(pi_genes_c$category) # "genesg_a" "geness_a" "unbiased"
+levels(pi_genes_c$category) <- c("gametophyte", "sporophyte", "unbiased")
+
+p4 <- ggplot(data = pi_genes_c, mapping = aes(x=category, y=mean_pi_syn)) + 
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_syn, ymax=higher_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("d") +labs(y ="pi_syn")+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
+
+p5 <- ggplot(data = pi_genes_c, mapping = aes(x=category, y=mean_pi_nonsyn)) + 
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_nonsyn, ymax=higher_pi_nonsyn), width=.2, position=position_dodge(.9))+ ggtitle("e") +labs(y ="pi_nonsyn")+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
+
+p6 <- ggplot(data = pi_genes_c, mapping = aes(x=category, y=mean_ratio_pis)) + 
+    geom_point()+ geom_errorbar(aes(ymin=lower_ratio_pis, ymax=higher_ratio_pis), width=.2, position=position_dodge(.9))+ ggtitle("f") +labs(y ="pi_n / pi_s")+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
+
+#p1 + p2 + p3 + plot_layout(nrow = 3,guides = "collect") 
 ```
 
 
 
+old function: mean vs weighted mean for the original data, no bootstrapping
+```{r}
+calculate_pi_real <- function(data) {
+    data <- data %>%
+      mutate(pi_syn = avg_pi * no_sites.x) %>%
+      mutate(pi_nonsyn = avg_pi_nonsyn * no_sites.y) %>%
+      mutate(ratio_pis = avg_pi_nonsyn / avg_pi)
+    sum_pi_syn <- sum(data$pi_syn)
+    sum_pi_nonsyn <- sum(data$pi_nonsyn)
+    sum_no_sites_x <- sum(data$no_sites.x)
+    sum_no_sites_y <- sum(data$no_sites.y)
+    weighted_pi_syn <- sum_pi_syn / sum_no_sites_x
+    weighted_pi_nonsyn <- sum_pi_nonsyn / sum_no_sites_y
+    ratio_weighted_pis <- weighted_pi_nonsyn / weighted_pi_syn
+    
+    mean_avg_pi_syn <- mean(data$avg_pi)
+    mean_avg_pi_nonsyn <- mean(data$avg_pi_nonsyn)
+    ratio_mean_pis <- mean(data$ratio_pis)
+    
+    sem_avg_pi_syn <- sd(data$avg_pi) / sqrt(length(data$avg_pi))
+    sem_avg_pi_nonsyn <- sd(data$avg_pi_nonsyn) / sqrt(length(data$avg_pi_nonsyn))
+    sem_ratio_pis <- sd(data$ratio_pis) / sqrt(length(data$ratio_pis))
+  
+    result <- data.frame(
+      weighted_pi_syn = weighted_pi_syn,
+      weighted_pi_nonsyn = weighted_pi_nonsyn,
+      ratio_weighted_pis = ratio_weighted_pis,
+      mean_avg_pi_syn =  mean_avg_pi_syn,
+      mean_avg_pi_nonsyn = mean_avg_pi_nonsyn,
+      ratio_mean_pis = ratio_mean_pis,
+      sem_avg_pi_syn = sem_avg_pi_syn,
+      sem_avg_pi_nonsyn = sem_avg_pi_nonsyn
+    )
+    return(result)
+}
+```
+plot both and compare
+
 
 # pi_n / pi_s and expression in rumex
-
 ## read files
 ```{r}
 directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/deseq2/"
@@ -97,13 +184,6 @@ genesl <- read.table(paste0(directory,"genesl.txt"))
 genesp <- read.table(paste0(directory,"genesp.txt"))
 
 directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/pixy/"
-FC_pixy <- read.table(paste0(directory,"FC_pixy_innerjoin.txt"),header = TRUE) #11734
-pixy_nonsyn <- read.table(paste0(directory,"pixy_pi_nonsyn.0329.genewise.txt"), header=TRUE) #27026
-colnames(pixy_nonsyn)[2:5] <- c("chrom", "start", "end", "avg_pi_nonsyn")
-pixy_nonsyn <- pixy_nonsyn %>% filter(no_sites>=50) # 22186
-
-statsr <- inner_join(FC_pixy, pixy_nonsyn, by=c("pop", "chrom", "start", "end")) # 11734
-write.csv(statsr, file = paste0(directory,"rumex_pi_n_pi_s.csv"), row.names = FALSE, quote = FALSE)
 statsr <- read.csv(paste0(directory,"rumex_pi_n_pi_s.csv"))
 
 genesl <- genesl %>% dplyr::select(1)
@@ -116,24 +196,113 @@ statsr_unbiased <- inner_join(unbias, statsr, by="gene") # 500 532
 write.table(statsr_genesl, file = paste0(directory,"statsr_genesl.txt"), sep = "\t", row.names = FALSE, quote = FALSE)
 write.table(statsr_genesp, file = paste0(directory,"statsr_genesp.txt"), sep = "\t", row.names = FALSE, quote = FALSE)
 write.table(statsr_unbiased, file = paste0(directory,"statsr_unbiased.txt"), sep = "\t", row.names = FALSE, quote = FALSE)
+
+statsr_genesl <- read.table(paste0(directory,"statsr_genesl.txt"), header = T)
+statsr_genesp <- read.table(paste0(directory,"statsr_genesp.txt"), header = T)
+statsr_unbiased <- read.table(paste0(directory,"statsr_unbiased.txt"), header = T)
 ```
 
 
 ## calculate weighted average of pi_n and pi_s
-
 ```{r}
-pi_genesp <- calculate_pi(statsr_genesp)
+pi_genesp <- bootstrap_calculate_pi(statsr_genesp)
 pi_genesp$category <- "genesp" 
     
-pi_genesl <- calculate_pi(statsr_genesl)
+pi_genesl <- bootstrap_calculate_pi(statsr_genesl)
 pi_genesl$category <- "genesl" 
 
-pi_unbiased <- calculate_pi(statsr_unbiased)
+pi_unbiased <- bootstrap_calculate_pi(statsr_unbiased)
 pi_unbiased$category <- "unbiased" 
 
-pi_r <- rbind(pi_genesp, pi_genesl, pi_unbiased)
-write.table(pi_r, file = paste0(directory,"weighted_pi_r.txt"), row.names = FALSE, sep = "\t", quote = FALSE)
+pi_genes_r <- rbind(pi_genesp, pi_genesl, pi_unbiased)
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/pixy/"
+write.table(pi_genes_r, file = paste0(directory,"specific_genes_pi.txt"), row.names = FALSE, sep = "\t", quote = FALSE)
+
+#
+pi_genesp <- calculate_pi_real(statsr_genesp)
+pi_genesp$category <- "genesp" 
+    
+pi_genesl <- calculate_pi_real(statsr_genesl)
+pi_genesl$category <- "genesl" 
+
+pi_unbiased <- calculate_pi_real(statsr_unbiased)
+pi_unbiased$category <- "unbiased" 
+
+pi_genes_r_real <- rbind(pi_genesp, pi_genesl, pi_unbiased)
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/pixy/"
+write.table(pi_genes_r_real, file = paste0(directory,"specific_genes_pi_real.txt"), row.names = FALSE, sep = "\t", quote = FALSE)
 ```
+
+
+
+```{r}
+pi_genes_r$category <- factor(pi_genes_r$category)
+levels(pi_genes_r$category) # "genesl"   "genesp"   "unbiased"
+levels(pi_genes_r$category) <- c("sporophyte", "gametophyte", "unbiased")
+pi_genes_r$category <- factor(pi_genes_r$category,
+                       levels = c("gametophyte", "sporophyte", "unbiased"))
+
+p1 <- ggplot(data = pi_genes_r, mapping = aes(x=category, y=mean_pi_syn)) + 
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_syn, ymax=higher_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("a") +labs(y ="pi_syn")+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
+
+p3 <- ggplot(data = pi_genes_r, mapping = aes(x=category, y=mean_pi_nonsyn)) + 
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_nonsyn, ymax=higher_pi_nonsyn), width=.2, position=position_dodge(.9))+ ggtitle("b") +labs(y ="pi_nonsyn")+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
+
+p3 <- ggplot(data = pi_genes_r, mapping = aes(x=category, y=mean_ratio_pis)) + 
+    geom_point()+ geom_errorbar(aes(ymin=lower_ratio_pis, ymax=higher_ratio_pis), width=.2, position=position_dodge(.9))+ ggtitle("c") +labs(y ="pi_n / pi_s")+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
+
+
+#(p1 | p4) / (p2 | p5) / (p3 | p6)
+```
+
+# mean sem vs weighted average
+```{r}
+pi_genes_c_real$category <- factor(pi_genes_c_real$category)
+levels(pi_genes_c_real$category) # "genesg_a" "geness_a" "unbiased"
+levels(pi_genes_c_real$category) <- c("gametophyte", "sporophyte", "unbiased")
+
+p4 <- ggplot(data = pi_genes_c_real, mapping = aes(x=category, y=mean_avg_pi_syn)) + 
+    geom_point()+ geom_errorbar(aes(ymin=mean_avg_pi_syn - sem_avg_pi_syn, ymax=mean_avg_pi_syn + sem_avg_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("d") +labs(y ="pi_syn")+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
+
+p5 <- ggplot(data = pi_genes_c_real, mapping = aes(x=category, y=mean_avg_pi_nonsyn)) + 
+    geom_point()+ geom_errorbar(aes(ymin=mean_avg_pi_nonsyn - sem_avg_pi_nonsyn, ymax=mean_avg_pi_nonsyn + sem_avg_pi_nonsyn), width=.2, position=position_dodge(.9))+ ggtitle("e") +labs(y ="pi_nonsyn")+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
+
+# p6 <- ggplot(data = pi_genes_c_real, mapping = aes(x=category, y=mean_ratio_pis)) + 
+#     geom_point()+ geom_errorbar(aes(ymin=lower_ratio_pis, ymax=higher_ratio_pis), width=.2, position=position_dodge(.9))+ ggtitle("f") +labs(y ="pi_n / pi_s")+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
+
+pi_genes_r_real$category <- factor(pi_genes_r_real$category)
+levels(pi_genes_r_real$category) # "genesl"   "genesp"   "unbiased"
+levels(pi_genes_r_real$category) <- c("sporophyte", "gametophyte", "unbiased")
+pi_genes_r_real$category <- factor(pi_genes_r_real$category,
+                       levels = c("gametophyte", "sporophyte", "unbiased"))
+
+p1 <- ggplot(data = pi_genes_r_real, mapping = aes(x=category, y=mean_avg_pi_syn)) + 
+    geom_point()+ geom_errorbar(aes(ymin=mean_avg_pi_syn - sem_avg_pi_syn, ymax=mean_avg_pi_syn + sem_avg_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("a") +labs(y ="pi_syn")+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
+
+p2 <- ggplot(data = pi_genes_r_real, mapping = aes(x=category, y=mean_avg_pi_nonsyn)) + 
+    geom_point()+ geom_errorbar(aes(ymin=mean_avg_pi_nonsyn - sem_avg_pi_nonsyn, ymax=mean_avg_pi_nonsyn + sem_avg_pi_nonsyn), width=.2, position=position_dodge(.9))+ ggtitle("b") +labs(y ="pi_nonsyn")+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
+
+# p3 <- ggplot(data = pi_genes_r, mapping = aes(x=category, y=mean_ratio_pis)) + 
+#     geom_point()+ geom_errorbar(aes(ymin=lower_ratio_pis, ymax=higher_ratio_pis), width=.2, position=position_dodge(.9))+ ggtitle("c") +labs(y ="pi_n / pi_s")+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
+
+(p1 | p4) / (p2 | p5) / (p3 | p6)
+```
+need to put mean and weighted mean side by side (have the data, just need to add the plot)
+add a new categorical variable for mean vs weighted mean, then everything is in the same plot
+
+```{r}
+# rumex
+p1 <- ggplot(data = pi_genes_r_real, mapping = aes(x=category, y=mean_avg_pi_syn)) + 
+    geom_point()+ geom_errorbar(aes(ymin=mean_avg_pi_syn - sem_avg_pi_syn, ymax=mean_avg_pi_syn + sem_avg_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("a") +labs(y ="pi_syn")+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
+
+p2 <- ggplot(data = pi_genes_r_real, mapping = aes(x=category, y=mean_avg_pi_nonsyn)) + 
+    geom_point()+ geom_errorbar(aes(ymin=mean_avg_pi_nonsyn - sem_avg_pi_nonsyn, ymax=mean_avg_pi_nonsyn + sem_avg_pi_nonsyn), width=.2, position=position_dodge(.9))+ ggtitle("b") +labs(y ="pi_nonsyn")+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
+
+
+
+```
+
+
 
 
 
