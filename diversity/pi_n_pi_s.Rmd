@@ -124,13 +124,13 @@ levels(pi_genes_c$category) # "genesg_a" "geness_a" "unbiased"
 levels(pi_genes_c$category) <- c("gametophyte", "sporophyte", "unbiased")
 
 p4 <- ggplot(data = pi_genes_c, mapping = aes(x=category, y=mean_pi_syn)) + 
-    geom_point()+ geom_errorbar(aes(ymin=lower_pi_syn, ymax=higher_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("d") +labs(y ="pi_syn")+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_syn, ymax=higher_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("d") +labs(y ="pi_syn")+ theme_classic() + theme(text = element_text(size = 12),axis.title.x=element_blank())
 
 p5 <- ggplot(data = pi_genes_c, mapping = aes(x=category, y=mean_pi_nonsyn)) + 
-    geom_point()+ geom_errorbar(aes(ymin=lower_pi_nonsyn, ymax=higher_pi_nonsyn), width=.2, position=position_dodge(.9))+ ggtitle("e") +labs(y ="pi_nonsyn")+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_nonsyn, ymax=higher_pi_nonsyn), width=.2, position=position_dodge(.9))+ ggtitle("e") +labs(y ="pi_nonsyn")+ theme_classic() + theme(text = element_text(size = 12),axis.title.x=element_blank())
 
 p6 <- ggplot(data = pi_genes_c, mapping = aes(x=category, y=mean_ratio_pis)) + 
-    geom_point()+ geom_errorbar(aes(ymin=lower_ratio_pis, ymax=higher_ratio_pis), width=.2, position=position_dodge(.9))+ ggtitle("f") +labs(y ="pi_n / pi_s")+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
+    geom_point()+ geom_errorbar(aes(ymin=lower_ratio_pis, ymax=higher_ratio_pis), width=.2, position=position_dodge(.9))+ ggtitle("f") +labs(y ="pi_n / pi_s")+ theme_classic() + theme(text = element_text(size = 12),axis.title.x=element_blank())
 
 #p1 + p2 + p3 + plot_layout(nrow = 3,guides = "collect") 
 ```
@@ -142,23 +142,24 @@ old function: mean vs weighted mean for the original data, no bootstrapping
 calculate_pi_real <- function(data) {
     data <- data %>%
       mutate(pi_syn = avg_pi * no_sites.x) %>%
-      mutate(pi_nonsyn = avg_pi_nonsyn * no_sites.y) %>%
-      mutate(ratio_pis = avg_pi_nonsyn / avg_pi)
+      mutate(pi_nonsyn = avg_pi_nonsyn * no_sites.y) #%>%
+      #mutate(ratio_pis = avg_pi_nonsyn / avg_pi) # issue with division by zero
     sum_pi_syn <- sum(data$pi_syn)
     sum_pi_nonsyn <- sum(data$pi_nonsyn)
     sum_no_sites_x <- sum(data$no_sites.x)
     sum_no_sites_y <- sum(data$no_sites.y)
+    
     weighted_pi_syn <- sum_pi_syn / sum_no_sites_x
     weighted_pi_nonsyn <- sum_pi_nonsyn / sum_no_sites_y
     ratio_weighted_pis <- weighted_pi_nonsyn / weighted_pi_syn
     
     mean_avg_pi_syn <- mean(data$avg_pi)
     mean_avg_pi_nonsyn <- mean(data$avg_pi_nonsyn)
-    ratio_mean_pis <- mean(data$ratio_pis)
+    #mean_ratio_pis <- mean(data$ratio_pis)
     
     sem_avg_pi_syn <- sd(data$avg_pi) / sqrt(length(data$avg_pi))
     sem_avg_pi_nonsyn <- sd(data$avg_pi_nonsyn) / sqrt(length(data$avg_pi_nonsyn))
-    sem_ratio_pis <- sd(data$ratio_pis) / sqrt(length(data$ratio_pis))
+    #sem_ratio_pis <- sd(data$ratio_pis) / sqrt(length(data$ratio_pis))
   
     result <- data.frame(
       weighted_pi_syn = weighted_pi_syn,
@@ -166,14 +167,16 @@ calculate_pi_real <- function(data) {
       ratio_weighted_pis = ratio_weighted_pis,
       mean_avg_pi_syn =  mean_avg_pi_syn,
       mean_avg_pi_nonsyn = mean_avg_pi_nonsyn,
-      ratio_mean_pis = ratio_mean_pis,
+      #mean_ratio_pis = mean_ratio_pis,
       sem_avg_pi_syn = sem_avg_pi_syn,
       sem_avg_pi_nonsyn = sem_avg_pi_nonsyn
+      #sem_ratio_pis = sem_ratio_pis
     )
     return(result)
 }
+# test the function
+calculate_pi_real(data)
 ```
-plot both and compare
 
 
 # pi_n / pi_s and expression in rumex
@@ -243,17 +246,19 @@ pi_genes_r$category <- factor(pi_genes_r$category,
                        levels = c("gametophyte", "sporophyte", "unbiased"))
 
 p1 <- ggplot(data = pi_genes_r, mapping = aes(x=category, y=mean_pi_syn)) + 
-    geom_point()+ geom_errorbar(aes(ymin=lower_pi_syn, ymax=higher_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("a") +labs(y ="pi_syn")+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_syn, ymax=higher_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("a") +labs(y ="pi_syn")+ theme_classic() + theme(text = element_text(size = 12),axis.title.x=element_blank())
 
-p3 <- ggplot(data = pi_genes_r, mapping = aes(x=category, y=mean_pi_nonsyn)) + 
-    geom_point()+ geom_errorbar(aes(ymin=lower_pi_nonsyn, ymax=higher_pi_nonsyn), width=.2, position=position_dodge(.9))+ ggtitle("b") +labs(y ="pi_nonsyn")+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
+p2 <- ggplot(data = pi_genes_r, mapping = aes(x=category, y=mean_pi_nonsyn)) + 
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_nonsyn, ymax=higher_pi_nonsyn), width=.2, position=position_dodge(.9))+ ggtitle("b") +labs(y ="pi_nonsyn")+ theme_classic() + theme(text = element_text(size = 12),axis.title.x=element_blank())
 
 p3 <- ggplot(data = pi_genes_r, mapping = aes(x=category, y=mean_ratio_pis)) + 
-    geom_point()+ geom_errorbar(aes(ymin=lower_ratio_pis, ymax=higher_ratio_pis), width=.2, position=position_dodge(.9))+ ggtitle("c") +labs(y ="pi_n / pi_s")+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
+    geom_point()+ geom_errorbar(aes(ymin=lower_ratio_pis, ymax=higher_ratio_pis), width=.2, position=position_dodge(.9))+ ggtitle("c") +labs(y ="pi_n / pi_s")+ theme_classic() + theme(text = element_text(size = 12),axis.title.x=element_blank())
 
 
-#(p1 | p4) / (p2 | p5) / (p3 | p6)
+(p1 | p4) / (p2 | p5) / (p3 | p6)
 ```
+
+
 
 # mean sem vs weighted average
 ```{r}
@@ -261,11 +266,11 @@ pi_genes_c_real$category <- factor(pi_genes_c_real$category)
 levels(pi_genes_c_real$category) # "genesg_a" "geness_a" "unbiased"
 levels(pi_genes_c_real$category) <- c("gametophyte", "sporophyte", "unbiased")
 
-p4 <- ggplot(data = pi_genes_c_real, mapping = aes(x=category, y=mean_avg_pi_syn)) + 
-    geom_point()+ geom_errorbar(aes(ymin=mean_avg_pi_syn - sem_avg_pi_syn, ymax=mean_avg_pi_syn + sem_avg_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("d") +labs(y ="pi_syn")+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
+p4_2 <- ggplot(data = pi_genes_c_real, mapping = aes(x=category, y=mean_avg_pi_syn)) + 
+    geom_point()+ geom_errorbar(aes(ymin=mean_avg_pi_syn - sem_avg_pi_syn, ymax=mean_avg_pi_syn + sem_avg_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("d-2") +labs(y ="pi_syn")+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
 
-p5 <- ggplot(data = pi_genes_c_real, mapping = aes(x=category, y=mean_avg_pi_nonsyn)) + 
-    geom_point()+ geom_errorbar(aes(ymin=mean_avg_pi_nonsyn - sem_avg_pi_nonsyn, ymax=mean_avg_pi_nonsyn + sem_avg_pi_nonsyn), width=.2, position=position_dodge(.9))+ ggtitle("e") +labs(y ="pi_nonsyn")+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
+p5_2 <- ggplot(data = pi_genes_c_real, mapping = aes(x=category, y=mean_avg_pi_nonsyn)) + 
+    geom_point()+ geom_errorbar(aes(ymin=mean_avg_pi_nonsyn - sem_avg_pi_nonsyn, ymax=mean_avg_pi_nonsyn + sem_avg_pi_nonsyn), width=.2, position=position_dodge(.9))+ ggtitle("e-2") +labs(y ="pi_nonsyn")+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
 
 # p6 <- ggplot(data = pi_genes_c_real, mapping = aes(x=category, y=mean_ratio_pis)) + 
 #     geom_point()+ geom_errorbar(aes(ymin=lower_ratio_pis, ymax=higher_ratio_pis), width=.2, position=position_dodge(.9))+ ggtitle("f") +labs(y ="pi_n / pi_s")+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
@@ -276,24 +281,29 @@ levels(pi_genes_r_real$category) <- c("sporophyte", "gametophyte", "unbiased")
 pi_genes_r_real$category <- factor(pi_genes_r_real$category,
                        levels = c("gametophyte", "sporophyte", "unbiased"))
 
-p1 <- ggplot(data = pi_genes_r_real, mapping = aes(x=category, y=mean_avg_pi_syn)) + 
-    geom_point()+ geom_errorbar(aes(ymin=mean_avg_pi_syn - sem_avg_pi_syn, ymax=mean_avg_pi_syn + sem_avg_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("a") +labs(y ="pi_syn")+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
+p1_2 <- ggplot(data = pi_genes_r_real, mapping = aes(x=category, y=mean_avg_pi_syn)) + 
+    geom_point()+ geom_errorbar(aes(ymin=mean_avg_pi_syn - sem_avg_pi_syn, ymax=mean_avg_pi_syn + sem_avg_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("a-2") +labs(y ="pi_syn mean")+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
 
-p2 <- ggplot(data = pi_genes_r_real, mapping = aes(x=category, y=mean_avg_pi_nonsyn)) + 
-    geom_point()+ geom_errorbar(aes(ymin=mean_avg_pi_nonsyn - sem_avg_pi_nonsyn, ymax=mean_avg_pi_nonsyn + sem_avg_pi_nonsyn), width=.2, position=position_dodge(.9))+ ggtitle("b") +labs(y ="pi_nonsyn")+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
+p2_2 <- ggplot(data = pi_genes_r_real, mapping = aes(x=category, y=mean_avg_pi_nonsyn)) + 
+    geom_point()+ geom_errorbar(aes(ymin=mean_avg_pi_nonsyn - sem_avg_pi_nonsyn, ymax=mean_avg_pi_nonsyn + sem_avg_pi_nonsyn), width=.2, position=position_dodge(.9))+ ggtitle("b-2") +labs(y ="pi_nonsyn")+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
 
 # p3 <- ggplot(data = pi_genes_r, mapping = aes(x=category, y=mean_ratio_pis)) + 
 #     geom_point()+ geom_errorbar(aes(ymin=lower_ratio_pis, ymax=higher_ratio_pis), width=.2, position=position_dodge(.9))+ ggtitle("c") +labs(y ="pi_n / pi_s")+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
 
-(p1 | p4) / (p2 | p5) / (p3 | p6)
+(p1 | p1_2) / (p2 | p2_2) / (p4 | p4_2) / (p5 | p5_2) 
+
 ```
-need to put mean and weighted mean side by side (have the data, just need to add the plot)
-add a new categorical variable for mean vs weighted mean, then everything is in the same plot
+
 
 ```{r}
 # rumex
 p1 <- ggplot(data = pi_genes_r_real, mapping = aes(x=category, y=mean_avg_pi_syn)) + 
-    geom_point()+ geom_errorbar(aes(ymin=mean_avg_pi_syn - sem_avg_pi_syn, ymax=mean_avg_pi_syn + sem_avg_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("a") +labs(y ="pi_syn")+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
+    geom_point()+ geom_errorbar(aes(ymin=mean_avg_pi_syn - sem_avg_pi_syn, ymax=mean_avg_pi_syn + sem_avg_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("a") +labs(y ="pi_syn mean")+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
+
+p1_1 <- ggplot(data = pi_genes_r, mapping = aes(x=category, y=mean_pi_syn)) + 
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_syn, ymax=higher_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("a") +labs(y ="pi_syn weighted mean")+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
+
+p1 + p1_1 
 
 p2 <- ggplot(data = pi_genes_r_real, mapping = aes(x=category, y=mean_avg_pi_nonsyn)) + 
     geom_point()+ geom_errorbar(aes(ymin=mean_avg_pi_nonsyn - sem_avg_pi_nonsyn, ymax=mean_avg_pi_nonsyn + sem_avg_pi_nonsyn), width=.2, position=position_dodge(.9))+ ggtitle("b") +labs(y ="pi_nonsyn")+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())

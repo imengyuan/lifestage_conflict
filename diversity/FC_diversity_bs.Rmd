@@ -126,9 +126,32 @@ for (tag in unique_tags) {
       } else {
         pi_r <- rbind(pi_r, pi_data)}
 }
+
+
+pi_r_real <- data.frame(
+            weighted_pi_syn = numeric(),
+            weighted_pi_nonsyn = numeric(),
+            ratio_weighted_pis = numeric(),
+            mean_avg_pi_syn = numeric(),
+            mean_avg_pi_nonsyn = numeric(),
+            sem_avg_pi_syn = numeric(),
+            sem_avg_pi_nonsyn = numeric()
+    )
+for (tag in unique_tags) {
+    subset_data <- statsr[statsr$tag == tag, ]
+    pi_data <- calculate_pi_real(subset_data)
+    pi_data$tag <- tag
+    
+    if (nrow(pi_r_real) == 0) {
+        pi_r_real <- pi_data
+      } else {
+        pi_r_real <- rbind(pi_r_real, pi_data)}
+}
+
 # save the output
 directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/pixy/"
 write.table(pi_r, file=paste0(directory,"pi_weighted_mean_CI.txt"), sep = "\t",row.names = FALSE, quote = FALSE)
+write.table(pi_r_real, file=paste0(directory,"pi_mean_real.txt"), sep = "\t",row.names = FALSE, quote = FALSE)
 
 tag_cnt <- group_by(statsr, tag) %>%
   dplyr::summarise(
@@ -158,4 +181,18 @@ p3 <- ggplot(data = pi_r, mapping = aes(x=tag, y=mean_ratio_pis)) +
 p1 + p2 + p3 + plot_layout(nrow = 3,guides = "collect") 
 ```
 
+```{r}
+tags <- c("(,-3.02]","(-3.02,-2.16]", "(-2.16,-1.27]", "(-1.27,0)", "(0,1.02]", "(1.02,2.54]","(2.54,5.36]", "(5.36,)")
+pi_r_real$tag <- factor(pi_r_real$tag,
+                       levels = tags,
+                       ordered = FALSE)
+
+p1_2 <- ggplot(data = pi_r_real, mapping = aes(x=tag, y=mean_avg_pi_syn)) + 
+    geom_point()+ geom_errorbar(aes(ymin=mean_avg_pi_syn - sem_avg_pi_syn, ymax=mean_avg_pi_syn + sem_avg_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("a") +labs(x ="log2FoldChange",y ="pi_syn")+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+
+p2_2 <- ggplot(data = pi_r_real, mapping = aes(x=tag, y=mean_avg_pi_nonsyn)) + 
+    geom_point()+ geom_errorbar(aes(ymin=mean_avg_pi_nonsyn - sem_avg_pi_nonsyn, ymax=mean_avg_pi_nonsyn + sem_avg_pi_nonsyn), width=.2, position=position_dodge(.9))+ ggtitle("b") +labs(x ="log2FoldChange",y ="pi_nonsyn")+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+
+p1_2 + p2_2 + plot_layout(nrow = 2,guides = "collect") 
+```
 

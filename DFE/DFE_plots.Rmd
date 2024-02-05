@@ -193,9 +193,9 @@ df2$Category <- factor(df2$Category)
 levels(df2$Category)
 df2$Category <- factor(df2$Category, level=c("sporophyte-specific","gametophyte-specific"))
 
-p3 <- ggplot(dfr2, aes(x=Nes,y=mean,fill=Category)) + geom_bar(stat="identity", position=position_dodge()) + theme_classic() + scale_x_discrete(limits=c("0~1", "1~10", ">10")) + scale_fill_manual(values = c("#CCEBC5", "#238B45"))  + labs(y="Proportion of mutations") + geom_errorbar(aes(ymin=lower, ymax=higher), width=.2, position=position_dodge(.9)) +ggtitle("a") + theme(text = element_text(size = 10))
+p3 <- ggplot(dfr2, aes(x=Nes,y=mean,fill=Category)) + geom_bar(stat="identity", position=position_dodge()) + theme_classic() + scale_x_discrete(limits=c("0~1", "1~10", ">10")) + scale_fill_manual(values = c("#CCEBC5", "#238B45"))  + labs(y="Proportion of mutations") + geom_errorbar(aes(ymin=lower, ymax=higher), width=.2, position=position_dodge(.9)) +ggtitle("a") + theme(text = element_text(size = 15))
 
-p4 <- ggplot(df2, aes(x=Nes,y=mean,fill=Category)) + geom_bar(stat="identity", position=position_dodge()) + theme_classic() + scale_x_discrete(limits=c("0~1", "1~10", ">10")) + scale_fill_manual(values = c("#CCEBC5", "#238B45"))  + labs(y="Proportion of mutations") + geom_errorbar(aes(ymin=lower, ymax=higher), width=.2, position=position_dodge(.9)) +ggtitle("b") + theme(text = element_text(size = 10))
+p4 <- ggplot(df2, aes(x=Nes,y=mean,fill=Category)) + geom_bar(stat="identity", position=position_dodge()) + theme_classic() + scale_x_discrete(limits=c("0~1", "1~10", ">10")) + scale_fill_manual(values = c("#CCEBC5", "#238B45"))  + labs(y="Proportion of mutations") + geom_errorbar(aes(ymin=lower, ymax=higher), width=.2, position=position_dodge(.9)) +ggtitle("b") + theme(text = element_text(size = 15))
 
 p3 + p4 + plot_layout(guides = "collect") & theme(legend.position = "right")
 ```
