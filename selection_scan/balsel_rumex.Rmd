@@ -44,7 +44,7 @@ p7 <- ggplot(scan, aes(x = physPos/1000000, y = genPos))+
 
 p8 <- ggplot(scan, aes(x = physPos/1000000, y = CLR))+geom_point(aes(colour=log10(s_hat)),size = 0.3)+
     facet_grid(.~chrom,scales="free_x", switch = "x", space = "free_x") + 
-    xlab("Position on Chromosome (Mb)")+ylab("Composite Likelihood Ratio")+theme_bw() +scale_color_gradient2(name = expression('log'[10]~hat(italic(a))), limits = c(-3, 9), midpoint = 0, high="red", mid = 'white', low="blue")+ theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside")+ theme(text = element_text(size = 10))
+    xlab("Position on Chromosome (Mb)")+ylab("Composite Likelihood Ratio")+theme_bw() +scale_color_gradient2(name = expression('log'[10]~hat(italic(a))), limits = c(-3, 9), midpoint = 0, high="red", mid = 'white', low="blue")+ theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside")+ theme(text = element_text(size = 10))+ geom_hline(yintercept = 9.500813, linetype="dashed",color = "black", size =0.3)
 
 
 p7 / p8 + plot_layout(guides = "collect") & theme(legend.position = "right")

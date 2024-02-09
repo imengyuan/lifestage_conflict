@@ -1,0 +1,191 @@
+---
+title: "expression level and pi plots"
+author: "Meng"
+date: "2024-02-07"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## linear model
+stats
+statsr
+```{r}
+modelr <- lm(avg_pi ~ log2FoldChange + baseMean, data = stats)
+summary(modelr)
+
+modelr <- lm(avg_pi ~ abs(log2FoldChange) + baseMean, data = stats)
+summary(modelr)
+```
+
+p_qt1 <- genesp %>% filter(baseMean <= 20)
+p_qt2 <- genesp %>% filter(baseMean > 20 & baseMean <= 70.4)
+p_qt3 <- genesp %>% filter(baseMean > 70.4 & baseMean <= 217)
+p_qt4 <- genesp %>% filter(baseMean > 217)
+
+```{r}
+statsr_qt1 <- statsr %>% filter(baseMean <= 20)
+statsr_qt2 <- statsr %>% filter(baseMean > 20 & baseMean <= 70.4)
+statsr_qt3 <- statsr %>% filter(baseMean > 70.4 & baseMean <= 217)
+statsr_qt4 <- statsr %>% filter(baseMean > 217)
+
+# table(statsr_qt1$tag)
+unique_tags <- unique(statsr$tag) # already unique
+
+pi_r_qt1 <- data.frame(
+            mean_pi_syn = numeric(),
+            mean_pi_nonsyn = numeric(),
+            mean_ratio_pis = numeric(),
+            lower_pi_syn = numeric(),
+            higher_pi_syn = numeric(),
+            lower_pi_nonsyn = numeric(),
+            higher_pi_nonsyn = numeric(),
+            lower_ratio_pis = numeric(),
+            higher_ratio_pis = numeric()
+    )
+for (tag in unique_tags) {
+    subset_data <- statsr_qt1[statsr_qt1$tag == tag, ]
+    pi_data <- bootstrap_calculate_pi(subset_data)
+    pi_data$tag <- tag
+    
+    if (nrow(pi_r_qt1) == 0) {
+        pi_r_qt1 <- pi_data
+      } else {
+        pi_r_qt1 <- rbind(pi_r_qt1 , pi_data)}
+}
+
+pi_r_qt2 <- data.frame(
+            mean_pi_syn = numeric(),
+            mean_pi_nonsyn = numeric(),
+            mean_ratio_pis = numeric(),
+            lower_pi_syn = numeric(),
+            higher_pi_syn = numeric(),
+            lower_pi_nonsyn = numeric(),
+            higher_pi_nonsyn = numeric(),
+            lower_ratio_pis = numeric(),
+            higher_ratio_pis = numeric()
+    )
+for (tag in unique_tags) {
+    subset_data <- statsr_qt2[statsr_qt2$tag == tag, ]
+    pi_data <- bootstrap_calculate_pi(subset_data)
+    pi_data$tag <- tag
+    
+    if (nrow(pi_r_qt2) == 0) {
+        pi_r_qt2 <- pi_data
+      } else {
+        pi_r_qt2 <- rbind(pi_r_qt2 , pi_data)}
+}
+
+pi_r_qt3 <- data.frame(
+            mean_pi_syn = numeric(),
+            mean_pi_nonsyn = numeric(),
+            mean_ratio_pis = numeric(),
+            lower_pi_syn = numeric(),
+            higher_pi_syn = numeric(),
+            lower_pi_nonsyn = numeric(),
+            higher_pi_nonsyn = numeric(),
+            lower_ratio_pis = numeric(),
+            higher_ratio_pis = numeric()
+    )
+for (tag in unique_tags) {
+    subset_data <- statsr_qt3[statsr_qt3$tag == tag, ]
+    pi_data <- bootstrap_calculate_pi(subset_data)
+    pi_data$tag <- tag
+    
+    if (nrow(pi_r_qt3) == 0) {
+        pi_r_qt3 <- pi_data
+      } else {
+        pi_r_qt3 <- rbind(pi_r_qt3 , pi_data)}
+}
+
+pi_r_qt4 <- data.frame(
+            mean_pi_syn = numeric(),
+            mean_pi_nonsyn = numeric(),
+            mean_ratio_pis = numeric(),
+            lower_pi_syn = numeric(),
+            higher_pi_syn = numeric(),
+            lower_pi_nonsyn = numeric(),
+            higher_pi_nonsyn = numeric(),
+            lower_ratio_pis = numeric(),
+            higher_ratio_pis = numeric()
+    )
+for (tag in unique_tags) {
+    subset_data <- statsr_qt4[statsr_qt4$tag == tag, ]
+    pi_data <- bootstrap_calculate_pi(subset_data)
+    pi_data$tag <- tag
+    
+    if (nrow(pi_r_qt4) == 0) {
+        pi_r_qt4 <- pi_data
+      } else {
+        pi_r_qt4 <- rbind(pi_r_qt4 , pi_data)}
+}
+
+```
+(-1.27,0) (-2.16,-1.27] (-3.02,-2.16]      (,-3.02]      (0,1.02]   (1.02,2.54] 
+          343           315           228           211           211           185 
+  (2.54,5.36]       (5.36,) 
+          226           234 
+
+```{r}
+tags <- c("(,-3.02]","(-3.02,-2.16]", "(-2.16,-1.27]", "(-1.27,0)", "(0,1.02]", "(1.02,2.54]","(2.54,5.36]", "(5.36,)")
+pi_r_qt1$tag <- factor(pi_r_qt1$tag,
+                       levels = tags,
+                       ordered = FALSE)
+pi_r_qt2$tag <- factor(pi_r_qt2$tag,
+                       levels = tags,
+                       ordered = FALSE)
+pi_r_qt3$tag <- factor(pi_r_qt3$tag,
+                       levels = tags,
+                       ordered = FALSE)
+pi_r_qt4$tag <- factor(pi_r_qt4$tag,
+                       levels = tags,
+                       ordered = FALSE)
+
+p1_1 <- ggplot(data = pi_r_qt1, mapping = aes(x=tag, y=mean_pi_syn)) + 
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_syn, ymax=higher_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("a_qt1") +labs(x ="log2FoldChange",y ="pi_syn")+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+
+p2_1 <- ggplot(data = pi_r_qt1, mapping = aes(x=tag, y=mean_pi_nonsyn)) + 
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_nonsyn, ymax=higher_pi_nonsyn), width=.2, position=position_dodge(.9))+ ggtitle("b_qt1") +labs(x ="log2FoldChange",y ="pi_nonsyn")+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+
+p3_1 <- ggplot(data = pi_r_qt1, mapping = aes(x=tag, y=mean_ratio_pis)) + 
+    geom_point()+ geom_errorbar(aes(ymin=lower_ratio_pis, ymax=higher_ratio_pis), width=.2, position=position_dodge(.9))+ ggtitle("c_qt1") +labs(x ="log2FoldChange",y ="pi_n / pi_s")+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+
+p1_2 <- ggplot(data = pi_r_qt2, mapping = aes(x=tag, y=mean_pi_syn)) + 
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_syn, ymax=higher_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("a_qt2") +labs(x ="log2FoldChange",y ="pi_syn")+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+
+p2_2 <- ggplot(data = pi_r_qt2, mapping = aes(x=tag, y=mean_pi_nonsyn)) + 
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_nonsyn, ymax=higher_pi_nonsyn), width=.2, position=position_dodge(.9))+ ggtitle("b_qt2") +labs(x ="log2FoldChange",y ="pi_nonsyn")+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+
+p3_2 <- ggplot(data = pi_r_qt2, mapping = aes(x=tag, y=mean_ratio_pis)) + 
+    geom_point()+ geom_errorbar(aes(ymin=lower_ratio_pis, ymax=higher_ratio_pis), width=.2, position=position_dodge(.9))+ ggtitle("c_qt2") +labs(x ="log2FoldChange",y ="pi_n / pi_s")+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+
+p1_3 <- ggplot(data = pi_r_qt3, mapping = aes(x=tag, y=mean_pi_syn)) + 
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_syn, ymax=higher_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("a_qt3") +labs(x ="log2FoldChange",y ="pi_syn")+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+
+p2_3 <- ggplot(data = pi_r_qt3, mapping = aes(x=tag, y=mean_pi_nonsyn)) + 
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_nonsyn, ymax=higher_pi_nonsyn), width=.2, position=position_dodge(.9))+ ggtitle("b_qt3") +labs(x ="log2FoldChange",y ="pi_nonsyn")+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+
+p3_3 <- ggplot(data = pi_r_qt3, mapping = aes(x=tag, y=mean_ratio_pis)) + 
+    geom_point()+ geom_errorbar(aes(ymin=lower_ratio_pis, ymax=higher_ratio_pis), width=.2, position=position_dodge(.9))+ ggtitle("c_qt3") +labs(x ="log2FoldChange",y ="pi_n / pi_s")+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+
+
+p1_4 <- ggplot(data = pi_r_qt4, mapping = aes(x=tag, y=mean_pi_syn)) + 
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_syn, ymax=higher_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("a_qt4") +labs(x ="log2FoldChange",y ="pi_syn")+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+
+p2_4 <- ggplot(data = pi_r_qt4, mapping = aes(x=tag, y=mean_pi_nonsyn)) + 
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_nonsyn, ymax=higher_pi_nonsyn), width=.2, position=position_dodge(.9))+ ggtitle("b_qt4") +labs(x ="log2FoldChange",y ="pi_nonsyn")+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+
+p3_4 <- ggplot(data = pi_r_qt4, mapping = aes(x=tag, y=mean_ratio_pis)) + 
+    geom_point()+ geom_errorbar(aes(ymin=lower_ratio_pis, ymax=higher_ratio_pis), width=.2, position=position_dodge(.9))+ ggtitle("c_qt4") +labs(x ="log2FoldChange",y ="pi_n / pi_s")+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+
+(p1_1 | p1_2 | p1_3 | p1_4) / (p2_1 | p2_2 | p2_3 | p2_4) / (p3_1 | p3_2 | p3_3 | p3_4) 
+```
+(p1 | p4) / (p2 | p5) / (p3 | p6)
+
+save the output
+```{r}
+
+```
+
