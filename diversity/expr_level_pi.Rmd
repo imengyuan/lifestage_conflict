@@ -186,6 +186,21 @@ p3_4 <- ggplot(data = pi_r_qt4, mapping = aes(x=tag, y=mean_ratio_pis)) +
 
 save the output
 ```{r}
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/pixy/"
+write.table(pi_r_qt1, file = paste0(directory, "pi_r_qt1"), sep = "\t",row.names = FALSE, quote = FALSE)
+write.table(pi_r_qt2, file = paste0(directory, "pi_r_qt2"), sep = "\t",row.names = FALSE, quote = FALSE)
+write.table(pi_r_qt3, file = paste0(directory, "pi_r_qt3"), sep = "\t",row.names = FALSE, quote = FALSE)
+write.table(pi_r_qt4, file = paste0(directory, "pi_r_qt4"), sep = "\t",row.names = FALSE, quote = FALSE)
 
+```
+
+
+## check recombination rate for each bin
+
+```{r}
+
+head(statsr)
+pos <- statsr[,c(1,8:9)]
+write.table(pos, file = "/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/pixy/pos.txt", sep = "\t",row.names = FALSE, quote = FALSE)
 ```
 

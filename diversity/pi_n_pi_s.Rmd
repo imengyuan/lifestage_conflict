@@ -12,6 +12,26 @@ library(dplyr)
 
 
 # pi_n / pi_s and expression in ceratodon
+get gene lists
+```{r}
+DE_c <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/deseq2/DE_results_all.txt", header =T) # 30107
+DE_c <- DE_c %>% filter(g_mean > 5 | s_mean > 5) # 25861 (including UV)
+
+unbiased <- DE_c %>% filter(log2FoldChange <= 0.419 & log2FoldChange > -0.354 ) # 6150
+unbiased <- unbiased %>% filter(padj >= 0.1) # 4680
+
+
+DE_c <- DE_c %>% filter(padj<0.1)
+geness <- DE_c[DE_c$g_s_ratio <= 0.1900026 ,]
+genesg <- DE_c[DE_c$g_s_ratio >= 8.5800357 ,] 
+geness <- geness[geness$log2FoldChange <= -2,] 
+genesg <- genesg[genesg$log2FoldChange >= 2,] 
+geness_a <- geness %>% filter(chrom != "U" & chrom != "V") #1656
+genesg_a <- genesg %>% filter(chrom != "U" & chrom != "V") #1514
+
+```
+
+
 ```{r}
 directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/diversity/"
 stats  <- read.csv(paste0(directory,"ceratodon_pi_n_pi_s.csv"))
@@ -19,13 +39,13 @@ stats  <- read.csv(paste0(directory,"ceratodon_pi_n_pi_s.csv"))
 geness_a <- geness_a %>% dplyr::select(1)
 genesg_a <- genesg_a %>% dplyr::select(1)
 unbiased <- unbiased %>% dplyr::select(1)
-stats_genesg_a <- inner_join(genesg_a, stats, by="gene") # 1091 1217
-stats_geness_a <- inner_join(geness_a, stats, by="gene") # 1049 1232
-stats_unbiased <- inner_join(unbiased, stats, by="gene") # 3715 4319
+stats_genesg_a <- inner_join(genesg_a, stats, by="gene") # 1217
+stats_geness_a <- inner_join(geness_a, stats, by="gene") # 1232
+stats_unbiased <- inner_join(unbiased, stats, by="gene") # 4319 3309
 
 write.table(stats_genesg_a, file = paste0(directory,"stats_genesg_a.txt"), sep = "\t", row.names = FALSE, quote = FALSE)
 write.table(stats_geness_a, file = paste0(directory,"stats_geness_a.txt"), sep = "\t", row.names = FALSE, quote = FALSE)
-write.table(stats_unbiased, file = paste0(directory,"stats_unbiased.txt"), sep = "\t", row.names = FALSE, quote = FALSE)
+write.table(stats_unbiased, file = paste0(directory,"stats_unbiased2.txt"), sep = "\t", row.names = FALSE, quote = FALSE)
 
 stats_genesg_a <- read.table(paste0(directory,"stats_genesg_a.txt"), header = T)
 stats_geness_a <- read.table(paste0(directory,"stats_geness_a.txt"), header = T)
@@ -94,12 +114,12 @@ pi_genesg_a$category <- "genesg_a"
 pi_geness_a <- bootstrap_calculate_pi(stats_geness_a)
 pi_geness_a$category <- "geness_a" 
 
-pi_unbiased <- bootstrap_calculate_pi(stats_unbiased)
-pi_unbiased$category <- "unbiased" 
+pi_unbiased_c <- bootstrap_calculate_pi(stats_unbiased)
+pi_unbiased_c$category <- "unbiased" 
 
-pi_genes_c <- rbind(pi_genesg_a, pi_geness_a, pi_unbiased)
+pi_genes_c <- rbind(pi_genesg_a, pi_geness_a, pi_unbiased_c)
 directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/diversity/"
-write.table(pi_genes_c, file = paste0(directory,"specific_genes_pi.txt"), row.names = FALSE, sep = "\t", quote = FALSE)
+write.table(pi_genes_c, file = paste0(directory,"specific_genes_pi2.txt"), row.names = FALSE, sep = "\t", quote = FALSE)
 
 # 
 pi_genesg_a <- calculate_pi_real(stats_genesg_a)
@@ -123,19 +143,21 @@ pi_genes_c$category <- factor(pi_genes_c$category)
 levels(pi_genes_c$category) # "genesg_a" "geness_a" "unbiased"
 levels(pi_genes_c$category) <- c("gametophyte", "sporophyte", "unbiased")
 
+pi_genes_c$category <- factor(pi_genes_c$category,
+                       levels = c("sporophyte", "unbiased","gametophyte"))
+
+
 p4 <- ggplot(data = pi_genes_c, mapping = aes(x=category, y=mean_pi_syn)) + 
-    geom_point()+ geom_errorbar(aes(ymin=lower_pi_syn, ymax=higher_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("d") +labs(y ="pi_syn")+ theme_classic() + theme(text = element_text(size = 12),axis.title.x=element_blank())
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_syn, ymax=higher_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("d") +labs(y = expression(pi[s]))+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
 
 p5 <- ggplot(data = pi_genes_c, mapping = aes(x=category, y=mean_pi_nonsyn)) + 
-    geom_point()+ geom_errorbar(aes(ymin=lower_pi_nonsyn, ymax=higher_pi_nonsyn), width=.2, position=position_dodge(.9))+ ggtitle("e") +labs(y ="pi_nonsyn")+ theme_classic() + theme(text = element_text(size = 12),axis.title.x=element_blank())
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_nonsyn, ymax=higher_pi_nonsyn), width=.2, position=position_dodge(.9))+ ggtitle("e") +labs(y = expression(pi[n]))+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
 
 p6 <- ggplot(data = pi_genes_c, mapping = aes(x=category, y=mean_ratio_pis)) + 
-    geom_point()+ geom_errorbar(aes(ymin=lower_ratio_pis, ymax=higher_ratio_pis), width=.2, position=position_dodge(.9))+ ggtitle("f") +labs(y ="pi_n / pi_s")+ theme_classic() + theme(text = element_text(size = 12),axis.title.x=element_blank())
+    geom_point()+ geom_errorbar(aes(ymin=lower_ratio_pis, ymax=higher_ratio_pis), width=.2, position=position_dodge(.9))+ ggtitle("f") +labs(y = expression(paste(pi[n], "/", pi[s], " ratio")))+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
 
 #p1 + p2 + p3 + plot_layout(nrow = 3,guides = "collect") 
 ```
-
-
 
 old function: mean vs weighted mean for the original data, no bootstrapping
 ```{r}
@@ -186,15 +208,28 @@ directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Man
 genesl <- read.table(paste0(directory,"genesl.txt"))
 genesp <- read.table(paste0(directory,"genesp.txt"))
 
+
+DE_tissue <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/deseq2/result_tissue_full.txt", header=T)
+DE_tissue <- DE_tissue %>% filter(p_mean>5 | l_mean>5) #17982
+
+unbias <- DE_tissue %>% filter(log2FoldChange <= 1.02 & log2FoldChange > -1.27) # 4344
+unbias <- unbias %>% filter(padj >= 0.1) # 822
+
+#unbias <- DE_tissue %>% filter(padj >= 0.1) # 858
+```
+
+
+```{r}
+
 directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/pixy/"
 statsr <- read.csv(paste0(directory,"rumex_pi_n_pi_s.csv"))
 
 genesl <- genesl %>% dplyr::select(1)
 genesp <- genesp %>% dplyr::select(1)
 unbias <- unbias %>% dplyr::select(1)
-statsr_genesl <- inner_join(genesl, statsr, by="gene") # 1076 1149
-statsr_genesp <- inner_join(genesp, statsr, by="gene") # 869 920
-statsr_unbiased <- inner_join(unbias, statsr, by="gene") # 500 532
+statsr_genesl <- inner_join(genesl, statsr, by="gene") # 1149
+statsr_genesp <- inner_join(genesp, statsr, by="gene") # 920
+statsr_unbiased <- inner_join(unbias, statsr, by="gene") # 532 523
 
 write.table(statsr_genesl, file = paste0(directory,"statsr_genesl.txt"), sep = "\t", row.names = FALSE, quote = FALSE)
 write.table(statsr_genesp, file = paste0(directory,"statsr_genesp.txt"), sep = "\t", row.names = FALSE, quote = FALSE)
@@ -214,12 +249,12 @@ pi_genesp$category <- "genesp"
 pi_genesl <- bootstrap_calculate_pi(statsr_genesl)
 pi_genesl$category <- "genesl" 
 
-pi_unbiased <- bootstrap_calculate_pi(statsr_unbiased)
-pi_unbiased$category <- "unbiased" 
+pi_unbiased_r <- bootstrap_calculate_pi(statsr_unbiased)
+pi_unbiased_r$category <- "unbiased" 
 
-pi_genes_r <- rbind(pi_genesp, pi_genesl, pi_unbiased)
+pi_genes_r <- rbind(pi_genesp, pi_genesl, pi_unbiased_r)
 directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/pixy/"
-write.table(pi_genes_r, file = paste0(directory,"specific_genes_pi.txt"), row.names = FALSE, sep = "\t", quote = FALSE)
+write.table(pi_genes_r, file = paste0(directory,"specific_genes_pi2.txt"), row.names = FALSE, sep = "\t", quote = FALSE)
 
 #
 pi_genesp <- calculate_pi_real(statsr_genesp)
@@ -243,22 +278,20 @@ pi_genes_r$category <- factor(pi_genes_r$category)
 levels(pi_genes_r$category) # "genesl"   "genesp"   "unbiased"
 levels(pi_genes_r$category) <- c("sporophyte", "gametophyte", "unbiased")
 pi_genes_r$category <- factor(pi_genes_r$category,
-                       levels = c("gametophyte", "sporophyte", "unbiased"))
+                       levels = c("sporophyte", "unbiased","gametophyte"))
 
 p1 <- ggplot(data = pi_genes_r, mapping = aes(x=category, y=mean_pi_syn)) + 
-    geom_point()+ geom_errorbar(aes(ymin=lower_pi_syn, ymax=higher_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("a") +labs(y ="pi_syn")+ theme_classic() + theme(text = element_text(size = 12),axis.title.x=element_blank())
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_syn, ymax=higher_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("a") +labs(y = expression(pi[s]))+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
 
 p2 <- ggplot(data = pi_genes_r, mapping = aes(x=category, y=mean_pi_nonsyn)) + 
-    geom_point()+ geom_errorbar(aes(ymin=lower_pi_nonsyn, ymax=higher_pi_nonsyn), width=.2, position=position_dodge(.9))+ ggtitle("b") +labs(y ="pi_nonsyn")+ theme_classic() + theme(text = element_text(size = 12),axis.title.x=element_blank())
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_nonsyn, ymax=higher_pi_nonsyn), width=.2, position=position_dodge(.9))+ ggtitle("b") +labs(y = expression(pi[n]))+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
 
 p3 <- ggplot(data = pi_genes_r, mapping = aes(x=category, y=mean_ratio_pis)) + 
-    geom_point()+ geom_errorbar(aes(ymin=lower_ratio_pis, ymax=higher_ratio_pis), width=.2, position=position_dodge(.9))+ ggtitle("c") +labs(y ="pi_n / pi_s")+ theme_classic() + theme(text = element_text(size = 12),axis.title.x=element_blank())
+    geom_point()+ geom_errorbar(aes(ymin=lower_ratio_pis, ymax=higher_ratio_pis), width=.2, position=position_dodge(.9))+ ggtitle("c") +labs(y = expression(paste(pi[n], "/", pi[s], " ratio")))+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
 
 
 (p1 | p4) / (p2 | p5) / (p3 | p6)
 ```
-
-
 
 # mean sem vs weighted average
 ```{r}

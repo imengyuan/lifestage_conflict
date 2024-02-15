@@ -254,7 +254,7 @@ cntsr$group <- factor(cntsr$group, level=c("g_biased", "s_biased", "unbiased"))
 
 hcols <- c("black", "grey" ,"white")
 p1 <- ggplot(cntsr) +
-geom_col(aes(x = category, y = count, fill = group), position = "fill", colour ="black")  + xlab("") + ylab("Proportion of genes") + theme_classic() +ggtitle("a") + scale_fill_manual(values = hcols) + theme(axis.text=element_text(size=15), axis.title=element_text(size=15)) + guides(fill = guide_legend(override.aes = list(size = 12)))
+geom_col(aes(x = category, y = count, fill = group), position = "fill", colour ="black")  + xlab("") + ylab("Proportion of genes") + theme_classic() +ggtitle("a") + scale_fill_manual(values = hcols) + theme(axis.text=element_text(size=10), axis.title=element_text(size=10)) + guides(fill = guide_legend(override.aes = list(size = 10)))
 
 ggplot(cnts) +
 geom_col(aes(x = category, y = count, fill = lifestage), colour ="black")  + xlab("") + ylab("Number of specific genes") + theme_light() + scale_fill_manual(values = hcols) + theme(axis.text=element_text(size=18), axis.title=element_text(size=18)) + guides(fill = guide_legend(override.aes = list(size = 12)))

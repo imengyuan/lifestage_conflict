@@ -170,13 +170,13 @@ pi_r$tag <- factor(pi_r$tag,
                        ordered = FALSE)
 
 p1 <- ggplot(data = pi_r, mapping = aes(x=tag, y=mean_pi_syn)) + 
-    geom_point()+ geom_errorbar(aes(ymin=lower_pi_syn, ymax=higher_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("a") +labs(x ="log2FoldChange",y ="pi_syn")+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_syn, ymax=higher_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("a") +labs(x ="log2FoldChange",y = expression(pi[s]))+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
 
 p2 <- ggplot(data = pi_r, mapping = aes(x=tag, y=mean_pi_nonsyn)) + 
-    geom_point()+ geom_errorbar(aes(ymin=lower_pi_nonsyn, ymax=higher_pi_nonsyn), width=.2, position=position_dodge(.9))+ ggtitle("b") +labs(x ="log2FoldChange",y ="pi_nonsyn")+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_nonsyn, ymax=higher_pi_nonsyn), width=.2, position=position_dodge(.9))+ ggtitle("b") +labs(x ="log2FoldChange",y = expression(pi[n]))+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
 
 p3 <- ggplot(data = pi_r, mapping = aes(x=tag, y=mean_ratio_pis)) + 
-    geom_point()+ geom_errorbar(aes(ymin=lower_ratio_pis, ymax=higher_ratio_pis), width=.2, position=position_dodge(.9))+ ggtitle("c") +labs(x ="log2FoldChange",y ="pi_n / pi_s")+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+    geom_point()+ geom_errorbar(aes(ymin=lower_ratio_pis, ymax=higher_ratio_pis), width=.2, position=position_dodge(.9))+ ggtitle("c") +labs(x ="log2FoldChange",y = expression(paste(pi[n], "/", pi[s], " ratio")))+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
 
 p1 + p2 + p3 + plot_layout(nrow = 3,guides = "collect") 
 ```
