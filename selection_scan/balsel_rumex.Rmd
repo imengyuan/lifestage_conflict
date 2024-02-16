@@ -32,7 +32,7 @@ scan <- rbind(scan1, scan2, scan3, scan4, scan5)
 scan<- scan %>% mutate(chrom = factor(chrom))
 levels(scan$chrom)
 levels(scan$chrom)<- c("A1", "A4", "A2", "XY", "A3")
-scan <- scan[order(scan$chrom),]
+#scan <- scan[order(scan$chrom),]
 scan <- scan %>% mutate(chrom = factor(chrom, levels = c("A1","A2","A3","A4","XY")))
 ```
 
@@ -40,11 +40,13 @@ plot the scans
 ```{r}
 p7 <- ggplot(scan, aes(x = physPos/1000000, y = genPos))+
     facet_grid(.~chrom,scales="free_x", switch = "x", space = "free_x") + geom_point(size=0.3, alpha=0.5)+
-    xlab("Physical position on Chromosome (Mb)")+ylab("Genetic position (cM)")+theme_bw()+theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside",legend.position ="none")+ theme(text = element_text(size = 10))
+    xlab("")+ylab("Genetic position (cM)")+theme_bw()+theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside",legend.position ="none")+ theme(text = element_text(size = 10), panel.spacing = unit(0.5, "lines"))
 
 p8 <- ggplot(scan, aes(x = physPos/1000000, y = CLR))+geom_point(aes(colour=log10(s_hat)),size = 0.3)+
     facet_grid(.~chrom,scales="free_x", switch = "x", space = "free_x") + 
-    xlab("Position on Chromosome (Mb)")+ylab("Composite Likelihood Ratio")+theme_bw() +scale_color_gradient2(name = expression('log'[10]~hat(italic(a))), limits = c(-3, 9), midpoint = 0, high="red", mid = 'white', low="blue")+ theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside")+ theme(text = element_text(size = 10))+ geom_hline(yintercept = 9.500813, linetype="dashed",color = "black", size =0.3)
+    xlab("Physical position on Chromosome (Mb)")+ylab("Composite Likelihood Ratio")+theme_bw() +scale_color_gradient2(name = expression('log'[10]~hat(italic(a))), limits = c(-3, 9), midpoint = 0, high="red", mid = 'white', low="blue")+ theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside")+ theme(text = element_text(size = 10), panel.spacing = unit(0.5, "lines"))
+
+#+ geom_hline(yintercept = 9.500813, linetype="dashed",color = "black", size =0.3)
 
 
 p7 / p8 + plot_layout(guides = "collect") & theme(legend.position = "right")
@@ -137,12 +139,14 @@ genes <- genes %>% filter(l_mean > 5 | p_mean > 5)
 
 
 pollen_bias <- result_tissue %>% filter(log2FoldChange>0 & padj < 0.1) # 6823
-unbiased <- result_tissue %>% filter(padj >= 0.1) # 858
+unbias <- DE_tissue %>% filter(log2FoldChange <= 1.02 & log2FoldChange > -1.27) # 4344
+unbias <- unbias %>% filter(padj >= 0.1) # 822
 leaf_bias <- result_tissue %>% filter(log2FoldChange<0 & padj < 0.1) # 10301
 
 
 pollen_bias <- genes %>% filter(log2FoldChange>0 & padj < 0.1) # 142
 unbiased <- genes %>% filter(padj >= 0.1) # 21
+unbiased <- genes %>% filter(log2FoldChange <= 1.02 & log2FoldChange > -1.27 & padj >= 0.1) # 21
 leaf_bias <- genes %>% filter(log2FoldChange<0 & padj < 0.1) # 242
 pollen_bias$category <- "pollen_bias"
 unbiased$category <- "unbiased"
@@ -151,6 +155,11 @@ bias <- rbind(pollen_bias,unbiased,leaf_bias)
 
 write.table(bias, file=paste0(data,"balsel_genes_bias.txt"), row.names = FALSE, quote = FALSE)
 ```
+category, p_biased, unbiased, l_biased
+balancing_sel, 142, 21, 242
+whole_genome, 6823, 822, 10301
+
+
 LG1 LG2 LG3 LG4 LG5 
 106  32 119  64  84 
 
@@ -227,39 +236,37 @@ Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’
 
 
 ## contigency test
-(old)
-category, pollen-biased, unbiased, leaf-biased
-balancing_sel, 155, 35, 251
-whole_genome, 8998, 4677, 11375
 
 category, p_biased, unbiased, l_biased
 balancing_sel, 142, 21, 242
-whole_genome, 6823, 858, 10301
+whole_genome, 6823, 822, 10301
 
 ```{r}
 bias_tabler <- read.csv(paste0(data,"biased_genes.txt"))
-bias_table
-row.names(bias_table) <- bias_table[,1]
-tablep <- bias_table[,2:3]
-tablel <- bias_table[,3:4]
-table <- bias_table[,c(2,4)]
+bias_tabler
+row.names(bias_tabler) <- bias_tabler[,1]
+tablep <- bias_tabler[,2:3]
+tablel <- bias_tabler[,3:4]
+table <- bias_tabler[,c(2,4)]
 
-cnts <- read.table(paste0(directory,"biased_cnts.txt"), header =T)
-cnts <- cnts[1:4,]
+#cnts <- read.table(paste0(directory,"biased_cnts.txt"), header =T)
+#cnts <- cnts[1:4,]
 cntsr <- gather(bias_tabler, group, count, p_biased:l_biased)
 cntsr$group <- factor(cntsr$group)
-levels(cntsr$group) <- c("s_biased", "g_biased", "unbiased")
-cntsr$group <- factor(cntsr$group, level=c("g_biased", "s_biased", "unbiased"))
+levels(cntsr$group) <- c("sporophyte-biased", "gametophyte-biased", "unbiased")
+cntsr$group <- factor(cntsr$group, level=c("gametophyte-biased", "sporophyte-biased", "unbiased"))
 
 
 hcols <- c("black", "grey" ,"white")
 p1 <- ggplot(cntsr) +
 geom_col(aes(x = category, y = count, fill = group), position = "fill", colour ="black")  + xlab("") + ylab("Proportion of genes") + theme_classic() +ggtitle("a") + scale_fill_manual(values = hcols) + theme(axis.text=element_text(size=10), axis.title=element_text(size=10)) + guides(fill = guide_legend(override.aes = list(size = 10)))
 
-ggplot(cnts) +
-geom_col(aes(x = category, y = count, fill = lifestage), colour ="black")  + xlab("") + ylab("Number of specific genes") + theme_light() + scale_fill_manual(values = hcols) + theme(axis.text=element_text(size=18), axis.title=element_text(size=18)) + guides(fill = guide_legend(override.aes = list(size = 12)))
-```
+p2 <- ggplot(cntsr) +
+geom_col(aes(x = category, y = count, fill = group), colour ="black")  + xlab("") + ylab("Number of genes") + theme_classic() +ggtitle("b") + scale_fill_manual(values = hcols) + theme(axis.text=element_text(size=10), axis.title=element_text(size=10)) + guides(fill = guide_legend(override.aes = list(size = 10)))
 
+p1 + p2 + plot_layout(guides = "collect") & theme(legend.position = "right")
+```
+real number + proportions
 
 
 chi square test

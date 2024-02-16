@@ -153,7 +153,11 @@ gff <- read.table(paste0(directory,"REF_LA_filtered_annotation.genes.gff"))
 colnames(gff) <- c("gene","chrom", "start", "end")
 DE_tissue <- inner_join(DE_tissue, gff, by = "gene")
 pollen <- DE_tissue %>% filter(log2FoldChange > 0 & padj < 0.1) # 8998 - 6823
-unbias <- DE_tissue %>% filter(padj >= 0.1) # 4677 858
+#unbias <- DE_tissue %>% filter(padj >= 0.1) # 4677 858
+unbias <- DE_tissue %>% filter(log2FoldChange <= 1.02 & log2FoldChange > -1.27) # 4344
+unbias <- unbias %>% filter(padj >= 0.1) # 822
+
+
 leaf <- DE_tissue %>% filter(log2FoldChange < 0 & padj < 0.1) # 11375 - 10301
 as.data.frame(table(pollen$chrom))
 as.data.frame(table(unbias$chrom))

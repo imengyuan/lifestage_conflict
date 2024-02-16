@@ -8,16 +8,10 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-library(ggplot2)
 library(dplyr)
-library("DESeq2")
-library('RColorBrewer')
 library("stringr")
-library(VennDiagram)
-library(rattle)
 library(topGO)
 library(data.table)
-#setwd("/Users/yuanmeng/Dropbox/Rumex_eQTL/deseq2")
 directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/deseq2/"
 ```
 
