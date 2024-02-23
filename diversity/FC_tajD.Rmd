@@ -1,0 +1,120 @@
+---
+title: "FC and tajD rumex"
+author: "Meng"
+date: "2023-12-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(patchwork)
+library(dplyr)
+library(ggplot2)
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/pixy/"
+```
+
+## merge pi estimates
+```{r}
+tajD <- read.csv(paste0(directory,"rumex_tajD.filt0329_syn.csv")) # 26967
+tajD <- read.csv(paste0(directory,"rumex_tajD.filt0329_nonsyn.csv")) # 26967
+
+tajD <- tajD[complete.cases(tajD),] # 17026 19771 (nonsyn)
+#tajD <- tajD %>% filter(sites>=50) # 11934 18896 (nonsyn)
+colnames(tajD)[1] <- "chrom"
+
+    
+DE_tissue <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/deseq2/result_tissue_full.txt", header=T)
+DE_tissue <- DE_tissue %>% filter(p_mean>5 | l_mean>5)  # 17982
+
+FC_tajD<- inner_join(DE_tissue, tajD, by=c("chrom","start","end")) # 7634
+FC_tajD_n<- inner_join(DE_tissue, tajD, by=c("chrom","start","end")) #12094
+write.table(FC_tajD, file = paste0(directory,"FC_tajD_innerjoin.txt"), row.names = FALSE, quote = FALSE)
+write.table(FC_tajD_n, file = paste0(directory,"FC_tajD_nonsyn_innerjoin.txt"), row.names = FALSE, quote = FALSE)
+```
+
+## weighted average pi_s within each bin
+add pi_n and pi_n / pi_s next
+```{r}
+tags <- c("(,-3.02]","(-3.02,-2.16]", "(-2.16,-1.27]", "(-1.27,0)", "(0,1.02]", "(1.02,2.54]","(2.54,5.36]", "(5.36,)")
+FC_tajD <- as_tibble(FC_tajD) %>% 
+  mutate(tag = case_when(
+    log2FoldChange > 0 & log2FoldChange <= 1.02 ~ tags[5],
+    log2FoldChange > 1.02 & log2FoldChange <= 2.54 ~ tags[6],
+    log2FoldChange > 2.54 & log2FoldChange <= 5.36 ~ tags[7],
+    log2FoldChange > 5.36   ~ tags[8],
+    
+    log2FoldChange <= -3.02 ~ tags[1],
+    log2FoldChange > -3.02 & log2FoldChange <= -2.16 ~ tags[2],
+    log2FoldChange > -2.16 & log2FoldChange <= -1.27 ~ tags[3],
+    log2FoldChange > -1.27 & log2FoldChange < 0 ~ tags[4]
+    ))
+table(FC_tajD$tag)
+
+FC_tajD_n <- as_tibble(FC_tajD_n) %>% 
+  mutate(tag = case_when(
+    log2FoldChange > 0 & log2FoldChange <= 1.02 ~ tags[5],
+    log2FoldChange > 1.02 & log2FoldChange <= 2.54 ~ tags[6],
+    log2FoldChange > 2.54 & log2FoldChange <= 5.36 ~ tags[7],
+    log2FoldChange > 5.36   ~ tags[8],
+    
+    log2FoldChange <= -3.02 ~ tags[1],
+    log2FoldChange > -3.02 & log2FoldChange <= -2.16 ~ tags[2],
+    log2FoldChange > -2.16 & log2FoldChange <= -1.27 ~ tags[3],
+    log2FoldChange > -1.27 & log2FoldChange < 0 ~ tags[4]
+    ))
+table(FC_tajD_n$tag)
+```
+(-1.27,0) (-2.16,-1.27] (-3.02,-2.16]      (,-3.02]      (0,1.02]   (1.02,2.54] 
+         1136          1164          1175          1239           697           729 
+  (2.54,5.36]       (5.36,) 
+          747           747 
+
+    (-1.27,0) (-2.16,-1.27] (-3.02,-2.16]      (,-3.02]      (0,1.02]   (1.02,2.54] 
+         1792          1816          1827          1874          1111          1193 
+  (2.54,5.36]       (5.36,) 
+         1215          1266 
+         
+
+## plot the output
+mean (+CI from bs?)
+```{r}
+mean_tajD <- FC_tajD %>% group_by(tag) %>%
+  dplyr::summarise(
+    count = length(TajD_TX),
+    mean_tajD = mean(TajD_TX),
+    sem_tajD = sd(TajD_TX)/sqrt(length(TajD_TX))
+  )
+
+mean_tajD_n <- FC_tajD_n %>% group_by(tag) %>%
+  dplyr::summarise(
+    count = length(TajD_TX),
+    mean_tajD = mean(TajD_TX),
+    sem_tajD = sd(TajD_TX)/sqrt(length(TajD_TX))
+  )
+
+write.table(mean_tajD, file = paste0(directory,"mean_tajD_s.txt"), row.names = FALSE, quote = FALSE)
+write.table(mean_tajD_n, file = paste0(directory,"mean_tajD_n.txt"), row.names = FALSE, quote = FALSE)
+```
+
+
+
+```{r}
+tags <- c("(,-3.02]","(-3.02,-2.16]", "(-2.16,-1.27]", "(-1.27,0)", "(0,1.02]", "(1.02,2.54]","(2.54,5.36]", "(5.36,)")
+mean_tajD$tag <- factor(mean_tajD$tag,
+                       levels = tags,
+                       ordered = FALSE)
+mean_tajD_n$tag <- factor(mean_tajD_n$tag,
+                       levels = tags,
+                       ordered = FALSE)
+
+
+p1 <- ggplot(data = mean_tajD, mapping = aes(x=tag, y=mean_tajD)) + 
+    geom_point()+ geom_errorbar(aes(ymin=mean_tajD - sem_tajD, ymax=mean_tajD + sem_tajD), width=.2, position=position_dodge(.9))+ ggtitle("") +labs(x ="log2FoldChange",y = expression(D[s]))+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+
+p2 <- ggplot(data = mean_tajD_n, mapping = aes(x=tag, y=mean_tajD)) + 
+    geom_point()+ geom_errorbar(aes(ymin=mean_tajD - sem_tajD, ymax=mean_tajD + sem_tajD), width=.2, position=position_dodge(.9))+ ggtitle("") +labs(x ="log2FoldChange",y = expression(D[n]))+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+
+p1 + p2
+```
+
+

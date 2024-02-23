@@ -11,12 +11,12 @@ knitr::opts_chunk$set(echo = TRUE)
 library(dplyr)
 library("stringr")
 library(topGO)
-library(data.table)
 directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/deseq2/"
 ```
 
 # topGO
 filter interesting genes (only include genes that are expressed)
+smaller scaffolds included
 ```{r}
 gene2GO <- read.table(paste0(directory, "TE_filtered.REF_LA_gene2GO.txt"))
 #gff <- read.table(paste0(directory,"REF_LA_filtered_annotation.genes.gff"))
@@ -29,13 +29,20 @@ colnames(expressed) <-"V1"
 gene2GO <- inner_join(expressed, gene2GO, by = "V1") # 11339 -> 6912
 write.table(gene2GO, file = paste0(directory, "TE_filtered.REF_LA_gene2GO_expressed.txt"), row.names = F, col.names = F, quote = F, sep = "\t")
 
-balsel_genes <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/balsel/balsel_genes_new.csv", header = T)
 
-pollen_bias <- balsel_genes  %>% filter(log2FoldChange>0 & padj < 0.1) 
+gene2GO <- read.table(paste0(directory, "TE_filtered.REF_LA_gene2GO_expressed.txt"))
+colnames(gene2GO)[1] <- "gene"
+# read the genes
+balsel_genes <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/balsel/balsel_genes_expressed.txt", header = T)
 
 balsel_genes <- balsel_genes %>% filter(p_mean>5 | l_mean>5) # 405
-pollen_bias <- pollen_bias  %>% filter(p_mean>5 | l_mean>5) # 142
+pollen_bias_balsel <- balsel_genes  %>% filter(log2FoldChange>0 & padj < 0.1) # 142
+p_biased <- read.table(paste0(directory, "pollen_biased_p01.txt"), header =T) # 6823
+p_biased_gene2GO <- inner_join(gene2GO, p_biased, by = "gene") # 2363
+write.table(p_biased_gene2GO[,c(1:2)], file = paste0(directory, "p_biased_gene2GO.txt"), row.names = F, col.names = F, quote = F, sep = "\t")
 
+
+l_biased <- read.table(paste0(directory, "leaf_biased_p01.txt"), header =T)
 genesl <- read.table(paste0(directory, "genesl.txt"), header =T)
 genesp <- read.table(paste0(directory, "genesp.txt"), header =T)
 ```
@@ -43,6 +50,8 @@ genesp <- read.table(paste0(directory, "genesp.txt"), header =T)
 
 ```{r}
 geneID2GO <- readMappings(file=paste0(directory, "TE_filtered.REF_LA_gene2GO_expressed.txt"))
+geneID2GO <- readMappings(file=paste0(directory, "p_biased_gene2GO.txt"))
+
 GO2gene <- inverseList(geneID2GO)
 str(head(GO2gene))
 str(head(geneID2GO))
@@ -51,12 +60,16 @@ geneNames <- names(geneID2GO)
 head(geneNames)
 
 # get list of interesting genes
+myInterestingGenes <- pollen_bias_balsel$gene
+
+
 myInterestingGenes <- genesp$gene
 myInterestingGenes <- genesl$gene
 
 myInterestingGenes <- balsel_genes$gene
 myInterestingGenes <- pollen_bias$gene
     
+
 geneList <- factor(as.integer(geneNames %in% myInterestingGenes))
 names(geneList) <- geneNames
 str(geneList)
@@ -79,6 +92,8 @@ weight01.fisher <- runTest(sampleGOdata, statistic = "fisher")
 results_table_p = GenTable(sampleGOdata, P_value=weight01.fisher, orderBy="P_value")
 
 results_table_l = GenTable(sampleGOdata, P_value=weight01.fisher, orderBy="P_value")
+
+write.csv(results_table_p, file=paste0(directory, "balsel_p_bias_GO.csv"),row.names = FALSE, quote=FALSE )
 
 
 write.csv(results_table_p, file=paste0(directory, "balsel_genes_GO.csv"),row.names = FALSE, quote=FALSE )

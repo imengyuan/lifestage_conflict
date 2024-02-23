@@ -236,11 +236,11 @@ AnalysisReady_NS.1583.002.NEBNext_dual_i7_B9---NEBNext_dual_i5_B9.70bMPR_.bam >>
 cut -f 1,4,5 TE_filtered_exon_filtered_REF_LA_genes.gff>REF_LA.TE_filtered.bed
 
 # redo bed file, grep LG and keep only genes
-grep 'maker\sgene' TE_filtered_exon_filtered_REF_LA_genes.gff>TE_filtered_exon_filtered_REF_LA.onlygenes.gff
+#grep 'maker\sgene' TE_filtered_exon_filtered_REF_LA_genes.gff>TE_filtered_exon_filtered_REF_LA.onlygenes.gff
 
-grep 'LG' TE_filtered_exon_filtered_REF_LA.onlygenes.gff >TE_filtered_exon_filtered_REF_LA.onlygenes.LG.gff
+#grep 'LG' TE_filtered_exon_filtered_REF_LA.onlygenes.gff >TE_filtered_exon_filtered_REF_LA.onlygenes.LG.gff
 
-cut -f 1,4,5 TE_filtered_exon_filtered_REF_LA.onlygenes.gff | grep 'LG' >REF_LA.TEfilt.LG.bed
+#cut -f 1,4,5 TE_filtered_exon_filtered_REF_LA.onlygenes.gff | grep 'LG' >REF_LA.TEfilt.LG.bed
 
 
 
