@@ -19,21 +19,37 @@ tajD <- read.csv(paste0(directory,"rumex_tajD.filt0329_syn.csv")) # 26967
 tajD <- read.csv(paste0(directory,"rumex_tajD.filt0329_nonsyn.csv")) # 26967
 
 tajD <- tajD[complete.cases(tajD),] # 17026 19771 (nonsyn)
-#tajD <- tajD %>% filter(sites>=50) # 11934 18896 (nonsyn)
 colnames(tajD)[1] <- "chrom"
 
     
 DE_tissue <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/deseq2/result_tissue_full.txt", header=T)
 DE_tissue <- DE_tissue %>% filter(p_mean>5 | l_mean>5)  # 17982
 
-FC_tajD<- inner_join(DE_tissue, tajD, by=c("chrom","start","end")) # 7634
-FC_tajD_n<- inner_join(DE_tissue, tajD, by=c("chrom","start","end")) #12094
-write.table(FC_tajD, file = paste0(directory,"FC_tajD_innerjoin.txt"), row.names = FALSE, quote = FALSE)
+FC_tajD<- inner_join(DE_tissue, tajD, by=c("chrom","start","end")) # 10863
+FC_tajD_n<- inner_join(DE_tissue, tajD, by=c("chrom","start","end")) # 12658
+
+write.table(FC_tajD, file = paste0(directory,"FC_tajD_syn_innerjoin.txt"), row.names = FALSE, quote = FALSE)
 write.table(FC_tajD_n, file = paste0(directory,"FC_tajD_nonsyn_innerjoin.txt"), row.names = FALSE, quote = FALSE)
+
+FC_tajD <- read.table(paste0(directory,"FC_tajD_innerjoin.txt"), header =T)
+FC_tajD_n <- read.table(paste0(directory,"FC_tajD_nonsyn_innerjoin.txt"), header =T)
 ```
 
-## weighted average pi_s within each bin
-add pi_n and pi_n / pi_s next
+## Taj D within each bin
+
+```{r}
+g_bias <- FC_tajD %>% filter(log2FoldChange>0) # 4220
+s_bias <- FC_tajD %>% filter(log2FoldChange<0) # 6643
+
+bin<-binning(g_bias$log2FoldChange, bins=4, method="quantile",
+                     labels=NULL, ordered=TRUE, weights=NULL)
+plot(bin)
+bin<-binning(s_bias$log2FoldChange, bins=4, method="quantile",
+                     labels=NULL, ordered=TRUE, weights=NULL)
+plot(bin)
+```
+
+
 ```{r}
 tags <- c("(,-3.02]","(-3.02,-2.16]", "(-2.16,-1.27]", "(-1.27,0)", "(0,1.02]", "(1.02,2.54]","(2.54,5.36]", "(5.36,)")
 FC_tajD <- as_tibble(FC_tajD) %>% 
@@ -65,14 +81,14 @@ FC_tajD_n <- as_tibble(FC_tajD_n) %>%
 table(FC_tajD_n$tag)
 ```
 (-1.27,0) (-2.16,-1.27] (-3.02,-2.16]      (,-3.02]      (0,1.02]   (1.02,2.54] 
-         1136          1164          1175          1239           697           729 
+         1633          1627          1653          1730           986          1044 
   (2.54,5.36]       (5.36,) 
-          747           747 
+         1078          1112 
 
     (-1.27,0) (-2.16,-1.27] (-3.02,-2.16]      (,-3.02]      (0,1.02]   (1.02,2.54] 
-         1792          1816          1827          1874          1111          1193 
+         1894          1895          1931          1959          1167          1238 
   (2.54,5.36]       (5.36,) 
-         1215          1266 
+         1264          1310 
          
 
 ## plot the output
@@ -109,12 +125,13 @@ mean_tajD_n$tag <- factor(mean_tajD_n$tag,
 
 
 p1 <- ggplot(data = mean_tajD, mapping = aes(x=tag, y=mean_tajD)) + 
-    geom_point()+ geom_errorbar(aes(ymin=mean_tajD - sem_tajD, ymax=mean_tajD + sem_tajD), width=.2, position=position_dodge(.9))+ ggtitle("") +labs(x ="log2FoldChange",y = expression(D[s]))+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+    geom_point()+ geom_errorbar(aes(ymin=mean_tajD - sem_tajD, ymax=mean_tajD + sem_tajD), width=.2, position=position_dodge(.9))+ ggtitle("a") +labs(x ="log2FoldChange",y = expression(D[s]))+ theme_classic()+ theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
 
 p2 <- ggplot(data = mean_tajD_n, mapping = aes(x=tag, y=mean_tajD)) + 
-    geom_point()+ geom_errorbar(aes(ymin=mean_tajD - sem_tajD, ymax=mean_tajD + sem_tajD), width=.2, position=position_dodge(.9))+ ggtitle("") +labs(x ="log2FoldChange",y = expression(D[n]))+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+    geom_point()+ geom_errorbar(aes(ymin=mean_tajD - sem_tajD, ymax=mean_tajD + sem_tajD), width=.2, position=position_dodge(.9))+ ggtitle("b") +labs(x ="log2FoldChange",y = expression(D[n]))+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
 
-p1 + p2
+
+(p1 | p3) / (p2 | p4) 
 ```
 
 
