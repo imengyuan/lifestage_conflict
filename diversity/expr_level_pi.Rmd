@@ -144,45 +144,44 @@ pi_r_qt4$tag <- factor(pi_r_qt4$tag,
                        ordered = FALSE)
 
 p1_1 <- ggplot(data = pi_r_qt1, mapping = aes(x=tag, y=mean_pi_syn)) + 
-    geom_point()+ geom_errorbar(aes(ymin=lower_pi_syn, ymax=higher_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("a_qt1") +labs(x ="log2FoldChange",y ="pi_syn")+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_syn, ymax=higher_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("a") +labs(x ="qt1",y = expression(pi[s]))+ theme_classic() + theme(text = element_text(size = 10), axis.text.x=element_blank(), axis.ticks.x=element_blank())
 
 p2_1 <- ggplot(data = pi_r_qt1, mapping = aes(x=tag, y=mean_pi_nonsyn)) + 
-    geom_point()+ geom_errorbar(aes(ymin=lower_pi_nonsyn, ymax=higher_pi_nonsyn), width=.2, position=position_dodge(.9))+ ggtitle("b_qt1") +labs(x ="log2FoldChange",y ="pi_nonsyn")+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_nonsyn, ymax=higher_pi_nonsyn), width=.2, position=position_dodge(.9))+ ggtitle("b") +labs(x ="qt1",y = expression(pi[n]))+ theme_classic() + theme(text = element_text(size = 10), axis.text.x=element_blank(), axis.ticks.x=element_blank())
 
 p3_1 <- ggplot(data = pi_r_qt1, mapping = aes(x=tag, y=mean_ratio_pis)) + 
-    geom_point()+ geom_errorbar(aes(ymin=lower_ratio_pis, ymax=higher_ratio_pis), width=.2, position=position_dodge(.9))+ ggtitle("c_qt1") +labs(x ="log2FoldChange",y ="pi_n / pi_s")+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+    geom_point()+ geom_errorbar(aes(ymin=lower_ratio_pis, ymax=higher_ratio_pis), width=.2, position=position_dodge(.9))+ ggtitle("c") +labs(x ="qt1",y = expression(paste(pi[n], "/", pi[s], " ratio")))+ theme_classic() + theme(text = element_text(size = 10), axis.text.x=element_blank(), axis.ticks.x=element_blank())
 
 p1_2 <- ggplot(data = pi_r_qt2, mapping = aes(x=tag, y=mean_pi_syn)) + 
-    geom_point()+ geom_errorbar(aes(ymin=lower_pi_syn, ymax=higher_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("a_qt2") +labs(x ="log2FoldChange",y ="pi_syn")+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_syn, ymax=higher_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("") +labs(x ="qt2",y = expression(pi[s]))+ theme_classic() + theme(text = element_text(size = 10), axis.text.x=element_blank(), axis.ticks.x=element_blank())
 
 p2_2 <- ggplot(data = pi_r_qt2, mapping = aes(x=tag, y=mean_pi_nonsyn)) + 
-    geom_point()+ geom_errorbar(aes(ymin=lower_pi_nonsyn, ymax=higher_pi_nonsyn), width=.2, position=position_dodge(.9))+ ggtitle("b_qt2") +labs(x ="log2FoldChange",y ="pi_nonsyn")+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_nonsyn, ymax=higher_pi_nonsyn), width=.2, position=position_dodge(.9))+ ggtitle("") +labs(x ="qt2",y = expression(pi[n]))+ theme_classic() + theme(text = element_text(size = 10), axis.text.x=element_blank(), axis.ticks.x=element_blank())
 
 p3_2 <- ggplot(data = pi_r_qt2, mapping = aes(x=tag, y=mean_ratio_pis)) + 
-    geom_point()+ geom_errorbar(aes(ymin=lower_ratio_pis, ymax=higher_ratio_pis), width=.2, position=position_dodge(.9))+ ggtitle("c_qt2") +labs(x ="log2FoldChange",y ="pi_n / pi_s")+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+    geom_point()+ geom_errorbar(aes(ymin=lower_ratio_pis, ymax=higher_ratio_pis), width=.2, position=position_dodge(.9))+ ggtitle("") +labs(x ="qt2",y = expression(paste(pi[n], "/", pi[s], " ratio")))+ theme_classic() + theme(text = element_text(size = 10), axis.text.x=element_blank(), axis.ticks.x=element_blank())
 
 p1_3 <- ggplot(data = pi_r_qt3, mapping = aes(x=tag, y=mean_pi_syn)) + 
-    geom_point()+ geom_errorbar(aes(ymin=lower_pi_syn, ymax=higher_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("a_qt3") +labs(x ="log2FoldChange",y ="pi_syn")+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_syn, ymax=higher_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("") +labs(x ="qt3",y = expression(pi[s]))+ theme_classic() + theme(text = element_text(size = 10), axis.text.x=element_blank(), axis.ticks.x=element_blank())
 
 p2_3 <- ggplot(data = pi_r_qt3, mapping = aes(x=tag, y=mean_pi_nonsyn)) + 
-    geom_point()+ geom_errorbar(aes(ymin=lower_pi_nonsyn, ymax=higher_pi_nonsyn), width=.2, position=position_dodge(.9))+ ggtitle("b_qt3") +labs(x ="log2FoldChange",y ="pi_nonsyn")+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_nonsyn, ymax=higher_pi_nonsyn), width=.2, position=position_dodge(.9))+ ggtitle("") +labs(x ="qt3",y = expression(pi[n]))+ theme_classic() + theme(text = element_text(size = 10), axis.text.x=element_blank(), axis.ticks.x=element_blank())
 
 p3_3 <- ggplot(data = pi_r_qt3, mapping = aes(x=tag, y=mean_ratio_pis)) + 
-    geom_point()+ geom_errorbar(aes(ymin=lower_ratio_pis, ymax=higher_ratio_pis), width=.2, position=position_dodge(.9))+ ggtitle("c_qt3") +labs(x ="log2FoldChange",y ="pi_n / pi_s")+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+    geom_point()+ geom_errorbar(aes(ymin=lower_ratio_pis, ymax=higher_ratio_pis), width=.2, position=position_dodge(.9))+ ggtitle("") +labs(x ="qt3",y = expression(paste(pi[n], "/", pi[s], " ratio")))+ theme_classic() + theme(text = element_text(size = 10), axis.text.x=element_blank(), axis.ticks.x=element_blank())
 
 
 p1_4 <- ggplot(data = pi_r_qt4, mapping = aes(x=tag, y=mean_pi_syn)) + 
-    geom_point()+ geom_errorbar(aes(ymin=lower_pi_syn, ymax=higher_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("a_qt4") +labs(x ="log2FoldChange",y ="pi_syn")+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_syn, ymax=higher_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("") +labs(x ="qt4",y =expression(pi[s]))+ theme_classic() + theme(text = element_text(size = 10), axis.text.x=element_blank(), axis.ticks.x=element_blank())
 
 p2_4 <- ggplot(data = pi_r_qt4, mapping = aes(x=tag, y=mean_pi_nonsyn)) + 
-    geom_point()+ geom_errorbar(aes(ymin=lower_pi_nonsyn, ymax=higher_pi_nonsyn), width=.2, position=position_dodge(.9))+ ggtitle("b_qt4") +labs(x ="log2FoldChange",y ="pi_nonsyn")+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_nonsyn, ymax=higher_pi_nonsyn), width=.2, position=position_dodge(.9))+ ggtitle("") +labs(x ="qt4",y = expression(pi[n]))+ theme_classic() + theme(text = element_text(size = 10), axis.text.x=element_blank(), axis.ticks.x=element_blank())
 
 p3_4 <- ggplot(data = pi_r_qt4, mapping = aes(x=tag, y=mean_ratio_pis)) + 
-    geom_point()+ geom_errorbar(aes(ymin=lower_ratio_pis, ymax=higher_ratio_pis), width=.2, position=position_dodge(.9))+ ggtitle("c_qt4") +labs(x ="log2FoldChange",y ="pi_n / pi_s")+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+    geom_point()+ geom_errorbar(aes(ymin=lower_ratio_pis, ymax=higher_ratio_pis), width=.2, position=position_dodge(.9))+ ggtitle("") +labs(x ="qt4",y = expression(paste(pi[n], "/", pi[s], " ratio")))+ theme_classic() + theme(text = element_text(size = 10), axis.text.x=element_blank(), axis.ticks.x=element_blank())
 
-(p1_1 | p1_2 | p1_3 | p1_4) / (p2_1 | p2_2 | p2_3 | p2_4) / (p3_1 | p3_2 | p3_3 | p3_4) 
+(p1_1 | p1_2 | p1_3 | p1_4) / (p2_1 | p2_2 | p2_3 | p2_4) / (p3_1 | p3_2 | p3_3 | p3_4) + plot_layout(guides = "collect") 
 ```
-(p1 | p4) / (p2 | p5) / (p3 | p6)
 
 save the output
 ```{r}
@@ -192,6 +191,10 @@ write.table(pi_r_qt2, file = paste0(directory, "pi_r_qt2"), sep = "\t",row.names
 write.table(pi_r_qt3, file = paste0(directory, "pi_r_qt3"), sep = "\t",row.names = FALSE, quote = FALSE)
 write.table(pi_r_qt4, file = paste0(directory, "pi_r_qt4"), sep = "\t",row.names = FALSE, quote = FALSE)
 
+pi_r_qt1 <- read.table(paste0(directory, "pi_r_qt1"), header = T)
+pi_r_qt2 <- read.table(paste0(directory, "pi_r_qt2"), header = T)
+pi_r_qt3 <- read.table(paste0(directory, "pi_r_qt3"), header = T)
+pi_r_qt4 <- read.table(paste0(directory, "pi_r_qt4"), header = T)
 ```
 
 

@@ -1,0 +1,74 @@
+---
+title: "expressed genes"
+author: "Meng"
+date: "2024-03-01"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library("ggVennDiagram")
+library(dplyr)
+```
+
+# rumex
+```{r}
+DE_tissue <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/deseq2/result_tissue_full.txt", header=T)
+
+p_expressed <- DE_tissue %>% filter(p_mean>5) # 15956
+l_expressed <- DE_tissue %>% filter(l_mean>5) # 15363
+15956/17982
+
+x <- list(
+    gametophyte = p_expressed$gene,
+    sporophyte = l_expressed$gene
+)
+
+ggVennDiagram(x, label_alpha = 0)
+```
+```{r}
+DE_tissue <- left_join(DE_tissue,cnt,by="gene")
+DE_tissue <- DE_tissue %>% filter(p_mean>5 | l_mean>5) # 17982
+DE_tissue <- DE_tissue %>% filter(padj<0.1) # 17124
+DE_tissue_pollen <-  DE_tissue %>% filter(log2FoldChange>0) # 6823
+DE_tissue_leaf <-  DE_tissue %>% filter(log2FoldChange<0) # 10301
+17124 / 17982
+```
+0.9522856
+
+get list of biased and specific genes
+```{r}
+
+```
+
+
+# ceratodon
+```{r}
+DE_c <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/deseq2/DE_results_all.txt", header =T) # 30107
+DE_c <- DE_c %>% filter(g_mean > 5 | s_mean > 5) # 25861 (including UV)
+
+g_expressed <- DE_c %>% filter(g_mean > 5) # 24096
+s_expressed <- DE_c %>% filter(s_mean > 5) # 24223
+
+x <- list(
+    gametophyte = g_expressed$gene,
+    sporophyte = s_expressed$gene
+)
+
+ggVennDiagram(x, label_alpha = 0)
+```
+```{r}
+DE_c <- DE_c %>% filter(g_mean > 5 | s_mean > 5) # 25861
+DE_c <- DE_c %>% filter(padj<0.1)  # 18977
+DE_c_sporophyte <-  DE_c %>% filter(log2FoldChange<0) # 8999
+DE_c_gametophyte <-  DE_c %>% filter(log2FoldChange>0) # 9978
+
+18977 / 25861
+```
+0.7338077
+
+get list of biased and specific genes
+```{r}
+
+```
+
