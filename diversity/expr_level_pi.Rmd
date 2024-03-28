@@ -297,6 +297,22 @@ p3 <- ggplot(data = pi_expr_qt, mapping = aes(x=expr_level, y=ratio_pis, colour 
 p3 + p3c + plot_layout(nrow = 1,guides = "collect") & theme(legend.position = "right")
 ```
 
+```{r}
+p3 <- ggplot(data = statsr, mapping = aes(x=log10(baseMean), y=avg_pi, colour = bias)) + geom_point(alpha =0.1)+ geom_smooth()+ ggtitle("a") +labs(x ="log10(baseMean)",y = expression(pi[s]))+ theme_classic() + theme(text = element_text(size = 10)) 
+
+p4 <- ggplot(data = statsr, mapping = aes(x=log10(baseMean), y=avg_pi_nonsyn, colour = bias)) + geom_point(alpha =0.1)+ geom_smooth()+ ggtitle("b") +labs(x ="log10(baseMean)",y = expression(pi[n]))+ theme_classic() + theme(text = element_text(size = 10)) 
+
+p3 + p4
+
+p3 + p4 + p3c + p4c + plot_layout(nrow = 2,guides = "collect") & theme(legend.position = "right")
+
+```
+
+## write output
+```{r}
+
+```
+
 
 
 ## check recombination rate for each bin
