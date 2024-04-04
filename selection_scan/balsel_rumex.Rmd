@@ -36,15 +36,42 @@ levels(scan$chrom)<- c("A1", "A4", "A2", "XY", "A3")
 scan <- scan %>% mutate(chrom = factor(chrom, levels = c("A1","A2","A3","A4","XY")))
 ```
 
+## plot inversion on A2, A3
+
+```{r}
+scan3$chrom <- "A2"
+scan5$chrom <- "A3"
+scan2$chrom <- "A4"
+p2 <- ggplot(scan5, aes(x = physPos/1000000, y = CLR))+geom_point(aes(colour=log10(s_hat)),size = 0.3) + ggtitle("A3") +
+    xlab("Physical position on Chromosome (Mb)")+ylab("Composite Likelihood Ratio")+theme_bw() +scale_color_gradient2(name = expression('log'[10]~hat(italic(a))), limits = c(-3, 9), midpoint = 0, high="red", mid = 'white', low="blue")+ theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside")+ theme(text = element_text(size = 10), panel.spacing = unit(0.5, "lines")) + geom_vline(xintercept = c(11.5,31.8))
+
+p1 <- ggplot(scan3, aes(x = physPos/1000000, y = CLR))+geom_point(aes(colour=log10(s_hat)),size = 0.3) + ggtitle("A2") +
+    xlab("Physical position on Chromosome (Mb)")+ylab("Composite Likelihood Ratio")+theme_bw() +scale_color_gradient2(name = expression('log'[10]~hat(italic(a))), limits = c(-3, 9), midpoint = 0, high="red", mid = 'white', low="blue")+ theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside")+ theme(text = element_text(size = 10), panel.spacing = unit(0.5, "lines")) + geom_vline(xintercept = c(5.6,69))
+
+p3 <- ggplot(scan2, aes(x = physPos/1000000, y = CLR))+geom_point(aes(colour=log10(s_hat)),size = 0.3) + ggtitle("A4") +
+    xlab("Physical position on Chromosome (Mb)")+ylab("Composite Likelihood Ratio")+theme_bw() +scale_color_gradient2(name = expression('log'[10]~hat(italic(a))), limits = c(-3, 9), midpoint = 0, high="red", mid = 'white', low="blue")+ theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside")+ theme(text = element_text(size = 10), panel.spacing = unit(0.5, "lines")) + geom_vline(xintercept = c(95,115))
+
+
+p1 + p2 + p3 + plot_layout(guides = "collect") & theme(legend.position = "right")
+```
+
+
 plot the scans
 ```{r}
+lines_data_facet_A2 <- data.frame(xintercept = c(5.6,69), facet = "A2")
+lines_data_facet_A3 <- data.frame(xintercept = c(11.5,31.8), facet = "A3")
+lines_data_facet_A4 <- data.frame(xintercept = c(95,115), facet = "A4")
+
+
 p7 <- ggplot(scan, aes(x = physPos/1000000, y = genPos))+
-    facet_grid(.~chrom,scales="free_x", switch = "x", space = "free_x") + geom_point(size=0.3, alpha=0.5)+
+    facet_grid(.~chrom,scales="free_x", switch = "x", space = "free_x") + geom_point(size=0.3, alpha=0.5)+ ggtitle("a") +
     xlab("")+ylab("Genetic position (cM)")+theme_bw()+theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside",legend.position ="none")+ theme(text = element_text(size = 10), panel.spacing = unit(0.5, "lines"))
 
 p8 <- ggplot(scan, aes(x = physPos/1000000, y = CLR))+geom_point(aes(colour=log10(s_hat)),size = 0.3)+
-    facet_grid(.~chrom,scales="free_x", switch = "x", space = "free_x") + 
-    xlab("Physical position on Chromosome (Mb)")+ylab("Composite Likelihood Ratio")+theme_bw() +scale_color_gradient2(name = expression('log'[10]~hat(italic(a))), limits = c(-3, 9), midpoint = 0, high="red", mid = 'white', low="blue")+ theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside")+ theme(text = element_text(size = 10), panel.spacing = unit(0.5, "lines"))
+    facet_grid(.~chrom,scales="free_x", switch = "x", space = "free_x") + ggtitle("b")+
+    xlab("Physical position on Chromosome (Mb)")+ylab("Composite Likelihood Ratio")+theme_bw() +scale_color_gradient2(name = expression('log'[10]~hat(italic(a))), limits = c(-3, 9), midpoint = 0, high="red", mid = 'white', low="blue")+ theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside")+ theme(text = element_text(size = 10), panel.spacing = unit(0.5, "lines")) + geom_vline(data = lines_data_facet_A2, aes(xintercept = xintercept)) +
+  geom_vline(data = lines_data_facet_A3, aes(xintercept = xintercept))+
+  geom_vline(data = lines_data_facet_A4, aes(xintercept = xintercept))
 
 #+ geom_hline(yintercept = 9.500813, linetype="dashed",color = "black", size =0.3)
 
@@ -88,6 +115,36 @@ table(scan95$chrom)[1:5]
      Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
    0.0000    0.8816    1.9159    4.6037    4.2158 2558.8470 
    
+## genes in inversions
+```{r}
+scan95 <- scan95 %>% mutate(physPos_mb = physPos/1000000)
+inversion_A2 <- scan95 %>% filter(chrom == "A2" & physPos_mb > 5.6 & physPos_mb < 69) # 10055
+inversion_A3 <- scan95 %>% filter(chrom == "A3" & physPos_mb > 11.5 & physPos_mb < 31.8) # 11132
+inversion_A4 <- scan95 %>% filter(chrom == "A4" & physPos_mb > 95 & physPos_mb < 115) # 121
+inversion <- rbind(inversion_A2, inversion_A3, inversion_A4)
+
+inversion <- inversion %>% inner_join(gff, by = "chrom") %>%
+        filter(physPos >= start & physPos <= end) # 9267
+
+result_CLR <- inversion %>%
+    group_by(gene) %>%
+    summarise(mean_CLR = mean(CLR), max_CLR = max(CLR), no_sites = length(CLR)) # 125
+
+result_CLR <- left_join(result_CLR, gff, by = "gene")
+table(result_CLR$chrom)[1:5]
+result_tissue <- read.table(paste0(directory,"result_tissue_full.txt"), header=T)
+result_tissue <- result_tissue %>% filter(l_mean > 5 | p_mean > 5)
+result_CLR <- left_join(result_CLR, result_tissue, by = "gene")
+
+## 
+write.table(result_CLR, file=paste0(data,"inversion_genes.txt"), row.names = FALSE, quote = FALSE)
+write.table(inversion, file=paste0(data,"inversion_sites_gff.txt"), row.names = FALSE, quote = FALSE)
+inversion2 <- rbind(inversion_A2, inversion_A3, inversion_A4)
+write.table(inversion2, file=paste0(data,"inversion_sites_all.txt"), row.names = FALSE, quote = FALSE)
+```
+A1 A4 A2 XY A3 
+ 0  1 63  0 61 
+ 
 
 ## get the list of candidate genes
 perform GO enrichment of these candidate genes
@@ -184,6 +241,7 @@ write.table(disease_genes_balsel, file=paste0(data,"disease_genes_balsel.txt"), 
 ```
 
 
+
 ## get max_CLR per gene for the whole genome
 
 ```{r}
@@ -204,6 +262,7 @@ result <- do.call(rbind, results) # 937846
 length(results) # 318, half way thru
 write.table(result, file=paste0(data,"balsel_sites_wholegenome.txt"), row.names = FALSE, quote = FALSE)
 ```
+
 
 
 

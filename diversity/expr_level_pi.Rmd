@@ -270,6 +270,62 @@ pi_expr_qt <- bind_rows(results_list)
 ```
 
 ```{r}
+#expressed <- cnt %>% filter(p_mean>5 | l_mean>5) #17984
+DE_tissue <- DE_tissue %>% filter(p_mean>5 | l_mean>5) #17982
+bins.quantiles(DE_tissue$baseMean, 10, 10, verbose = FALSE)
+
+statsr <- statsr %>% mutate(expr_level = case_when(
+    baseMean <= 6.845 ~ "qt1",
+    baseMean > 6.845 & baseMean <= 14.371 ~ "qt2",
+    baseMean > 14.371 & baseMean <= 26.3 ~ "qt3",
+    baseMean > 26.3 & baseMean <= 44.4 ~ "qt4",
+    baseMean > 44.4 & baseMean <= 70.26 ~ "qt5",
+    baseMean > 70.26 & baseMean <= 107.809 ~ "qt6",
+    baseMean > 107.809 & baseMean <= 168.41 ~ "qt7",
+    baseMean > 168.41 & baseMean <= 291.6 ~ "qt8",
+    baseMean > 291.6 & baseMean <= 670 ~ "qt9",
+    baseMean > 670 ~ "qt10"
+))
+
+table(statsr$expr_level)
+grouped_data <- statsr %>%
+  group_by(bias, expr_level)
+
+results_list <- lapply(split(grouped_data, interaction(grouped_data$bias, grouped_data$expr_level)), function(group) {
+  calculate_pi_real(group)
+})
+
+pi_expr_qt10 <- bind_rows(results_list)
+
+pi_expr_qt10 <- pi_expr_qt10 %>% mutate(expr_level = factor(expr_level, levels = c("qt1", "qt2", "qt3", "qt4", "qt5", "qt6", "qt7", "qt8","qt9", "qt10")))
+levels(pi_expr_qt10$expr_level)
+
+
+p1 <- ggplot(data = pi_expr_qt10, mapping = aes(x=expr_level, y=weighted_pi_syn, colour = bias)) + 
+    geom_point()+ ggtitle("a") +labs(x ="expression level quantiles",y = expression(pi[s]))+ theme_classic() + theme(text = element_text(size = 10)) 
+
+p2 <- ggplot(data = pi_expr_qt10, mapping = aes(x=expr_level, y=weighted_pi_nonsyn, colour = bias)) + 
+    geom_point()+ ggtitle("b") +labs(x ="expression level quantiles",y = expression(pi[n]))+ theme_classic() + theme(text = element_text(size = 10)) 
+
+p3 <- ggplot(data = pi_expr_qt10, mapping = aes(x=expr_level, y=ratio_weighted_pis, colour = bias)) + ggtitle("c")+
+    geom_point() +labs(x ="expression level quantiles",y = expression(paste(pi[n], "/", pi[s], " ratio")))+ theme_classic() + theme(text = element_text(size = 10)) 
+
+p1 + p2 + p3+ plot_layout(nrow = 1,guides = "collect") & theme(legend.position = "right")
+```
+qt1 qt10  qt2  qt3  qt4  qt5  qt6  qt7  qt8  qt9 
+ 686 1445  785  925 1056 1231 1336 1386 1420 1464 
+[0.0298937364341198, 6.84469234925497]    [6.8450746321015, 14.3702356623989] 
+                                  1799                                   1798 
+  [14.3713554606715, 26.2929049546056]   [26.3115769967044, 44.3988187202997] 
+                                  1798                                   1798 
+  [44.4441271087276, 70.2100243661586]   [70.2608560406953, 107.803948501274] 
+                                  1798                                   1798 
+   [107.809680647553, 168.40866407541]   [168.413962577764, 291.573892918416] 
+                                  1798                                   1798 
+  [291.633360932102, 668.961121141881]   [670.130779158352, 638812.291330801] 
+                                  1798                                   1799
+
+```{r}
 p1 <- ggplot(data = pi_expr_qt, mapping = aes(x=expr_level, y=mean_avg_pi_syn, colour = bias)) + 
     geom_point()+ geom_errorbar(aes(ymin=mean_avg_pi_syn - sem_avg_pi_syn, ymax=mean_avg_pi_syn + sem_avg_pi_syn), width=.2)+ ggtitle("a") +labs(x ="expression level quantiles",y = expression(pi[s]))+ theme_classic() + theme(text = element_text(size = 10)) 
 
@@ -310,6 +366,9 @@ p3 + p4 + p3c + p4c + plot_layout(nrow = 2,guides = "collect") & theme(legend.po
 
 ## write output
 ```{r}
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/pixy/"
+write.table(pi_expr_qt, file=paste0(directory,"pi_expr_qt_c.txt"), sep = "\t",row.names = FALSE, quote = FALSE)
+write.table(statsr, file=paste0(directory,"statsr.txt"), sep = "\t",row.names = FALSE, quote = FALSE)
 
 ```
 

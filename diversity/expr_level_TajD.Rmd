@@ -34,14 +34,14 @@ get_tajD <- function(data) {
 ```
 
 
-## TajD syn
+## TajD syn in 10 bins of expression level quantile
 ```{r}
-FC_tajD <- FC_tajD %>% mutate(expr_level = case_when(
-    baseMean <= 20 ~ "qt1",
-    baseMean > 20 & baseMean <= 70.4 ~ "qt2",
-    baseMean > 70.4 & baseMean <= 217 ~ "qt3",
-    baseMean > 217 ~ "qt4"
-))
+# FC_tajD <- FC_tajD %>% mutate(expr_level = case_when(
+#     baseMean <= 20 ~ "qt1",
+#     baseMean > 20 & baseMean <= 70.4 ~ "qt2",
+#     baseMean > 70.4 & baseMean <= 217 ~ "qt3",
+#     baseMean > 217 ~ "qt4"
+# ))
 
 FC_tajD <- FC_tajD %>% mutate(bias = case_when(
     log2FoldChange > 0 ~ "g",
@@ -67,12 +67,12 @@ tajD_expr_syn <- bind_rows(results_list)
 2920 4714 
 
 ```{r}
-FC_tajD_n <- FC_tajD_n %>% mutate(expr_level = case_when(
-    baseMean <= 20 ~ "qt1",
-    baseMean > 20 & baseMean <= 70.4 ~ "qt2",
-    baseMean > 70.4 & baseMean <= 217 ~ "qt3",
-    baseMean > 217 ~ "qt4"
-))
+# FC_tajD_n <- FC_tajD_n %>% mutate(expr_level = case_when(
+#     baseMean <= 20 ~ "qt1",
+#     baseMean > 20 & baseMean <= 70.4 ~ "qt2",
+#     baseMean > 70.4 & baseMean <= 217 ~ "qt3",
+#     baseMean > 217 ~ "qt4"
+# ))
 
 FC_tajD_n <- FC_tajD_n %>% mutate(bias = case_when(
     log2FoldChange > 0 ~ "g",
@@ -119,5 +119,11 @@ p4 <- ggplot(data = FC_tajD_n, mapping = aes(x=baseMean, y=TajD_TX, colour = bia
 
 p3 + p4 + p3c + p4c + plot_layout(nrow = 2,guides = "collect") & theme(legend.position = "right")
 
+```
+
+```{r}
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/pixy/"
+write.table(tajD_expr_syn, file=paste0(directory,"tajD_expr_syn.txt"), sep = "\t",row.names = FALSE, quote = FALSE)
+write.table(tajD_expr_nonsyn, file=paste0(directory,"tajD_expr_nonsyn.txt"), sep = "\t",row.names = FALSE, quote = FALSE)
 ```
 
