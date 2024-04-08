@@ -1,7 +1,7 @@
 ---
-title: "tajD and expr level"
+title: "expression level and tajD"
 author: "Meng"
-date: "2024-03-28"
+date: "2024-04-08"
 output: html_document
 ---
 
@@ -14,6 +14,7 @@ FC_tajD <- read.table(paste0(directory,"FC_tajD_innerjoin.txt"), header =T)
 FC_tajD_n <- read.table(paste0(directory,"FC_tajD_nonsyn_innerjoin.txt"), header =T)
 ```
 
+## fucntion
 ```{r}
 get_tajD <- function(data) {
         count <- length(data$TajD_TX)
@@ -34,8 +35,22 @@ get_tajD <- function(data) {
 ```
 
 
-## TajD syn in bins of expression level quantile
+## 10 bins
+syn
 ```{r}
+FC_tajD <- FC_tajD %>% mutate(expr_level = case_when(
+    baseMean <= 6.845 ~ "qt1",
+    baseMean > 6.845 & baseMean <= 14.371 ~ "qt2",
+    baseMean > 14.371 & baseMean <= 26.3 ~ "qt3",
+    baseMean > 26.3 & baseMean <= 44.4 ~ "qt4",
+    baseMean > 44.4 & baseMean <= 70.26 ~ "qt5",
+    baseMean > 70.26 & baseMean <= 107.809 ~ "qt6",
+    baseMean > 107.809 & baseMean <= 168.41 ~ "qt7",
+    baseMean > 168.41 & baseMean <= 291.6 ~ "qt8",
+    baseMean > 291.6 & baseMean <= 670 ~ "qt9",
+    baseMean > 670 ~ "qt10"
+))
+
 FC_tajD <- FC_tajD %>% mutate(bias = case_when(
     log2FoldChange > 0 ~ "g",
     log2FoldChange < 0 ~ "s"
@@ -47,25 +62,35 @@ table(FC_tajD$bias)
 grouped_data <- FC_tajD %>%
   group_by(bias, expr_level)
 
-
 results_list <- lapply(split(grouped_data, interaction(grouped_data$bias, grouped_data$expr_level)), function(group) {
   get_tajD(group)
 })
 
 tajD_expr_syn <- bind_rows(results_list)
+
+tajD_expr_syn <- tajD_expr_syn %>% mutate(expr_level = factor(expr_level, levels = c("qt1", "qt2", "qt3", "qt4", "qt5", "qt6", "qt7", "qt8","qt9", "qt10")))
+levels(tajD_expr_syn$expr_level)
 ```
- qt1  qt2  qt3  qt4 
-1784 1876 1987 1987 
- g    s 
+qt1 qt10  qt2  qt3  qt4  qt5  qt6  qt7  qt8  qt9 
+ 676  754  715  736  753  772  785  811  789  843 
+
+   g    s 
 2920 4714 
 
+nonsyn
 ```{r}
-# FC_tajD_n <- FC_tajD_n %>% mutate(expr_level = case_when(
-#     baseMean <= 20 ~ "qt1",
-#     baseMean > 20 & baseMean <= 70.4 ~ "qt2",
-#     baseMean > 70.4 & baseMean <= 217 ~ "qt3",
-#     baseMean > 217 ~ "qt4"
-# ))
+FC_tajD_n <- FC_tajD_n %>% mutate(expr_level = case_when(
+    baseMean <= 6.845 ~ "qt1",
+    baseMean > 6.845 & baseMean <= 14.371 ~ "qt2",
+    baseMean > 14.371 & baseMean <= 26.3 ~ "qt3",
+    baseMean > 26.3 & baseMean <= 44.4 ~ "qt4",
+    baseMean > 44.4 & baseMean <= 70.26 ~ "qt5",
+    baseMean > 70.26 & baseMean <= 107.809 ~ "qt6",
+    baseMean > 107.809 & baseMean <= 168.41 ~ "qt7",
+    baseMean > 168.41 & baseMean <= 291.6 ~ "qt8",
+    baseMean > 291.6 & baseMean <= 670 ~ "qt9",
+    baseMean > 670 ~ "qt10"
+))
 
 FC_tajD_n <- FC_tajD_n %>% mutate(bias = case_when(
     log2FoldChange > 0 ~ "g",
@@ -83,37 +108,34 @@ results_list <- lapply(split(grouped_data, interaction(grouped_data$bias, groupe
 })
 
 tajD_expr_nonsyn <- bind_rows(results_list)
+
+tajD_expr_nonsyn <- tajD_expr_nonsyn %>% mutate(expr_level = factor(expr_level, levels = c("qt1", "qt2", "qt3", "qt4", "qt5", "qt6", "qt7", "qt8","qt9", "qt10")))
+levels(tajD_expr_nonsyn$expr_level)
 ```
- qt1  qt2  qt3  qt4 
-3014 3146 3230 3268 
+qt1 qt10  qt2  qt3  qt4  qt5  qt6  qt7  qt8  qt9 
+1150 1283 1201 1251 1255 1291 1301 1282 1305 1339 
+
    g    s 
 4979 7679 
 
 ## plots
 ```{r}
 p1 <- ggplot(data = tajD_expr_syn, mapping = aes(x=expr_level, y=mean_tajD, colour = bias)) + 
-    geom_point(position=position_dodge(.9))+ geom_errorbar(aes(ymin=mean_tajD - sem_tajD, ymax=mean_tajD + sem_tajD), width=.2, position=position_dodge(.9))+ ggtitle("a") +labs(x ="expression level quantiles",y = expression(D[s]))+ theme_classic() + theme(text = element_text(size = 10)) 
+    geom_point()+ geom_errorbar(aes(ymin=mean_tajD - sem_tajD, ymax=mean_tajD + sem_tajD), width=.2)+ ggtitle("a") +labs(x ="",y = expression(D[s]))+ theme_classic() + theme(text = element_text(size = 10)) 
 
 p2 <- ggplot(data = tajD_expr_nonsyn, mapping = aes(x=expr_level, y=mean_tajD, colour = bias)) + 
-    geom_point(position=position_dodge(.9))+ geom_errorbar(aes(ymin=mean_tajD - sem_tajD, ymax=mean_tajD + sem_tajD), width=.2, position=position_dodge(.9))+ ggtitle("b") +labs(x ="expression level quantiles",y = expression(D[n]))+ theme_classic() + theme(text = element_text(size = 10)) 
+    geom_point()+ geom_errorbar(aes(ymin=mean_tajD - sem_tajD, ymax=mean_tajD + sem_tajD), width=.2)+ ggtitle("b") +labs(x ="expression level quantiles",y = expression(D[n]))+ theme_classic() + theme(text = element_text(size = 10)) 
 
-p1 + p2 + p1c + p2c + plot_layout(nrow = 2,guides = "collect") & theme(legend.position = "right")
-
+p1 + p2
 ```
 
-
-
+both species
 ```{r}
-p3 <- ggplot(data = FC_tajD, mapping = aes(x=baseMean, y=TajD_TX, colour = bias)) + geom_point()+ geom_smooth()+ ggtitle("a") +labs(x ="expression level",y = expression(D[s]))+ theme_classic() + theme(text = element_text(size = 10)) + xlim(0,10000)
-
-p4 <- ggplot(data = FC_tajD_n, mapping = aes(x=baseMean, y=TajD_TX, colour = bias)) + geom_point()+ geom_smooth()+ ggtitle("b") +labs(x ="expression level",y = expression(D[n]))+ theme_classic() + theme(text = element_text(size = 10)) + xlim(0,10000)
-
-#p3 + p4
-
-p3 + p4 + p3c + p4c + plot_layout(nrow = 2,guides = "collect") & theme(legend.position = "right")
-
+(p1 | p1c) / (p2 | p2c) + plot_layout(nrow = 2,guides = "collect") & theme(legend.position = "right")
 ```
 
+
+## write output
 ```{r}
 directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/pixy/"
 write.table(tajD_expr_syn, file=paste0(directory,"tajD_expr_syn.txt"), sep = "\t",row.names = FALSE, quote = FALSE)

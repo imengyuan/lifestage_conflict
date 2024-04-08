@@ -1,0 +1,140 @@
+---
+title: "expression level and pi"
+author: "Meng"
+date: "2024-04-08"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(patchwork)
+library(dplyr)
+library(ggplot2)
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/pixy/"
+statsr <- read.csv(paste0(directory,"rumex_pi_n_pi_s.csv"))
+```
+
+
+## functions to calculate weighted mean pi and CI
+```{r}
+# a function to calculate the weighted average of pi_n pi_s
+calculate_pi <- function(data) {
+    data <- data %>%
+      mutate(pi_syn = avg_pi * no_sites.x) %>%
+      mutate(pi_nonsyn = avg_pi_nonsyn * no_sites.y)
+    sum_pi_syn <- sum(data$pi_syn)
+    sum_pi_nonsyn <- sum(data$pi_nonsyn)
+    sum_no_sites_x <- sum(data$no_sites.x)
+    sum_no_sites_y <- sum(data$no_sites.y)
+    weighted_pi_syn <- sum_pi_syn / sum_no_sites_x
+    weighted_pi_nonsyn <- sum_pi_nonsyn / sum_no_sites_y
+    ratio_weighted_pis <- weighted_pi_nonsyn / weighted_pi_syn
+    result <- data.frame(
+      bias = unique(data$bias),
+      expr_level = unique(data$expr_level),
+      weighted_pi_syn = weighted_pi_syn,
+      weighted_pi_nonsyn = weighted_pi_nonsyn,
+      ratio_weighted_pis = ratio_weighted_pis
+    )
+    return(result)
+}
+
+# bootstrap and calculate the mean and 95% of weighted average of pi_n pi_s pi_n/pi_s
+bootstrap_calculate_pi <- function(data, iterations = 500) {
+    # set up the output format
+    results <- data.frame(bias = character(), expr_level= character(), weighted_pi_syn = numeric(), weighted_pi_nonsyn = numeric(),   ratio_weighted_pis = numeric(), stringsAsFactors = FALSE)
+    
+    # bootstrap 1000 times and save to result
+    for (i in 1:iterations) {
+      resampled_data <- data[sample(nrow(data), replace = TRUE), ]
+      calculated_values <- calculate_pi(resampled_data)
+      if (nrow(results) == 0) {
+        results <- calculated_values
+      } else {
+        results <- rbind(results, calculated_values)}
+    }
+
+    # calculate the mean and 95% CI from bootstrapped values
+    output <- data.frame(
+            bias = unique(results$bias),
+            expr_level = unique(results$expr_level),
+            mean_pi_syn = mean(results$weighted_pi_syn),
+            mean_pi_nonsyn = mean(results$weighted_pi_nonsyn),
+            mean_ratio_pis = mean(results$ratio_weighted_pis),
+            lower_pi_syn = quantile(results$weighted_pi_syn, 0.025),
+            higher_pi_syn = quantile(results$weighted_pi_syn, 0.975),
+            lower_pi_nonsyn = quantile(results$weighted_pi_nonsyn, 0.025),
+            higher_pi_nonsyn = quantile(results$weighted_pi_nonsyn, 0.975),
+            lower_ratio_pis = quantile(results$ratio_weighted_pis, 0.025),
+            higher_ratio_pis = quantile(results$ratio_weighted_pis, 0.975)
+    )
+    return(output)
+  }
+  
+```
+
+
+## 10 bins of expression level
+```{r}
+DE_tissue <- DE_tissue %>% filter(p_mean>5 | l_mean>5) #17982
+bins.quantiles(DE_tissue$baseMean, 10, 10, verbose = FALSE)
+
+statsr <- statsr %>% mutate(expr_level = case_when(
+    baseMean <= 6.845 ~ "qt1",
+    baseMean > 6.845 & baseMean <= 14.371 ~ "qt2",
+    baseMean > 14.371 & baseMean <= 26.3 ~ "qt3",
+    baseMean > 26.3 & baseMean <= 44.4 ~ "qt4",
+    baseMean > 44.4 & baseMean <= 70.26 ~ "qt5",
+    baseMean > 70.26 & baseMean <= 107.809 ~ "qt6",
+    baseMean > 107.809 & baseMean <= 168.41 ~ "qt7",
+    baseMean > 168.41 & baseMean <= 291.6 ~ "qt8",
+    baseMean > 291.6 & baseMean <= 670 ~ "qt9",
+    baseMean > 670 ~ "qt10"
+))
+
+statsr <- statsr %>% mutate(bias = case_when(
+    log2FoldChange > 0 ~ "g",
+    log2FoldChange < 0 ~ "s"
+))
+
+table(statsr$expr_level)
+table(statsr$bias)
+
+grouped_data <- statsr %>%
+  group_by(bias, expr_level)
+
+results_list <- lapply(split(grouped_data, interaction(grouped_data$bias, grouped_data$expr_level)), function(group) {
+  bootstrap_calculate_pi(group)
+})
+
+pi_expr_qt10 <- bind_rows(results_list)
+
+pi_expr_qt10 <- pi_expr_qt10 %>% mutate(expr_level = factor(expr_level, levels = c("qt1", "qt2", "qt3", "qt4", "qt5", "qt6", "qt7", "qt8","qt9", "qt10")))
+levels(pi_expr_qt10$expr_level)
+```
+qt1 qt10  qt2  qt3  qt4  qt5  qt6  qt7  qt8  qt9 
+ 686 1445  785  925 1056 1231 1336 1386 1420 1464 
+ g    s 
+4391 7343 
+
+## plots
+```{r}
+p1 <- ggplot(data = pi_expr_qt10, mapping = aes(x=expr_level, y=mean_pi_syn, colour = bias)) + 
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_syn, ymax=higher_pi_syn), width=.2)+ ggtitle("a") +labs(x ="",y = expression(pi[s]))+ theme_classic() + theme(text = element_text(size = 10)) 
+
+p2 <- ggplot(data = pi_expr_qt10, mapping = aes(x=expr_level, y=mean_pi_nonsyn, colour = bias)) + 
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_nonsyn, ymax=higher_pi_nonsyn), width=.2)+ ggtitle("b") +labs(x ="",y = expression(pi[n]))+ theme_classic() + theme(text = element_text(size = 10)) 
+
+p3 <- ggplot(data = pi_expr_qt10, mapping = aes(x=expr_level, y=mean_ratio_pis, colour = bias)) +
+    geom_point()+ geom_errorbar(aes(ymin=lower_ratio_pis, ymax=higher_ratio_pis), width=.2)+ ggtitle("c") +labs(x ="expression level quantiles",y = expression(paste(pi[n], "/", pi[s], " ratio")))+ theme_classic() + theme(text = element_text(size = 10)) 
+
+p1 + p2 + p3+ plot_layout(nrow = 1,guides = "collect") & theme(legend.position = "right")
+
+```
+
+
+
+## write output
+```{r}
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/pixy/"
+write.table(pi_expr_qt10, file=paste0(directory,"pi_expr_qt10.txt"), sep = "\t",row.names = FALSE, quote = FALSE)
+```
