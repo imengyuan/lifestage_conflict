@@ -1,0 +1,63 @@
+---
+title: "FC and pi linear graphs"
+author: "Meng"
+date: "2024-04-09"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/pixy/"
+```
+
+# rumex
+## pi - log2FC regression 
+ do piS original piN and  remove zero for ratio
+```{r}
+p1 <- ggplot(FC_pixy, aes(x=log2FoldChange, y=avg_pi)) + geom_point(colour="#1F78B4", alpha=0.2) + geom_smooth(color="black", method = lm) + theme_classic() + theme(text = element_text(size = 10))+ labs(x='log2FoldChange', y='nucleotide diversity (syn)') + ggtitle('a')
+
+p3 <- ggplot(FC_pixy, aes(x=abs(log2FoldChange), y=avg_pi)) + geom_point(colour="#1F78B4", alpha=0.2) + geom_smooth(color="black", method = lm) + theme_classic() + theme(text = element_text(size = 10))+ labs(x='abs(log2FoldChange)', y='nucleotide diversity (syn)') + ggtitle('c')
+
+grid.arrange(p1, p2, p3, p4, nrow = 2)
+```
+
+linear regression
+```{r}
+cor(FC_pixy$avg_pi, FC_pixy$log2FoldChange) # 0.04935226
+cor(FC_pixy$avg_pi, abs(FC_pixy$log2FoldChange)) # 0.06233079
+
+model <- lm(avg_pi ~ log2FoldChange, data = FC_pixy)
+summary(model)
+
+model <- lm(avg_pi ~ abs(log2FoldChange), data = FC_pixy)
+summary(model)
+```
+
+
+# ceratodon
+## pi - log2FC regression 
+```{r}
+ggplot(ratio_pixy, aes(x=log2FoldChange, y=avg_pi)) + geom_point(colour="#1F78B4", alpha=0.2) + geom_smooth(color="black") + theme_classic() + theme(text = element_text(size = 12))+ labs(x='log2FoldChange', y='Synonymous nucleotide diversity') + ggtitle('b')
+
+ggplot(ratio_pixy, aes(x=abs(log2FoldChange), y=avg_pi)) + geom_point(colour="#1F78B4", alpha=0.2) + geom_smooth(color="black") + theme_classic() + theme(text = element_text(size = 12))+ labs(x='abs(log2FoldChange)', y='Synonymous nucleotide diversity') + ggtitle('b')
+```
+
+```{r}
+p2 <- ggplot(ratio_pixy, aes(x=log2FoldChange, y=avg_pi)) + geom_point(colour="#1F78B4", alpha=0.2) + geom_smooth(color="black", method = lm) + theme_classic() + theme(text = element_text(size = 10))+ labs(x='log2FoldChange', y='Nucleotide diversity (syn)') + ggtitle('b')
+
+p4 <- ggplot(ratio_pixy, aes(x=abs(log2FoldChange), y=avg_pi)) + geom_point(colour="#1F78B4", alpha=0.2) + geom_smooth(color="black", method = lm) + theme_classic() + theme(text = element_text(size = 10))+ labs(x='abs(log2FoldChange)', y='Nucleotide diversity (syn)') + ggtitle('d')
+
+#, method = lm
+```
+
+linear regression
+```{r}
+cor(ratio_pixy$avg_pi, ratio_pixy$log2FoldChange) # 0.08382991
+cor(ratio_pixy$avg_pi, abs(ratio_pixy$log2FoldChange)) # 0.08578927
+
+model <- lm(avg_pi ~ log2FoldChange, data = ratio_pixy)
+summary(model)
+
+model <- lm(avg_pi ~ abs(log2FoldChange), data = ratio_pixy)
+summary(model)
+```

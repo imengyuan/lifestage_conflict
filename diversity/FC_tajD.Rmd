@@ -13,14 +13,13 @@ library(ggplot2)
 directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/pixy/"
 ```
 
-## merge pi estimates
+## merge tajD estimates
 ```{r}
 tajD <- read.csv(paste0(directory,"rumex_tajD.filt0329_syn.csv")) # 26967
 tajD <- read.csv(paste0(directory,"rumex_tajD.filt0329_nonsyn.csv")) # 26967
 
 tajD <- tajD[complete.cases(tajD),] # 17026 19771 (nonsyn)
 colnames(tajD)[1] <- "chrom"
-
     
 DE_tissue <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/deseq2/result_tissue_full.txt", header=T)
 DE_tissue <- DE_tissue %>% filter(p_mean>5 | l_mean>5)  # 17982
@@ -31,24 +30,50 @@ FC_tajD_n<- inner_join(DE_tissue, tajD, by=c("chrom","start","end")) # 12658
 write.table(FC_tajD, file = paste0(directory,"FC_tajD_syn_innerjoin.txt"), row.names = FALSE, quote = FALSE)
 write.table(FC_tajD_n, file = paste0(directory,"FC_tajD_nonsyn_innerjoin.txt"), row.names = FALSE, quote = FALSE)
 
-FC_tajD <- read.table(paste0(directory,"FC_tajD_innerjoin.txt"), header =T)
+FC_tajD <- read.table(paste0(directory,"FC_tajD_syn_innerjoin.txt"), header =T)
 FC_tajD_n <- read.table(paste0(directory,"FC_tajD_nonsyn_innerjoin.txt"), header =T)
 ```
 
-## Taj D within each bin
 
+## separate data into FC bin
 ```{r}
-g_bias <- FC_tajD %>% filter(log2FoldChange>0) # 4220
-s_bias <- FC_tajD %>% filter(log2FoldChange<0) # 6643
+tags <- c("s4", "s3", "s2", "s1", "g1", "g2", "g3", "g4")
+FC_tajD <- as_tibble(FC_tajD) %>% 
+  mutate(tag = case_when(
+    log2FoldChange > 0 & log2FoldChange <= 1.143 ~ tags[5],
+    log2FoldChange > 1.143 & log2FoldChange <= 2.79 ~ tags[6],
+    log2FoldChange > 2.79 & log2FoldChange <= 5.7235 ~ tags[7],
+    log2FoldChange > 5.7235   ~ tags[8],
+    
+    log2FoldChange <= -3.0162 ~ tags[1],
+    log2FoldChange > -3.0162 & log2FoldChange <= -2.154298 ~ tags[2],
+    log2FoldChange > -2.154298 & log2FoldChange <= -1.255 ~ tags[3],
+    log2FoldChange > -1.255 & log2FoldChange < 0 ~ tags[4]
+    ))
+table(FC_tajD$tag)
 
-bin<-binning(g_bias$log2FoldChange, bins=4, method="quantile",
-                     labels=NULL, ordered=TRUE, weights=NULL)
-plot(bin)
-bin<-binning(s_bias$log2FoldChange, bins=4, method="quantile",
-                     labels=NULL, ordered=TRUE, weights=NULL)
-plot(bin)
+FC_tajD_n <- as_tibble(FC_tajD_n) %>% 
+  mutate(tag = case_when(
+    log2FoldChange > 0 & log2FoldChange <= 1.143 ~ tags[5],
+    log2FoldChange > 1.143 & log2FoldChange <= 2.79 ~ tags[6],
+    log2FoldChange > 2.79 & log2FoldChange <= 5.7235 ~ tags[7],
+    log2FoldChange > 5.7235   ~ tags[8],
+    
+    log2FoldChange <= -3.0162 ~ tags[1],
+    log2FoldChange > -3.0162 & log2FoldChange <= -2.154298 ~ tags[2],
+    log2FoldChange > -2.154298 & log2FoldChange <= -1.255 ~ tags[3],
+    log2FoldChange > -1.255 & log2FoldChange < 0 ~ tags[4]
+    ))
+table(FC_tajD_n$tag)
+
 ```
+  g1   g2   g3   g4   s1   s2   s3   s4 
+1096 1052 1063 1009 1616 1632 1661 1734 
 
+  g1   g2   g3   g4   s1   s2   s3   s4 
+1296 1255 1231 1197 1872 1904 1937 1966
+
+## Taj D within each bin
 
 ```{r}
 tags <- c("(,-3.02]","(-3.02,-2.16]", "(-2.16,-1.27]", "(-1.27,0)", "(0,1.02]", "(1.02,2.54]","(2.54,5.36]", "(5.36,)")
@@ -85,14 +110,13 @@ table(FC_tajD_n$tag)
   (2.54,5.36]       (5.36,) 
          1078          1112 
 
-    (-1.27,0) (-2.16,-1.27] (-3.02,-2.16]      (,-3.02]      (0,1.02]   (1.02,2.54] 
+   (-1.27,0) (-2.16,-1.27] (-3.02,-2.16]      (,-3.02]      (0,1.02]   (1.02,2.54] 
          1894          1895          1931          1959          1167          1238 
   (2.54,5.36]       (5.36,) 
          1264          1310 
          
 
-## plot the output
-mean (+CI from bs?)
+## get mean & sem
 ```{r}
 mean_tajD <- FC_tajD %>% group_by(tag) %>%
   dplyr::summarise(
@@ -108,21 +132,25 @@ mean_tajD_n <- FC_tajD_n %>% group_by(tag) %>%
     sem_tajD = sd(TajD_TX)/sqrt(length(TajD_TX))
   )
 
-write.table(mean_tajD, file = paste0(directory,"mean_tajD_s.txt"), row.names = FALSE, quote = FALSE)
-write.table(mean_tajD_n, file = paste0(directory,"mean_tajD_n.txt"), row.names = FALSE, quote = FALSE)
+mean_tajD <- mean_tajD %>% mutate(tag = factor(tag, levels = c("s4", "s3", "s2", "s1", "g1", "g2", "g3", "g4")))
+levels(mean_tajD$tag)
+
+mean_tajD_n <- mean_tajD_n %>% mutate(tag = factor(tag, levels = c("s4", "s3", "s2", "s1", "g1", "g2", "g3", "g4")))
+levels(mean_tajD_n$tag)
 ```
 
 
-
+## plot the output
 ```{r}
 tags <- c("(,-3.02]","(-3.02,-2.16]", "(-2.16,-1.27]", "(-1.27,0)", "(0,1.02]", "(1.02,2.54]","(2.54,5.36]", "(5.36,)")
 mean_tajD$tag <- factor(mean_tajD$tag,
                        levels = tags,
                        ordered = FALSE)
+levels(mean_tajD$tag)
 mean_tajD_n$tag <- factor(mean_tajD_n$tag,
                        levels = tags,
                        ordered = FALSE)
-
+levels(mean_tajD_n$tag)
 
 p1 <- ggplot(data = mean_tajD, mapping = aes(x=tag, y=mean_tajD)) + 
     geom_point()+ geom_errorbar(aes(ymin=mean_tajD - sem_tajD, ymax=mean_tajD + sem_tajD), width=.2, position=position_dodge(.9))+ ggtitle("a") +labs(x ="log2FoldChange",y = expression(D[s]))+ theme_classic()+ theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
@@ -130,8 +158,19 @@ p1 <- ggplot(data = mean_tajD, mapping = aes(x=tag, y=mean_tajD)) +
 p2 <- ggplot(data = mean_tajD_n, mapping = aes(x=tag, y=mean_tajD)) + 
     geom_point()+ geom_errorbar(aes(ymin=mean_tajD - sem_tajD, ymax=mean_tajD + sem_tajD), width=.2, position=position_dodge(.9))+ ggtitle("b") +labs(x ="log2FoldChange",y = expression(D[n]))+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
 
+p1 + p2
+```
 
+```{r}
 (p1 | p3) / (p2 | p4) 
 ```
 
+
+## write output
+```{r}
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/pixy/"
+write.table(mean_tajD, file = paste0(directory,"mean_tajD_s_apr.txt"), row.names = FALSE, quote = FALSE)
+write.table(mean_tajD_n, file = paste0(directory,"mean_tajD_n_apr.txt"), row.names = FALSE, quote = FALSE)
+#mean_tajD <- read.table(paste0(directory,"mean_tajD_s.txt"), header = T)
+```
 
