@@ -107,21 +107,12 @@ calculate_pi_real <- function(data) {
 
 
 # ceratodon
-## gene sets in ceratodn
+## gene sets in ceratodon
 ```{r}
-DE_c <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/deseq2/DE_results_all.txt", header =T) # 30107
-DE_c <- DE_c %>% filter(g_mean > 5 | s_mean > 5) # 25861 (including UV)
-DE_c <- DE_c %>% filter(padj<0.1)
-
-geness <- DE_c[DE_c$g_s_ratio <= 0.1900026 ,]
-genesg <- DE_c[DE_c$g_s_ratio >= 8.5800357 ,] 
-geness <- geness[geness$log2FoldChange <= -2,] 
-genesg <- genesg[genesg$log2FoldChange >= 2,] 
-geness_a <- geness %>% filter(chrom != "U" & chrom != "V") #1656
-genesg_a <- genesg %>% filter(chrom != "U" & chrom != "V") #1514
-
-unbiased <- DE_c %>% filter(log2FoldChange <= 0.419 & log2FoldChange > -0.354 ) # 6150
-unbiased <- unbiased %>% filter(padj >= 0.1) # 4680
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/deseq2/"
+geness_a <- read.table(paste0(directory,"geness_a.txt"), header = T)
+genesg_a <- read.table(paste0(directory,"genesg_a.txt"), header = T)
+unbiased <- read.table(paste0(directory,"unbiased.txt"), header = T)
 ```
 
 ## stats
@@ -205,15 +196,9 @@ write.table(pi_genes_c_real, file = paste0(directory,"specific_genes_pi_real.txt
 ## gene sets
 ```{r}
 directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/deseq2/"
-genesl <- read.table(paste0(directory,"genesl.txt"))
-genesp <- read.table(paste0(directory,"genesp.txt"))
-
-DE_tissue <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/deseq2/result_tissue_full.txt", header=T)
-DE_tissue <- DE_tissue %>% filter(p_mean>5 | l_mean>5) #17982
-
-unbias <- DE_tissue %>% filter(log2FoldChange <= 1.02 & log2FoldChange > -1.27) # 4344
-unbias <- unbias %>% filter(padj >= 0.1) # 822
-#unbias <- DE_tissue %>% filter(padj >= 0.1) # 858
+genesl <- read.table(paste0(directory,"genesl.txt"), header = T)
+genesp <- read.table(paste0(directory,"genesp.txt"), header = T)
+unbias <- read.table(paste0(directory,"unbias.txt"), header = T)
 ```
 
 ## stats

@@ -1,0 +1,161 @@
+---
+title: "gene sets for DFE"
+author: "Meng"
+date: "2024-04-10"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+```
+
+# rumex
+## get specific genes
+```{r}
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/deseq2/"
+DE_tissue <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/deseq2/result_tissue_full.txt", header=T)
+DE_tissue <- DE_tissue %>% filter(p_mean>5 | l_mean>5) # 17982
+DE_tissue <- DE_tissue %>% filter(padj<0.1) # 17124
+quantile(DE_tissue$p_l_ratio, probs = c(0.1, 0.9)) # 0.08399402 82.27061646
+nrow(DE_tissue[DE_tissue$p_l_ratio <= 0.08399402,]) # 1713
+nrow(DE_tissue[DE_tissue$p_l_ratio >= 82.27061646,]) # 1713
+# extract to check the FC
+gff <- read.table(paste0(directory,"/deseq2/REF_LA_filtered_annotation.genes.gff"))
+colnames(gff) <- c("gene","chrom", "start", "end")
+DE_tissue <- left_join(DE_tissue, gff, by="gene")
+
+genesl <- DE_tissue[DE_tissue$p_l_ratio <= 0.08399402,]
+genesp <- DE_tissue[DE_tissue$p_l_ratio >= 82.27061646,] 
+as.data.frame(table(genesl$chrom))
+as.data.frame(table(genesp$chrom))
+
+genesl <- genesl[genesl$log2FoldChange <= -2,]
+genesp <- genesp[genesp$log2FoldChange >= 2,]
+
+write.table(genesl, file = paste0(directory,"genesl.txt"), sep = "\t", row.names = FALSE, quote = FALSE)
+write.table(genesp, file = paste0(directory,"genesp.txt"), sep = "\t", row.names = FALSE, quote = FALSE)
+
+write.table(genesl[, 13:15], file = paste0(directory,"genesl.bed"), sep = "\t", row.names = FALSE, col.names = FALSE, quote = FALSE)
+write.table(genesp[, 13:15], file = paste0(directory,"genesp.bed"), sep = "\t", row.names = FALSE, col.names = FALSE, quote = FALSE)
+```
+
+
+## gen unbiased genes
+```{r}
+DE_tissue <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/deseq2/result_tissue_full.txt", header=T)
+DE_tissue <- DE_tissue %>% filter(p_mean>5 | l_mean>5) #17982
+
+unbias <- DE_tissue %>% filter(log2FoldChange <= 1.143 & log2FoldChange > -1.255) # 4496
+unbias <- unbias %>% filter(padj >= 0.05) # 969
+#unbias <- DE_tissue %>% filter(padj >= 0.05) # 1019
+
+write.table(unbias, file = paste0(directory,"unbias.txt"), sep = "\t", row.names = FALSE, quote = FALSE)
+write.table(unbias[, 8:10], file = paste0(directory,"unbias.bed"), sep = "\t", row.names = FALSE, col.names = FALSE, quote = FALSE)
+```
+
+
+## expresison level quantiles
+```{r}
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/deseq2/"
+genesl <- read.table(paste0(directory,"genesl.txt"), header = T)
+genesp <- read.table(paste0(directory,"genesp.txt"), header = T)
+
+DE_tissue <- DE_tissue %>% filter(p_mean>5 | l_mean>5) #17982
+bins.quantiles(DE_tissue$baseMean, 4, 4, verbose = FALSE)
+
+p_qt1 <- genesp %>% filter(baseMean <= 19.63)
+p_qt2 <- genesp %>% filter(baseMean > 19.63 & baseMean <= 70.25)
+p_qt3 <- genesp %>% filter(baseMean > 70.25 & baseMean <= 216.4)
+p_qt4 <- genesp %>% filter(baseMean > 216.4)
+
+l_qt1 <- genesl %>% filter(baseMean <= 19.63)
+l_qt2 <- genesl %>% filter(baseMean > 19.63 & baseMean <= 70.25)
+l_qt3 <- genesl %>% filter(baseMean > 70.25 & baseMean <= 216.4)
+l_qt4 <- genesl %>% filter(baseMean > 216.4)
+
+u_qt1 <- unbias %>% filter(baseMean <= 19.63)
+u_qt2 <- unbias %>% filter(baseMean > 19.63 & baseMean <= 70.25)
+u_qt3 <- unbias %>% filter(baseMean > 70.25 & baseMean <= 216.4)
+u_qt4 <- unbias %>% filter(baseMean > 216.4)
+
+qt_list <- list(p_qt1, p_qt2, p_qt3, p_qt4, l_qt1, l_qt2, l_qt3, l_qt4, u_qt1, u_qt2, u_qt3, u_qt4)
+file_names <- c("p_qt1", "p_qt2", "p_qt3", "p_qt4", "l_qt1", "l_qt2", "l_qt3", "l_qt4", "u_qt1", "u_qt2", "u_qt3", "u_qt4")
+for (i in 1:length(qt_list)) {
+  file_name <- paste0(directory, file_names[i], ".bed")
+  write.table(qt_list[[i]][, 8:10], file = file_name, sep = "\t", row.names = FALSE, col.names = FALSE, quote = FALSE)}
+```
+l
+320 407 458 526
+p
+565 257 181 708
+u
+402 267 194 106
+
+# ceratodon
+## get specific genes
+```{r}
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/deseq2/"
+DE_c <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/deseq2/DE_results_all.txt", header =T) # 30107
+DE_c <- DE_c %>% filter(g_mean > 5 | s_mean > 5) # 25861 (including UV)
+DE_c <- DE_c %>% filter(padj<0.1)
+quantile(DE_c$g_s_ratio, probs = c(0.1, 0.9)) # 0.1900026 8.5800357  
+
+geness <- DE_c[DE_c$g_s_ratio <= 0.1900026 ,]
+genesg <- DE_c[DE_c$g_s_ratio >= 8.5800357 ,] 
+geness <- geness[geness$log2FoldChange <= -2,] 
+genesg <- genesg[genesg$log2FoldChange >= 2,] 
+geness_a <- geness %>% filter(chrom != "U" & chrom != "V") #1656
+genesg_a <- genesg %>% filter(chrom != "U" & chrom != "V") #1514
+
+geness_a <- read.table(paste0(directory,"geness_a.txt"), header = T)
+genesg_a <- read.table(paste0(directory,"genesg_a.txt"), header = T)
+```
+
+## get unbiased genes
+```{r}
+DE_c <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/deseq2/DE_results_all.txt", header =T) # 30107
+DE_c <- DE_c %>% filter(g_mean > 5 | s_mean > 5) # 25861 (including UV)
+unbiased <- DE_c %>% filter(log2FoldChange <= 0.43028 & log2FoldChange > -0.3853 ) # 6466
+unbiased <- unbiased %>% filter(padj >= 0.05) # 5221
+test <- DE_c %>% filter(padj >= 0.05) # 8006
+
+write.table(unbiased, file = paste0(directory,"unbiased.txt"), sep = "\t", row.names = FALSE, quote = FALSE)
+write.table(unbiased[, 2:4], file = paste0(directory,"unbiased.bed"), sep = "\t", row.names = FALSE, col.names = FALSE, quote = FALSE)
+```
+
+
+## expression level quantiles
+```{r}
+bins.quantiles(DE_c$baseMean, 4, 4, verbose = FALSE)
+
+g_qt1 <- genesg_a %>% filter(baseMean <= 39.48)
+g_qt2 <- genesg_a %>% filter(baseMean > 39.48 & baseMean <= 242.92)
+g_qt3 <- genesg_a %>% filter(baseMean > 242.92 & baseMean <= 809.89)
+g_qt4 <- genesg_a %>% filter(baseMean > 809.89)
+
+s_qt1 <- geness_a %>% filter(baseMean <= 39.48)
+s_qt2 <- geness_a %>% filter(baseMean > 39.48 & baseMean <= 242.92)
+s_qt3 <- geness_a %>% filter(baseMean > 242.92 & baseMean <= 809.89)
+s_qt4 <- geness_a %>% filter(baseMean > 809.89)
+
+u_qt1 <- unbiased %>% filter(baseMean <= 39.48)
+u_qt2 <- unbiased %>% filter(baseMean > 39.48 & baseMean <= 242.92)
+u_qt3 <- unbiased %>% filter(baseMean > 242.92 & baseMean <= 809.89)
+u_qt4 <- unbiased %>% filter(baseMean > 809.89)
+
+qt_list <- list(g_qt1, g_qt2, g_qt3, g_qt4, s_qt1, s_qt2, s_qt3, s_qt4, u_qt1, u_qt2, u_qt3, u_qt4)
+file_names <- c("g_qt1", "g_qt2", "g_qt3", "g_qt4", "s_qt1", "s_qt2", "s_qt3", "s_qt4", "u_qt1", "u_qt2", "u_qt3", "u_qt4")
+for (i in 1:length(qt_list)) {
+  file_name <- paste0(directory, file_names[i], ".bed")
+  write.table(qt_list[[i]][, 2:4], file = file_name, sep = "\t", row.names = FALSE, col.names = FALSE, quote = FALSE)
+}
+```
+
+s qt
+860 393 245 158
+g
+475 459 281 299
+u
+934 1436 1506 1345
+
