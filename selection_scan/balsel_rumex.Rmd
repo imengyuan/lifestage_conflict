@@ -59,7 +59,7 @@ p1 + p2 + p3 + plot_layout(guides = "collect") & theme(legend.position = "right"
 plot the scans
 ```{r}
 lines_data_facet_A2 <- data.frame(xintercept = c(5.6,69), facet = "A2")
-lines_data_facet_A3 <- data.frame(xintercept = c(11.5,31.8), facet = "A3")
+lines_data_facet_A3 <- data.frame(xintercept = c(0,34), facet = "A3")
 lines_data_facet_A4 <- data.frame(xintercept = c(95,115), facet = "A4")
 
 
@@ -119,16 +119,17 @@ table(scan95$chrom)[1:5]
 ```{r}
 scan95 <- scan95 %>% mutate(physPos_mb = physPos/1000000)
 inversion_A2 <- scan95 %>% filter(chrom == "A2" & physPos_mb > 5.6 & physPos_mb < 69) # 10055
-inversion_A3 <- scan95 %>% filter(chrom == "A3" & physPos_mb > 11.5 & physPos_mb < 31.8) # 11132
+# 
+inversion_A3 <- scan95 %>% filter(chrom == "A3" & physPos_mb < 34) # 11132
 inversion_A4 <- scan95 %>% filter(chrom == "A4" & physPos_mb > 95 & physPos_mb < 115) # 121
 inversion <- rbind(inversion_A2, inversion_A3, inversion_A4)
 
 inversion <- inversion %>% inner_join(gff, by = "chrom") %>%
-        filter(physPos >= start & physPos <= end) # 9267
+        filter(physPos >= start & physPos <= end) # 9750
 
 result_CLR <- inversion %>%
     group_by(gene) %>%
-    summarise(mean_CLR = mean(CLR), max_CLR = max(CLR), no_sites = length(CLR)) # 125
+    summarise(mean_CLR = mean(CLR), max_CLR = max(CLR), no_sites = length(CLR)) # 138
 
 result_CLR <- left_join(result_CLR, gff, by = "gene")
 table(result_CLR$chrom)[1:5]
@@ -143,7 +144,7 @@ inversion2 <- rbind(inversion_A2, inversion_A3, inversion_A4)
 write.table(inversion2, file=paste0(data,"inversion_sites_all.txt"), row.names = FALSE, quote = FALSE)
 ```
 A1 A4 A2 XY A3 
- 0  1 63  0 61 
+ 0  1 63  0 61 /74
  
 
 ## get the list of candidate genes

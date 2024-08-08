@@ -35,6 +35,10 @@ colnames(gene2GO)[1] <- "gene"
 # read the genes
 balsel_genes <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/balsel/balsel_genes_expressed.txt", header = T)
 
+balsel_gene_noInversion <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/balsel/inversion_genes.txt", header = T) # 138
+balsel_gene_noInversion <- balsel_gene_noInversion[complete.cases(balsel_gene_noInversion),] # 128
+
+
 balsel_genes <- balsel_genes %>% filter(p_mean>5 | l_mean>5) # 405
 pollen_bias_balsel <- balsel_genes  %>% filter(log2FoldChange>0 & padj < 0.1) # 142
 p_biased <- read.table(paste0(directory, "pollen_biased_p01.txt"), header =T) # 6823

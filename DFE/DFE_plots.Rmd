@@ -10,9 +10,9 @@ library(tidyr)
 library(dplyr)
 library(ggplot2)
 library(patchwork)
+library(RColorBrewer)
 library("gridExtra")
 knitr::opts_chunk$set(echo = TRUE)
-setwd("/Users/yuanmeng/Git/rumex_haploid_sel/DFE")
 directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/DFE/"
 
 data_summary <- function(data, varname, groupnames){
@@ -83,28 +83,30 @@ write.table(dfr, file = paste0(directory,"final_prop_qt_apr.txt"), row.names = F
 
 ## plot DFE, mean & CI
 ```{r}
-prop$Category <- factor(prop$Category)
-prop$Category <- factor(prop$Category, level=c("sporophyte","gametophyte", "unbiased")) 
-ggplot(dfr, aes(x=Nes,y=mean,fill=Category)) + geom_bar(stat="identity", position=position_dodge()) + theme_classic() + scale_x_discrete(limits=c("0~1", "1~10", ">10")) + scale_fill_manual(values = c("#CCEBC5", "#238B45","green"))  + labs(y="Proportion of mutations") + geom_errorbar(aes(ymin=lower, ymax=higher), width=.2, position=position_dodge(.9)) +ggtitle("b") + theme(text = element_text(size = 15))+
+dfr$Category <- factor(dfr$Category)
+levels(dfr$Category)
+dfr$Category <- factor(dfr$Category, level=c("sporophyte", "unbiased", "gametophyte"))
+ggplot(dfr, aes(x=Nes,y=mean,fill=Category)) + geom_bar(stat="identity", position=position_dodge()) + theme_classic() + scale_x_discrete(limits=c("0~1", "1~10", ">10")) + scale_fill_manual(values = c("#CCEBC5", "#238B45","green"))  + labs(y="Proportion of mutations") + geom_errorbar(aes(ymin=lower, ymax=higher), width=.2, position=position_dodge(.9)) +ggtitle("b") + theme(text = element_text(size = 10))+
     facet_grid(.~Quantile,scales="free_x", switch = "x", space = "free_x") 
 ```
-
-
 ```{r}
 dfr <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/DFE/final_prop_qt_apr.txt", header=T)
 dfr$Category <- factor(dfr$Category)
 levels(dfr$Category)
-dfr$Category <- factor(dfr$Category, level=c("sporophyte","gametophyte", "unbiased"))
+dfr$Category <- factor(dfr$Category, level=c("sporophyte", "unbiased", "gametophyte"))
 
 df <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/DFE/final_prop_qt_apr.txt", header=T)
 df$Category <- factor(df$Category)
 levels(df$Category)
-df$Category <- factor(df$Category, level=c("sporophyte","gametophyte", "unbiased"))
+df$Category <- factor(df$Category, level=c("sporophyte", "unbiased", "gametophyte"))
+```
 
-p1 <- ggplot(dfr, aes(x=Nes,y=mean,fill=Category)) + geom_bar(stat="identity", position=position_dodge()) + theme_classic() + scale_x_discrete(limits=c("0~1", "1~10", ">10")) + scale_fill_manual(values = c("#CCEBC5", "#238B45", "green"))  + labs(y="Proportion of mutations") + geom_errorbar(aes(ymin=lower, ymax=higher), width=.2, position=position_dodge(.9)) + ggtitle("a") + theme(text = element_text(size = 10))+
+
+```{r}
+p1 <- ggplot(dfr, aes(x=Nes,y=mean,fill=Category)) + geom_bar(stat="identity", position=position_dodge()) + theme_classic() + scale_x_discrete(limits=c("0~1", "1~10", ">10")) + scale_fill_manual(values = c("#E6F5D0", "#B8E186", "#238B45"))  + labs(x=expression(italic(paste(N[e], "s"))), y="Proportion of mutations") + geom_errorbar(aes(ymin=lower, ymax=higher), width=.2, position=position_dodge(.9)) + ggtitle("a") + theme(text = element_text(size = 10))+
     facet_grid(.~Quantile,scales="free_x", switch = "x", space = "free_x") 
 
-p2 <- ggplot(df, aes(x=Nes,y=mean,fill=Category)) + geom_bar(stat="identity", position=position_dodge()) + theme_classic() + scale_x_discrete(limits=c("0~1", "1~10", ">10")) + scale_fill_manual(values = c("#CCEBC5", "#238B45", "green"))  + labs(y="Proportion of mutations") + geom_errorbar(aes(ymin=lower, ymax=higher), width=.2, position=position_dodge(.9)) + ggtitle("b") + theme(text = element_text(size = 10))+
+p2 <- ggplot(df, aes(x=Nes,y=mean,fill=Category)) + geom_bar(stat="identity", position=position_dodge()) + theme_classic() + scale_x_discrete(limits=c("0~1", "1~10", ">10")) + scale_fill_manual(values = c("#E6F5D0", "#B8E186", "#238B45"))  + labs(x=expression(italic(paste(N[e], "s"))), y="Proportion of mutations") + geom_errorbar(aes(ymin=lower, ymax=higher), width=.2, position=position_dodge(.9)) + ggtitle("b") + theme(text = element_text(size = 10))+
     facet_grid(.~Quantile,scales="free_x", switch = "x", space = "free_x") 
 
 p1 + p2 + plot_layout(nrow = 2,guides = "collect") & theme(legend.position = "right")
@@ -144,21 +146,23 @@ colnames(dfr2)[6:7] <- c("lower", "higher")
 write.table(dfr2, file = paste0(directory,"final_prop_apr.txt"), row.names = F, quote = F,sep = "\t")
 ```
 
-
 ```{r}
 dfr2 <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/DFE/final_prop_apr.txt", header=T)
 dfr2$Category <- factor(dfr2$Category)
 levels(dfr2$Category)
-dfr2$Category <- factor(dfr2$Category, level=level=c("sporophyte","gametophyte", "unbiased"))
+dfr2$Category <- factor(dfr2$Category, level=c("sporophyte", "unbiased", "gametophyte"))
 
 df2 <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/DFE/final_prop_apr.txt", header=T)
 df2$Category <- factor(df2$Category)
 levels(df2$Category)
-df2$Category <- factor(df2$Category, level=level=c("sporophyte","gametophyte", "unbiased"))
+df2$Category <- factor(df2$Category, level=c("sporophyte", "unbiased", "gametophyte"))
+```
 
-p3 <- ggplot(dfr2, aes(x=Nes,y=mean,fill=Category)) + geom_bar(stat="identity", position=position_dodge()) + theme_classic() + scale_x_discrete(limits=c("0~1", "1~10", ">10")) + scale_fill_manual(values = c("#CCEBC5", "#238B45","green"))  + labs(y="Proportion of mutations") + geom_errorbar(aes(ymin=lower, ymax=higher), width=.2, position=position_dodge(.9)) +ggtitle("a") + theme(text = element_text(size = 15))
 
-p4 <- ggplot(df2, aes(x=Nes,y=mean,fill=Category)) + geom_bar(stat="identity", position=position_dodge()) + theme_classic() + scale_x_discrete(limits=c("0~1", "1~10", ">10")) + scale_fill_manual(values = c("#CCEBC5", "#238B45","green"))  + labs(y="Proportion of mutations") + geom_errorbar(aes(ymin=lower, ymax=higher), width=.2, position=position_dodge(.9)) +ggtitle("b") + theme(text = element_text(size = 15))
+```{r}
+p3 <- ggplot(dfr2, aes(x=Nes,y=mean,fill=Category)) + geom_bar(stat="identity", position=position_dodge()) + theme_classic() + scale_x_discrete(limits=c("0~1", "1~10", ">10")) + scale_fill_manual(values = c("#E6F5D0", "#B8E186", "#238B45")) + labs(x=expression(italic(paste(N[e], "s"))), y="Proportion of mutations") + geom_errorbar(aes(ymin=lower, ymax=higher), width=.2, position=position_dodge(.9)) +ggtitle("a") + theme(text = element_text(size = 10))
+
+p4 <- ggplot(df2, aes(x=Nes,y=mean,fill=Category)) + geom_bar(stat="identity", position=position_dodge()) + theme_classic() + scale_x_discrete(limits=c("0~1", "1~10", ">10")) + scale_fill_manual(values = c("#E6F5D0", "#B8E186", "#238B45")) + labs(x=expression(italic(paste(N[e], "s"))), y="Proportion of mutations") + geom_errorbar(aes(ymin=lower, ymax=higher), width=.2, position=position_dodge(.9)) +ggtitle("b") + theme(text = element_text(size = 10))
 
 p3 + p4 + plot_layout(guides = "collect") & theme(legend.position = "right")
 ```

@@ -6,29 +6,43 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/pixy/"
+library(ggplot2)
+library(patchwork)
 ```
 
 # rumex
 ## pi - log2FC regression 
  do piS original piN and  remove zero for ratio
 ```{r}
-p1 <- ggplot(FC_pixy, aes(x=log2FoldChange, y=avg_pi)) + geom_point(colour="#1F78B4", alpha=0.2) + geom_smooth(color="black", method = lm) + theme_classic() + theme(text = element_text(size = 10))+ labs(x='log2FoldChange', y='nucleotide diversity (syn)') + ggtitle('a')
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/pixy/"
+statsr <- read.csv(paste0(directory,"rumex_pi_n_pi_s.csv"))
 
-p3 <- ggplot(FC_pixy, aes(x=abs(log2FoldChange), y=avg_pi)) + geom_point(colour="#1F78B4", alpha=0.2) + geom_smooth(color="black", method = lm) + theme_classic() + theme(text = element_text(size = 10))+ labs(x='abs(log2FoldChange)', y='nucleotide diversity (syn)') + ggtitle('c')
+p1 <- ggplot(statsr, aes(x=log2FoldChange, y=avg_pi)) + geom_point(colour="#1F78B4", alpha=0.2) + geom_smooth(color="black", method = lm) + theme_classic() + theme(text = element_text(size = 10))+ labs(x='log2FoldChange', y=expression(pi[s])) + ggtitle('a')
 
-grid.arrange(p1, p2, p3, p4, nrow = 2)
+p2 <- ggplot(statsr, aes(x=abs(log2FoldChange), y=avg_pi)) + geom_point(colour="#1F78B4", alpha=0.2) + geom_smooth(color="black", method = lm) + theme_classic() + theme(text = element_text(size = 10))+ labs(x='abs(log2FoldChange)', y=expression(pi[s])) + ggtitle('d')
+
+
+p3 <- ggplot(statsr, aes(x=log2FoldChange, y=avg_pi_nonsyn)) + geom_point(colour="#1F78B4", alpha=0.2) + geom_smooth(color="black", method = lm) + theme_classic() + theme(text = element_text(size = 10))+ labs(x='log2FoldChange', y=expression(pi[n])) + ggtitle('b')
+
+p4 <- ggplot(statsr, aes(x=abs(log2FoldChange), y=avg_pi_nonsyn)) + geom_point(colour="#1F78B4", alpha=0.2) + geom_smooth(color="black", method = lm) + theme_classic() + theme(text = element_text(size = 10))+ labs(x='abs(log2FoldChange)', y=expression(pi[n])) + ggtitle('e')
+
+statsr <- statsr %>% filter(avg_pi != 0 & avg_pi_nonsyn  != 0)
+statsr$pi_ratio <- statsr$avg_pi_nonsyn / statsr$avg_pi
+
+p5 <- ggplot(statsr, aes(x=log2FoldChange, y=pi_ratio)) + geom_point(colour="#1F78B4", alpha=0.2) + geom_smooth(color="black", method = lm) + theme_classic() + theme(text = element_text(size = 10))+ labs(x='log2FoldChange', y=expression(paste(pi[n], "/", pi[s], " ratio"))) + ggtitle('c')
+
+p6 <- ggplot(statsr, aes(x=abs(log2FoldChange), y=pi_ratio)) + geom_point(colour="#1F78B4", alpha=0.2) + geom_smooth(color="black", method = lm) + theme_classic() + theme(text = element_text(size = 10))+ labs(x='abs(log2FoldChange)', y=expression(paste(pi[n], "/", pi[s], " ratio"))) + ggtitle('f')
+
+p1 + p2 + p3 + p4 + p5 + p6 + plot_layout(nrow = 3)
 ```
 
 linear regression
 ```{r}
-cor(FC_pixy$avg_pi, FC_pixy$log2FoldChange) # 0.04935226
-cor(FC_pixy$avg_pi, abs(FC_pixy$log2FoldChange)) # 0.06233079
+#cor(FC_pixy$avg_pi, FC_pixy$log2FoldChange) # 0.04935226
+#cor(FC_pixy$avg_pi, abs(FC_pixy$log2FoldChange)) # 0.06233079
 
 model <- lm(avg_pi ~ log2FoldChange, data = FC_pixy)
 summary(model)
-
 model <- lm(avg_pi ~ abs(log2FoldChange), data = FC_pixy)
 summary(model)
 ```
@@ -37,17 +51,26 @@ summary(model)
 # ceratodon
 ## pi - log2FC regression 
 ```{r}
-ggplot(ratio_pixy, aes(x=log2FoldChange, y=avg_pi)) + geom_point(colour="#1F78B4", alpha=0.2) + geom_smooth(color="black") + theme_classic() + theme(text = element_text(size = 12))+ labs(x='log2FoldChange', y='Synonymous nucleotide diversity') + ggtitle('b')
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/diversity/"
+stats  <- read.csv(paste0(directory,"ceratodon_pi_n_pi_s.csv"))
 
-ggplot(ratio_pixy, aes(x=abs(log2FoldChange), y=avg_pi)) + geom_point(colour="#1F78B4", alpha=0.2) + geom_smooth(color="black") + theme_classic() + theme(text = element_text(size = 12))+ labs(x='abs(log2FoldChange)', y='Synonymous nucleotide diversity') + ggtitle('b')
-```
+p1 <- ggplot(stats, aes(x=log2FoldChange, y=avg_pi)) + geom_point(colour="#1F78B4", alpha=0.2) + geom_smooth(color="black", method = lm) + theme_classic() + theme(text = element_text(size = 10))+ labs(x='log2FoldChange', y=expression(pi[s])) + ggtitle('a')
 
-```{r}
-p2 <- ggplot(ratio_pixy, aes(x=log2FoldChange, y=avg_pi)) + geom_point(colour="#1F78B4", alpha=0.2) + geom_smooth(color="black", method = lm) + theme_classic() + theme(text = element_text(size = 10))+ labs(x='log2FoldChange', y='Nucleotide diversity (syn)') + ggtitle('b')
+p2 <- ggplot(stats, aes(x=abs(log2FoldChange), y=avg_pi)) + geom_point(colour="#1F78B4", alpha=0.2) + geom_smooth(color="black", method = lm) + theme_classic() + theme(text = element_text(size = 10))+ labs(x='abs(log2FoldChange)', y=expression(pi[s])) + ggtitle('d')
 
-p4 <- ggplot(ratio_pixy, aes(x=abs(log2FoldChange), y=avg_pi)) + geom_point(colour="#1F78B4", alpha=0.2) + geom_smooth(color="black", method = lm) + theme_classic() + theme(text = element_text(size = 10))+ labs(x='abs(log2FoldChange)', y='Nucleotide diversity (syn)') + ggtitle('d')
 
-#, method = lm
+p3 <- ggplot(stats, aes(x=log2FoldChange, y=avg_pi_nonsyn)) + geom_point(colour="#1F78B4", alpha=0.2) + geom_smooth(color="black", method = lm) + theme_classic() + theme(text = element_text(size = 10))+ labs(x='log2FoldChange', y=expression(pi[n])) + ggtitle('b')
+
+p4 <- ggplot(stats, aes(x=abs(log2FoldChange), y=avg_pi_nonsyn)) + geom_point(colour="#1F78B4", alpha=0.2) + geom_smooth(color="black", method = lm) + theme_classic() + theme(text = element_text(size = 10))+ labs(x='abs(log2FoldChange)', y=expression(pi[n])) + ggtitle('e')
+
+stats <- stats %>% filter(avg_pi != 0 & avg_pi_nonsyn  != 0)
+stats$pi_ratio <- stats$avg_pi_nonsyn / stats$avg_pi
+
+p5 <- ggplot(stats, aes(x=log2FoldChange, y=pi_ratio)) + geom_point(colour="#1F78B4", alpha=0.2) + geom_smooth(color="black", method = lm) + theme_classic() + theme(text = element_text(size = 10))+ labs(x='log2FoldChange', y=expression(paste(pi[n], "/", pi[s], " ratio"))) + ggtitle('c')
+
+p6 <- ggplot(stats, aes(x=abs(log2FoldChange), y=pi_ratio)) + geom_point(colour="#1F78B4", alpha=0.2) + geom_smooth(color="black", method = lm) + theme_classic() + theme(text = element_text(size = 10))+ labs(x='abs(log2FoldChange)', y=expression(paste(pi[n], "/", pi[s], " ratio"))) + ggtitle('f')
+
+p1 + p2 + p3 + p4 + p5 + p6 + plot_layout(nrow = 3)
 ```
 
 linear regression
