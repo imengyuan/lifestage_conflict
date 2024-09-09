@@ -1,2 +1,2 @@
-# Rumex haploid selection
-Scripts for the Rumex haploid selection manuscript
+# Testing for conflict between life stages
+Scripts for the lifestage conflict manuscript
