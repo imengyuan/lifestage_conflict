@@ -1,0 +1,311 @@
+---
+title: "Ceratodon expression analysis"
+author: "Meng"
+date: '2021-09-19'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(ggplot2)
+library(dplyr)
+library("DESeq2")
+library('RColorBrewer')
+library("stringr")
+library(VennDiagram)
+library(rattle)
+#setwd("/Users/yuanmeng/Dropbox/ceratodon/deseq2")
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/deseq2/"
+```
+
+
+## prep dataset
+```{r}
+gff<-read.table(paste0(directory,"R40_GG1U_combined.gene.final.gff"))
+head(gff)
+colnames(gff)<-c("chrom","start","end","gene")
+gff$chrom <-factor(gff$chrom )
+levels(gff$chrom )
+readcnt<-read.table(paste0(directory,"readcnts_ceratodon.filt.txt"),header=T)
+head(readcnt)
+# gene <- readcnt[,1]
+
+# keep only autosomes for readcnt, V genes for readcnt_m and U genes for readcnt_f
+colnames(readcnt)[1] <- "gene"
+readcnt <- inner_join(gff, readcnt, by = "gene")
+readcnt_auto <- readcnt %>% filter(chrom != "U" & chrom != "V") 
+readcnt_m <- readcnt %>% filter(chrom == "V") 
+readcnt_f <- readcnt %>% filter(chrom == "U") 
+    
+# meta_data contains the sample information
+meta_data<-read.csv(paste0(directory,"meta_data.csv"))
+rownames(meta_data) <- meta_data[,1]
+meta_data$id <- seq.int(nrow(meta_data)) 
+head(meta_data)
+l_m <- meta_data %>% filter(sex == "m") %>% select(id)
+l_f <- meta_data %>% filter(sex == "f") %>% select(id)
+
+# keep the gene column
+# keep all samples for autosomes, s + male g samples for male, s+female g samples for female
+readcnt_m <- readcnt_m[,c(1:30,t(l_m)+9)]
+readcnt_f <- readcnt_f[,c(1:30,t(l_f)+9)]
+
+meta_data_m <- meta_data %>% filter(sex == "m" | sex == "unsexed")  
+meta_data_f <- meta_data %>% filter(sex == "f" | sex == "unsexed") 
+
+readcnt_matrix <- as.matrix(readcnt[,-c(1:9)])
+readcnt_matrix_auto <- as.matrix(readcnt_auto[,-c(1:9)])
+readcnt_matrix_m <- as.matrix(readcnt_m[,-c(1:9)])
+readcnt_matrix_f <- as.matrix(readcnt_f[,-c(1:9)])
+
+# row names are the gene ids
+rownames(readcnt_matrix) <- readcnt[ , 4]
+rownames(readcnt_matrix_auto) <- readcnt_auto[ , 4]
+rownames(readcnt_matrix_m) <- readcnt_m[ , 4]
+rownames(readcnt_matrix_f) <- readcnt_f[ , 4]
+str(readcnt_matrix)
+str(readcnt_matrix_auto)
+str(readcnt_matrix_m)
+str(readcnt_matrix_f)
+
+write.table(readcnt_auto, file = paste0(directory,"readcnt_auto.txt"), row.names = FALSE, quote = FALSE)
+write.table(readcnt_m, file = paste0(directory,"readcnt_m.txt"), row.names = FALSE, quote = FALSE)
+write.table(readcnt_f, file = paste0(directory,"readcnt_f.txt"), row.names = FALSE, quote = FALSE)
+readcnt_auto <- read.table(paste0(directory,"readcnt_auto.txt"), header =T)
+readcnt_m <- read.table(paste0(directory,"readcnt_m.txt"), header =T)
+readcnt_f <- read.table(paste0(directory,"readcnt_f.txt"), header =T)
+```
+
+## run deseq2
+change direction of comparison 
+```{r}
+# for all genes, just use for nomalized read cnts
+dds_all <- DESeqDataSetFromMatrix(countData = readcnt_matrix, 
+                              colData = meta_data,
+                              design = ~ tissue)
+dds_all <- DESeq(dds_all)
+res_all <- results(dds_all,contrast=c("tissue","gametophyte","sporophyte"))
+result_all <- res_all[complete.cases(res_all),]
+nrow(res_all) # 34932 
+nrow(result_all) # 30745
+
+# for autosomal genes
+dds_auto <- DESeqDataSetFromMatrix(countData = readcnt_matrix_auto, 
+                              colData = meta_data,
+                              design = ~ tissue)
+dds_auto <- DESeq(dds_auto)
+resultsNames(dds_auto) #"tissue_sporophyte_vs_gametophyte"
+res_auto <- results(dds_auto,contrast=c("tissue","gametophyte","sporophyte"))
+head(res_auto)
+summary(res_auto)
+result_auto <- res_auto[complete.cases(res_auto),]
+nrow(res_auto) # 28071 
+nrow(result_auto) # 25421
+
+# for U
+dds_f <- DESeqDataSetFromMatrix(countData = readcnt_matrix_f, 
+                              colData = meta_data_f,
+                              design = ~ tissue)
+dds_f <- DESeq(dds_f)
+resultsNames(dds_f) #"tissue_sporophyte_vs_gametophyte"
+res_f <- results(dds_f,contrast=c("tissue","gametophyte","sporophyte"))
+head(res_f)
+summary(res_f)
+result_f <- res_f[complete.cases(res_f),]
+nrow(res_f) # 3450 
+nrow(result_f) # 2469
+
+
+# for V
+dds_m <- DESeqDataSetFromMatrix(countData = readcnt_matrix_m, 
+                              colData = meta_data_m,
+                              design = ~ tissue)
+dds_m <- DESeq(dds_m)
+resultsNames(dds_m) #"tissue_sporophyte_vs_gametophyte"
+res_m <- results(dds_m,contrast=c("tissue","gametophyte","sporophyte"))
+head(res_m)
+summary(res_m)
+result_m <- res_m[complete.cases(res_m),]
+nrow(res_m) # 3411 
+nrow(result_m) # 2217
+
+```
+
+## get cnts
+```{r}
+cnt <- as.data.frame(counts(dds_all, normalized=T))
+cnt <- cnt %>% mutate(gene=rownames(cnt)) 
+head(cnt)
+col<-data.frame(colnames(cnt))
+# s 2:22, g 23:58
+# gm 25... , gf 23 24...
+
+cnt <- cnt %>% mutate(s_mean = rowMeans(cnt[,1:21])) %>% 
+    mutate(g_mean = rowMeans(cnt[,22:57])) %>% 
+    mutate(gm_mean = rowMeans(cnt[,t(l_m)])) %>% 
+    mutate(gf_mean = rowMeans(cnt[,t(l_f)]))
+
+cnt <- cnt %>% mutate(g_s_ratio = g_mean/s_mean) %>% 
+    mutate(gm_s_ratio = gm_mean/s_mean) %>% 
+    mutate(gf_s_ratio = gf_mean/s_mean)
+
+cnt <- inner_join(cnt, gff, by="gene")
+write.table(cnt, file = paste0(directory,"normailized_readcnt.txt"), row.names = FALSE, quote=FALSE)
+
+# assign the correct ratio based on chromsomes (auto vs U vs V) 
+cnt_auto <- cnt %>% filter(chrom != "U" & chrom != "V") %>% select(gene, chrom, start, end, s_mean, g_mean, g_s_ratio)
+cnt_U <- cnt %>% filter(chrom == "U") %>% select(gene, chrom, start, end, s_mean, gf_mean,  gf_s_ratio)
+cnt_V <- cnt %>% filter(chrom == "V") %>% select(gene, chrom, start, end, s_mean, gm_mean,  gm_s_ratio)
+
+colnames(cnt_V)[6:7] <- c("g_mean","g_s_ratio")
+colnames(cnt_U)[6:7] <- c("g_mean","g_s_ratio")
+
+cnt <- rbind(cnt_auto,cnt_U,cnt_V)
+write.table(cnt, file = paste0(directory,"cnt.txt"), row.names = FALSE, quote=FALSE)
+cnt <- read.table(paste0(directory,"cnt.txt"), header=T)
+```
+
+
+## gametophyte expressed genes
+```{r}
+# gametophyte <- cnt %>% filter(g_mean>0) # 30212
+gametophyte <- cnt %>% filter(g_mean>5) # 23847 #24097
+nrow(cnt) # 34392
+nrow(gametophyte)/nrow(cnt) # 0.6898259
+
+expressed <- cnt %>% filter(g_mean > 5 | s_mean > 5) # 25751 #25880
+nrow(gametophyte)/nrow(expressed) # 0.9311051
+write.table(expressed, file = paste0(directory,"expressed.txt"), row.names = FALSE, quote=FALSE)
+expressed <- read.table(paste0(directory,"expressed.txt"), header=T)
+
+mean(expressed$s_mean)
+mean(expressed$g_mean)
+median(expressed$s_mean)
+median(expressed$g_mean)
+```
+
+## get DE genes
+```{r}
+DE_auto <- as.data.frame(result_auto)
+DE_f <- as.data.frame(result_f) 
+DE_m <- as.data.frame(result_m) 
+DE_c <- rbind(DE_auto, DE_f, DE_m) # 30107
+
+DE_c <- DE_c %>% mutate(gene = rownames(DE_c))
+write.table(DE_c, file =paste0(directory,"DE_results_all.txt"), row.names = FALSE, quote = FALSE, sep = "\t") 
+DE_c <- read.table(paste0(directory,"DE_results_all.txt"), header = T)
+
+DE_c <- inner_join(cnt,DE_c,by="gene") # 30107
+DE_c <- DE_c %>% filter(g_mean > 5 | s_mean > 5) # 25861
+DE_c <- DE_c %>% filter(padj<0.1) # 17557 # 18977
+DE_c_sporophyte <-  DE_c %>% filter(log2FoldChange<0) # 8999
+DE_c_gametophyte <-  DE_c %>% filter(log2FoldChange>0) # 9978
+write.table(DE_c, file =paste0(directory,"DE_results_filtered.txt"), row.names = FALSE, quote = FALSE, sep = "\t") 
+
+gameto <- DE_c %>% filter(log2FoldChange > 0 & padj < 0.1) # 9978
+unbiased <- DE_c %>% filter(padj >= 0.1) # 6884
+sporo <- DE_c %>% filter(log2FoldChange < 0 & padj < 0.1) # 8999
+as.data.frame(table(gameto$chrom))
+as.data.frame(table(unbias$chrom))
+as.data.frame(table(sporo$chrom))
+write.table(gameto, file = paste0(directory,"gameto_biased_p01.txt"), row.names = FALSE, quote = FALSE)
+write.table(sporo, file = paste0(directory,"sporo_biased_p01.txt"), row.names = FALSE, quote = FALSE)
+write.table(unbiased, file = paste0(directory,"unbiased_p01.txt"), row.names = FALSE, quote = FALSE)
+
+gameto <- DE_c %>% filter(log2FoldChange > 1 & padj < 0.1) # 6446
+sporo <- DE_c %>% filter(log2FoldChange < -1 & padj < 0.1) # 5202
+as.data.frame(table(gameto$chrom))
+as.data.frame(table(sporo$chrom))
+write.table(gameto, file = paste0(directory,"gameto_biased_p01_FC2.txt"), row.names = FALSE, quote = FALSE)
+write.table(sporo, file = paste0(directory,"sporo_biased_p01_FC2.txt"), row.names = FALSE, quote = FALSE)
+```
+
+
+## quantiles of expression ratio + DE genes
+```{r}
+quantile(DE_c$g_s_ratio, probs = c(0.1, 0.9)) # 0.1900026 8.5800357  
+# extract to check the FC
+geness <- DE_c[DE_c$g_s_ratio <= 0.1900026 ,]
+genesg <- DE_c[DE_c$g_s_ratio >= 8.5800357 ,] 
+nrow(geness) # 1898
+nrow(genesg) # 1898
+as.data.frame(table(geness$chrom))
+as.data.frame(table(genesg$chrom))
+
+geness <- geness[geness$log2FoldChange <= -2,] 
+genesg <- genesg[genesg$log2FoldChange >= 2,] 
+nrow(geness) # 1867
+nrow(genesg) # 1886
+
+geness_a <- geness %>% filter(chrom != "U" & chrom != "V") #1656
+genesg_a <- genesg %>% filter(chrom != "U" & chrom != "V") #1514
+write.table(geness, file =paste0(directory,"geness.txt"), row.names = FALSE, quote = FALSE, sep = "\t") 
+write.table(genesg, file =paste0(directory,"genesg.txt"), row.names = FALSE, quote = FALSE, sep = "\t") 
+write.table(geness_a, file =paste0(directory,"geness_a.txt"), row.names = FALSE, quote = FALSE, sep = "\t") 
+write.table(genesg_a, file =paste0(directory,"genesg_a.txt"), row.names = FALSE, quote = FALSE, sep = "\t") 
+
+write.table(geness_a[, 2:4], file = paste0(directory,"geness_a.bed"), sep = "\t", row.names = FALSE, col.names = FALSE, quote = FALSE)
+write.table(genesg_a[, 2:4], file = paste0(directory,"genesg_a.bed"), sep = "\t", row.names = FALSE, col.names = FALSE, quote = FALSE)
+```
+
+## binning based on expression level
+
+```{r}
+# doesn't matter as we only have autosomal genes here
+expressed$mean <- (expressed$s_mean + expressed$g_mean)/2
+
+# use all expressed genes to get the expression level quantiles
+bin<-binning(expressed$mean, bins=4, method="quantile",
+                     labels=NULL, ordered=TRUE, weights=NULL)
+plot(bin)
+
+g_qt1 <- genesg_a %>% filter(baseMean <= 41.9)
+g_qt2 <- genesg_a %>% filter(baseMean > 41.9 & baseMean <= 251)
+g_qt3 <- genesg_a %>% filter(baseMean > 251 & baseMean <= 816)
+g_qt4 <- genesg_a %>% filter(baseMean > 816)
+
+s_qt1 <- geness_a %>% filter(baseMean <= 41.9)
+s_qt2 <- geness_a %>% filter(baseMean > 41.9 & baseMean <= 304)
+s_qt3 <- geness_a %>% filter(baseMean > 304 & baseMean <= 816)
+s_qt4 <- geness_a %>% filter(baseMean > 816)
+
+qt_list <- list(g_qt1, g_qt2, g_qt3, g_qt4, s_qt1, s_qt2, s_qt3, s_qt4)
+file_names <- c("g_qt1", "g_qt2", "g_qt3", "g_qt4", "s_qt1", "s_qt2", "s_qt3", "s_qt4")
+for (i in 1:length(qt_list)) {
+  file_name <- paste0(directory, file_names[i], ".bed")
+  write.table(qt_list[[i]][, 2:4], file = file_name, sep = "\t", row.names = FALSE, col.names = FALSE, quote = FALSE)
+}
+
+
+```
+41.9]
+251]
+816]
+(
+
+s qt
+1092, 417, 217, 141 with UV?
+917, 385, 216, 138
+873, 429, 197, 157
+
+g qt
+810, 522, 274, 280
+528, 460, 254, 272
+489, 454, 272, 298
+
+## PCA of genes
+
+```{r}
+vsdata_c <- vst(dds_auto, blind=FALSE)
+# pdf("all_pca.pdf")
+plotPCA(vsdata_c, intgroup=c("tissue"))
+
+vsdata_m <- vst(dds_m, blind=FALSE)
+# pdf("all_pca.pdf")
+plotPCA(vsdata_m, intgroup=c("tissue"))
+
+vsdata_f <- vst(dds_f, blind=FALSE)
+# pdf("all_pca.pdf")
+plotPCA(vsdata_f, intgroup=c("tissue"))
+
+```
+

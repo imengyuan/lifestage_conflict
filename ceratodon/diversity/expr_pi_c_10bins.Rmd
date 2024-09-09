@@ -1,0 +1,147 @@
+---
+title: "expression level and pi"
+author: "Meng"
+date: "2024-04-08"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(patchwork)
+library(dplyr)
+library(ggplot2)
+knitr::opts_chunk$set(echo = TRUE)
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/diversity/"
+stats  <- read.csv(paste0(directory,"ceratodon_pi_n_pi_s.csv"))
+```
+
+## functions to calculate weighted mean pi and CI
+```{r}
+# a function to calculate the weighted average of pi_n pi_s
+calculate_pi <- function(data) {
+    data <- data %>%
+      mutate(pi_syn = avg_pi * no_sites.x) %>%
+      mutate(pi_nonsyn = avg_pi_nonsyn * no_sites.y)
+    sum_pi_syn <- sum(data$pi_syn)
+    sum_pi_nonsyn <- sum(data$pi_nonsyn)
+    sum_no_sites_x <- sum(data$no_sites.x)
+    sum_no_sites_y <- sum(data$no_sites.y)
+    weighted_pi_syn <- sum_pi_syn / sum_no_sites_x
+    weighted_pi_nonsyn <- sum_pi_nonsyn / sum_no_sites_y
+    ratio_weighted_pis <- weighted_pi_nonsyn / weighted_pi_syn
+    result <- data.frame(
+      bias = unique(data$bias),
+      expr_level = unique(data$expr_level),
+      weighted_pi_syn = weighted_pi_syn,
+      weighted_pi_nonsyn = weighted_pi_nonsyn,
+      ratio_weighted_pis = ratio_weighted_pis
+    )
+    return(result)
+}
+
+# bootstrap and calculate the mean and 95% of weighted average of pi_n pi_s pi_n/pi_s
+bootstrap_calculate_pi <- function(data, iterations = 500) {
+    # set up the output format
+    results <- data.frame(bias = character(), expr_level= character(), weighted_pi_syn = numeric(), weighted_pi_nonsyn = numeric(),   ratio_weighted_pis = numeric(), stringsAsFactors = FALSE)
+    
+    # bootstrap 1000 times and save to result
+    for (i in 1:iterations) {
+      resampled_data <- data[sample(nrow(data), replace = TRUE), ]
+      calculated_values <- calculate_pi(resampled_data)
+      if (nrow(results) == 0) {
+        results <- calculated_values
+      } else {
+        results <- rbind(results, calculated_values)}
+    }
+
+    # calculate the mean and 95% CI from bootstrapped values
+    output <- data.frame(
+            bias = unique(results$bias),
+            expr_level = unique(results$expr_level),
+            mean_pi_syn = mean(results$weighted_pi_syn),
+            mean_pi_nonsyn = mean(results$weighted_pi_nonsyn),
+            mean_ratio_pis = mean(results$ratio_weighted_pis),
+            lower_pi_syn = quantile(results$weighted_pi_syn, 0.025),
+            higher_pi_syn = quantile(results$weighted_pi_syn, 0.975),
+            lower_pi_nonsyn = quantile(results$weighted_pi_nonsyn, 0.025),
+            higher_pi_nonsyn = quantile(results$weighted_pi_nonsyn, 0.975),
+            lower_ratio_pis = quantile(results$ratio_weighted_pis, 0.025),
+            higher_ratio_pis = quantile(results$ratio_weighted_pis, 0.975)
+    )
+    return(output)
+  }
+  
+```
+
+
+## 10 expr level bins
+```{r}
+DE_c <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/deseq2/DE_results_all.txt", header =T) # 30107
+DE_c <- DE_c %>% filter(g_mean > 5 | s_mean > 5) # 25861 (including UV)
+
+bins.quantiles(DE_c$baseMean, 10, 10, verbose = FALSE)
+
+stats <- stats %>% mutate(expr_level = case_when(
+    baseMean <= 9.78 ~ "qt1",
+    baseMean > 9.78 & baseMean <= 25.73 ~ "qt2",
+    baseMean > 25.73 & baseMean <= 58.94 ~ "qt3",
+    baseMean > 58.94 & baseMean <= 126.3 ~ "qt4",
+    baseMean > 126.3 & baseMean <= 242.92 ~ "qt5",
+    baseMean > 242.92 & baseMean <= 409.55 ~ "qt6",
+    baseMean > 409.55 & baseMean <= 647.09 ~ "qt7",
+    baseMean > 647.09 & baseMean <= 1020 ~ "qt8",
+    baseMean > 1020 & baseMean <= 1815.6 ~ "qt9",
+    baseMean > 1815.6 ~ "qt10"
+))
+
+table(stats$expr_level)
+
+stats <- stats %>% mutate(bias = case_when(
+    log2FoldChange > 0 ~ "g",
+    log2FoldChange < 0 ~ "s"
+))
+table(stats$bias)
+
+grouped_data <- stats %>%
+  group_by(bias, expr_level)
+
+results_list <- lapply(split(grouped_data, interaction(grouped_data$bias, grouped_data$expr_level)), function(group) {
+  bootstrap_calculate_pi(group)
+})
+
+pi_expr_qt_c10 <- bind_rows(results_list)
+
+pi_expr_qt_c10 <- pi_expr_qt_c10 %>% mutate(expr_level = factor(expr_level, levels = c("qt1", "qt2", "qt3", "qt4", "qt5", "qt6", "qt7", "qt8","qt9", "qt10")))
+levels(pi_expr_qt_c10$expr_level)
+```
+qt1 qt10  qt2  qt3  qt4  qt5  qt6  qt7  qt8  qt9 
+1034 2384 1201 1344 1627 1931 2161 2282 2328 2323 
+  g     s 
+10015  8600
+
+## plots 
+```{r}
+p4 <- ggplot(data = pi_expr_qt_c10, mapping = aes(x=expr_level, y=mean_pi_syn, colour = bias)) + 
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_syn, ymax=higher_pi_syn), width=.2)+ ggtitle("d") +labs(x ="",y = expression(pi[s]))+ theme_classic() + theme(text = element_text(size = 10)) 
+
+p5 <- ggplot(data = pi_expr_qt_c10, mapping = aes(x=expr_level, y=mean_pi_nonsyn, colour = bias)) + 
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_nonsyn, ymax=higher_pi_nonsyn), width=.2)+ ggtitle("e") +labs(x ="",y = expression(pi[n]))+ theme_classic() + theme(text = element_text(size = 10)) 
+
+p6 <- ggplot(data = pi_expr_qt_c10, mapping = aes(x=expr_level, y=mean_ratio_pis, colour = bias)) +
+    geom_point()+ geom_errorbar(aes(ymin=lower_ratio_pis, ymax=higher_ratio_pis), width=.2)+ ggtitle("f") +labs(x ="Expression level quantiles",y = expression(paste(pi[n], "/", pi[s], " ratio")))+ theme_classic() + theme(text = element_text(size = 10)) 
+
+p4 + p5 + p6+ plot_layout(nrow = 1,guides = "collect") & theme(legend.position = "right")
+```
+
+for both species
+```{r}
+(p1 | p4) / (p2 | p5) / (p3 | p6) + plot_layout(guides = "collect") & theme(legend.position = "right")
+```
+
+
+## write outputs
+```{r}
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/diversity/"
+write.table(pi_expr_qt_c10, file=paste0(directory,"pi_expr_qt_c10.txt"), sep = "\t",row.names = FALSE, quote = FALSE)
+pi_expr_qt_c10 <- read.table(paste0(directory,"pi_expr_qt_c10.txt"), header = T)
+```
+

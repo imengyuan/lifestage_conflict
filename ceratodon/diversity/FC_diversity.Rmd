@@ -1,0 +1,295 @@
+---
+title: "FC ratio plot"
+author: "Meng"
+date: "2023-10-05"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(rattle)
+library(binr)
+library(stringr)
+setwd("/Users/yuanmeng/Git/ceratodon_haploid_sel/DFE")
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/diversity/"
+```
+
+## read stats
+```{r}
+pixy <- read.table(paste0(directory,"auto_syn_geneWise_pi.txt"), header=TRUE) 
+pixy <- pixy[complete.cases(pixy),] # 27598
+pixy <- pixy %>% filter(no_sites >= 50) # 21396
+colnames(pixy)[2:4] <- c("chrom", "start", "end")
+
+DE_c <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/deseq2/DE_results_all.txt", header =T) # 30107
+DE_c <- DE_c %>% filter(g_mean > 5 | s_mean > 5) # 25861 (including UV)
+
+ratio_pixy <- inner_join(DE_c, pixy, by=c("chrom", "start", "end"))# 21084 (18615 no UV)
+write.csv(ratio_pixy, file = paste0(directory,"ratio_pixy_innerjoin.csv"), row.names = FALSE, quote = FALSE)
+ratio_pixy <- read.csv(paste0(directory,"ratio_pixy_innerjoin.csv"))
+#ratio_pixy <- ratio_pixy %>% filter(padj<0.1) # 15803
+```
+
+## all expressed genes
+```{r}
+g_bias <- ratio_pixy %>% filter(log2FoldChange>0) # 10015
+s_bias <- ratio_pixy %>% filter(log2FoldChange<0) # 8600
+
+bin<-binning(g_bias$log2FoldChange, bins=4, method="quantile",
+                     labels=NULL, ordered=TRUE, weights=NULL)
+plot(bin)
+bin<-binning(s_bias$log2FoldChange, bins=4, method="quantile",
+                     labels=NULL, ordered=TRUE, weights=NULL)
+plot(bin)
+
+
+bins.quantiles(g_bias$log2FoldChange, 4, 4, verbose = FALSE)
+bins.quantiles(s_bias$log2FoldChange, 4, 4, verbose = FALSE)
+
+```
+     [-14.8692565791056, -1.60927913686534]     [-1.60855908379737, -0.773720844283828] 
+                                       2150                                        2150 
+   [-0.773353373522152, -0.354365601686166] [-0.354240333098304, -7.23826268118461e-05] 
+                                       2150                                        2150 
+
+[5.65303614841912e-05, 0.418620113434756]    [0.418918049678397, 0.970025668650542] 
+                                     2504                                      2504 
+    [0.970034640558053, 1.92072290002626]                     [1.9216625281522, 30] 
+                                     2503                                      2504 
+
+
+```{r}
+breaks <- c(-30,-1.61,-0.774,-0.354,0,0.419,0.97,1.92,30)
+# specify interval/bin labels
+tags <- c("(,-1.61]","(-1.61,-0.774]", "(-0.774,-0.354]", "(-0.354,0)", "(0,0.419]", "(0.419,0.97]","(0.97,1.92]", "(1.92,)")
+
+# bucketing values into bins
+group_tags <- cut(ratio_pixy$log2FoldChange, 
+                  breaks=breaks, 
+                  include.lowest=TRUE, 
+                  right=FALSE, 
+                  labels=tags)
+# inspect bins
+summary(group_tags)
+ratio_groups <- factor(group_tags, 
+                           levels = tags,
+                           ordered = TRUE)
+```
+(,-1.61]  (-1.61,-0.774] (-0.774,-0.354]      (-0.356,0)       (0,0.419]    (0.419,0.97] 
+           2147            2151            2155            2147            2505            2502 
+    (0.97,1.92]         (1.92,) 
+           2502            2506 
+```{r}
+vgroup <- as_tibble(ratio_pixy) %>% 
+  mutate(tag = case_when(
+    log2FoldChange > 0 & log2FoldChange <= 0.419 ~ tags[5],
+    log2FoldChange > 0.419 & log2FoldChange <= 0.97 ~ tags[6],
+    log2FoldChange > 0.97 & log2FoldChange <= 1.92 ~ tags[7],
+    log2FoldChange > 1.92   ~ tags[8],
+    
+    log2FoldChange <= -1.61 ~ tags[1],
+    log2FoldChange > -1.61 & log2FoldChange <= -0.774 ~ tags[2],
+    log2FoldChange > -0.774 & log2FoldChange <= -0.354 ~ tags[3],
+    log2FoldChange > -0.354 & log2FoldChange < 0 ~ tags[4]
+
+    ))
+#summary(vgroup)
+vgroup$tag <- factor(vgroup$tag,
+                       levels = tags,
+                       ordered = FALSE)
+
+ggplot(data = vgroup, mapping = aes(x=tag,y=avg_pi)) + 
+    geom_jitter(color="#1F78B4",alpha=0.2) +
+    geom_boxplot(fill="#1F78B4",color="black",alpha=0.3) + 
+    labs(x='log2FoldChange', y='Synonymous nucleotide diversity') +
+    ggtitle('b')+
+    guides(color=FALSE) + ylim(0,0.06)+
+    theme_classic() + theme(text = element_text(size = 12))
+```
+
+```{r}
+calculate_pi <- function(data) {
+  data <- data %>%
+    mutate(pi_syn = avg_pi * no_sites)
+  
+  sum_pi_syn <- sum(data$pi_syn)
+  sum_no_sites <- sum(data$no_sites)
+  weighted_pi_syn <- sum_pi_syn / sum_no_sites
+  return(weighted_pi_syn)
+}
+
+pi_values_c <- vgroup %>%
+  group_by(tag) %>%
+  summarise(weighted_pi_syn = calculate_pi(cur_data()), mean = mean(avg_pi), sd = sd(avg_pi))
+
+ggplot(data = pi_values_c, mapping = aes(x=log2FoldChange, y=weighted_pi_s)) + 
+    geom_point()+
+    theme_classic() + theme(text = element_text(size = 12))
+
+ggplot(data = pi_values_c, mapping = aes(x=log2FoldChange, y=pi_s_mean)) + 
+    geom_point()+ 
+    theme_classic() + theme(text = element_text(size = 12))
+
+write.table(pi_values_c, file=paste0(directory,"pi_values_c.txt"), sep = "\t",row.names = FALSE, quote = FALSE)
+pi_values_c <- read.table(paste0(directory,"pi_values_c.txt"), header=T)
+```
+
+
+
+## applying adjp<0.1 cutoff
+separate g and s biased genes
+
+```{r}
+g_bias <- ratio_pixy %>% filter(log2FoldChange>0) # 8570, 11235
+s_bias <- ratio_pixy %>% filter(log2FoldChange<0) # 7233, 9849
+
+bin<-binning(g_bias$log2FoldChange, bins=4, method="quantile",
+                     labels=NULL, ordered=TRUE, weights=NULL)
+bin<-binning(s_bias$log2FoldChange, bins=4, method="quantile",
+                     labels=NULL, ordered=TRUE, weights=NULL)
+plot(bin)
+```
+
+0,0.717]
+0.717,1.29]
+1.29,2.3]
+2.3,30]
+
+,-2.02]
+-2.02, -1.07]
+-0.598]
+0
+
+## break and tags for FC
+```{r}
+breaks <- c(-30,-2.02,-1.07,-0.598,0,0.717,1.29,2.3,30)
+# specify interval/bin labels
+tags <- c("(,-2.02]","(-2.02,-1.07]", "(-1.07,-0.598]", "(-0.598,0)", "(0,0.717]", "(0.717,1.29]","(1.29,2.3]", "(2.3,)")
+
+# bucketing values into bins
+group_tags <- cut(ratio_pixy$log2FoldChange, 
+                  breaks=breaks, 
+                  include.lowest=TRUE, 
+                  right=FALSE, 
+                  labels=tags)
+# inspect bins
+summary(group_tags)
+
+ratio_groups <- factor(group_tags, 
+                           levels = tags,
+                           ordered = TRUE)
+```
+(,-2.02]  (-2.02,-1.07] (-1.07,-0.598]     (-0.598,0)      (0,0.717]   (0.717,1.29] 
+          1820           1812           1791           1810           2140           2135 
+    (1.29,2.3]         (2.3,) 
+          2161           2134 
+          
+## plot
+```{r}
+v <- ratio_pixy %>% select(log2FoldChange,avg_pi) 
+vgroup <- as_tibble(v) %>% 
+  mutate(tag = case_when(
+    log2FoldChange > 0 & log2FoldChange <= 0.717 ~ tags[5],
+    log2FoldChange > 0.717 & log2FoldChange <= 1.29 ~ tags[6],
+    log2FoldChange > 1.29 & log2FoldChange <= 2.3 ~ tags[7],
+    log2FoldChange > 2.3   ~ tags[8],
+    
+    log2FoldChange <= -2.02 ~ tags[1],
+    log2FoldChange > -2.02 & log2FoldChange <= -1.07 ~ tags[2],
+    log2FoldChange > -1.07 & log2FoldChange <= -0.598 ~ tags[3],
+    log2FoldChange > -0.598 & log2FoldChange < 0 ~ tags[4]
+
+    ))
+#summary(vgroup)
+
+vgroup$tag <- factor(vgroup$tag,
+                       levels = tags,
+                       ordered = FALSE)
+
+ggplot(data = vgroup, mapping = aes(x=tag,y=avg_pi)) + 
+    geom_jitter(color="#1F78B4",alpha=0.2) +
+    geom_boxplot(fill="#1F78B4",color="black",alpha=0.3) + 
+    labs(x='log2FoldChange', y='Synonymous nucleotide diversity') +
+    ggtitle('b')+
+    guides(color=FALSE) + ylim(0,0.06)+
+    theme_classic() + theme(text = element_text(size = 12))
+
+```
+ ,0.411]
+0.953]
+1.89]
+30
+-1.6]
+-0.775]
+-0.356]
+0
+
+
+
+## pi - log2FC regression 
+```{r}
+ggplot(ratio_pixy, aes(x=log2FoldChange, y=avg_pi)) + geom_point(colour="#1F78B4", alpha=0.2) + geom_smooth(color="black") + theme_classic() + theme(text = element_text(size = 12))+ labs(x='log2FoldChange', y='Synonymous nucleotide diversity') + ggtitle('b')
+
+ggplot(ratio_pixy, aes(x=abs(log2FoldChange), y=avg_pi)) + geom_point(colour="#1F78B4", alpha=0.2) + geom_smooth(color="black") + theme_classic() + theme(text = element_text(size = 12))+ labs(x='abs(log2FoldChange)', y='Synonymous nucleotide diversity') + ggtitle('b')
+```
+
+```{r}
+p2 <- ggplot(ratio_pixy, aes(x=log2FoldChange, y=avg_pi)) + geom_point(colour="#1F78B4", alpha=0.2) + geom_smooth(color="black", method = lm) + theme_classic() + theme(text = element_text(size = 10))+ labs(x='log2FoldChange', y='Nucleotide diversity (syn)') + ggtitle('b')
+
+p4 <- ggplot(ratio_pixy, aes(x=abs(log2FoldChange), y=avg_pi)) + geom_point(colour="#1F78B4", alpha=0.2) + geom_smooth(color="black", method = lm) + theme_classic() + theme(text = element_text(size = 10))+ labs(x='abs(log2FoldChange)', y='Nucleotide diversity (syn)') + ggtitle('d')
+
+#, method = lm
+```
+
+linear regression
+```{r}
+cor(ratio_pixy$avg_pi, ratio_pixy$log2FoldChange) # 0.08382991
+cor(ratio_pixy$avg_pi, abs(ratio_pixy$log2FoldChange)) # 0.08578927
+
+model <- lm(avg_pi ~ log2FoldChange, data = ratio_pixy)
+summary(model)
+
+model <- lm(avg_pi ~ abs(log2FoldChange), data = ratio_pixy)
+summary(model)
+```
+Call:
+lm(formula = avg_pi ~ log2FoldChange, data = ratio_pixy)
+
+Residuals:
+      Min        1Q    Median        3Q       Max 
+-0.025080 -0.009544 -0.003910  0.005560  0.135850 
+
+Coefficients:
+                Estimate Std. Error t value Pr(>|t|)    
+(Intercept)    1.234e-02  9.117e-05  135.33   <2e-16 ***
+log2FoldChange 4.805e-04  3.934e-05   12.21   <2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.0132 on 21082 degrees of freedom
+Multiple R-squared:  0.007027,	Adjusted R-squared:  0.00698 
+F-statistic: 149.2 on 1 and 21082 DF,  p-value: < 2.2e-16
+
+
+Call:
+lm(formula = avg_pi ~ abs(log2FoldChange), data = ratio_pixy)
+
+Residuals:
+      Min        1Q    Median        3Q       Max 
+-0.028114 -0.009472 -0.003883  0.005498  0.135408 
+
+Coefficients:
+                     Estimate Std. Error t value Pr(>|t|)    
+(Intercept)         1.154e-02  1.151e-04   100.3   <2e-16 ***
+abs(log2FoldChange) 6.207e-04  4.964e-05    12.5   <2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 0.0132 on 21082 degrees of freedom
+Multiple R-squared:  0.00736,	Adjusted R-squared:  0.007313 
+F-statistic: 156.3 on 1 and 21082 DF,  p-value: < 2.2e-16
+
+
+
+

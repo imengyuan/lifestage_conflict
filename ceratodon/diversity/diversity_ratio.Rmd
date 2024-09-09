@@ -1,0 +1,297 @@
+---
+title: "diversity stats"
+author: "Meng"
+date: "2023-10-03"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## 4 format stats
+
+```{r echo = FALSE}
+stats<-read.csv("pi_auto_syn.csv")
+# merge with stats
+head(stats)
+
+gff<-read.table("simple.gff1")
+head(gff)
+colnames(gff)<-c("scaffold","start","end","geneID")
+table(gff$scaffold)
+stats<-left_join(stats, gff, by=c("scaffold","start","end"))
+stats<-stats[,c(10,1:9)]
+write.csv(stats, file = "stats.csv")
+# stats <- read.csv("stats.csv")
+
+type(stats$geneID)
+stats$geneID<-as.character(stats$geneID)
+#stats <- mutate(stats, GeneID=as.character(stats$geneID))
+#stats <- stats[c(15,2:14)]
+#colnames(stats)[1] <- "geneID"
+
+type(cnt$geneID)
+cnt_stats <- inner_join(stats, cnt, by="geneID") # 19530
+write.csv(cnt_stats, file = "cnt_stats.csv", row.names = FALSE)
+#write.csv(stats, file = "stats.csv", row.names = FALSE)
+#write.csv(cnt, file = "cnt.csv", row.names = FALSE)
+# plot y-diveristy, x-leaf to pollen ratio
+#ggplot(cnt_stats, aes(x=pollen_leaf_ratio, y=pi_NC, color=LG)) + geom_point() + facet_grid(cols = vars(LG)) + geom_smooth(color="black") # if you don't have a lot of data, LG doesn't matter here
+
+cnt_stats <- cnt_stats[complete.cases(cnt_stats),] #1183
+#write.csv(cnt_stats, file = "cnt_stats.csv", row.names = FALSE)
+
+cnt_stats<-read.csv("cnt_stats.csv")
+```
+
+generate stats for tajD, tajD_cnts
+```{r}
+tajD<-read.csv("tajD_auto_syn.csv")
+# merge with tajD
+head(tajD)
+
+gff<-read.table("simple.gff1")
+head(gff)
+colnames(gff)<-c("scaffold","start","end","geneID")
+
+tajD<-left_join(tajD, gff, by=c("scaffold","start","end"))
+tajD<-tajD[,c(16,1:15)]
+write.csv(tajD, file = "tajD.csv")
+tajD <- read.csv("tajD.csv")
+tajD <- tajD[,2:17]
+
+type(tajD$geneID)
+tajD$geneID<-as.character(tajD$geneID)
+#tajD <- mutate(tajD, GeneID=as.character(tajD$geneID))
+#tajD <- tajD[c(15,2:14)]
+#colnames(tajD)[1] <- "geneID"
+
+type(cnt$geneID)
+cnt_tajD <- inner_join(tajD, cnt, by="geneID") # 19530
+write.csv(cnt_tajD, file = "cnt_tajD_oct.csv", row.names = FALSE)
+#write.csv(tajD, file = "tajD.csv", row.names = FALSE)
+#write.csv(cnt, file = "cnt.csv", row.names = FALSE)
+# plot y-diveristy, x-leaf to pollen ratio
+#ggplot(cnt_tajD, aes(x=pollen_leaf_ratio, y=pi_NC, color=LG)) + geom_point() + facet_grid(cols = vars(LG)) + geom_smooth(color="black") # if you don't have a lot of data, LG doesn't matter here
+
+#cnt_tajD <- cnt_tajD[complete.cases(cnt_tajD),] #1183
+#write.csv(cnt_tajD, file = "cnt_tajD.csv", row.names = FALSE)
+
+cnt_tajD<-read.csv("cnt_tajD.csv")
+```
+
+
+
+## 5. plot y-diveristy, x-leaf to pollen ratio
+```{r}
+head(cnt_stats)
+ggplot(cnt_stats, aes(x=log10(s_g_ratio), y=pi_Dur)) + geom_point(colour="#00B0F0") + geom_smooth(color="black") + theme_light() + xlim(-2.5, 2.5)
+ggplot(cnt_stats, aes(x=log10(s_g_ratio), y=pi_Port)) + geom_point(colour="#00B0F0") + geom_smooth(color="black") + theme_light() + xlim(-2.5, 2.5)
+```
+
+start from here, double check ratio inf or NAs, stats NAs
+
+## 5-2 quantiles for binning
+```{r}
+bin<-binning(cnt_stats$s_g_ratio, bins=8, method="quantile",
+                     labels=NULL, ordered=TRUE, weights=NULL)
+
+plot(bin)
+cnt_stats <- cnt_stats[complete.cases(cnt_stats),]
+# set up cut-off values 
+breaks <- c(0,0.239,0.486,0.705,0.95,1.25,1.8,3.7,300000000000)
+# specify interval/bin labels
+tags <- c("[0-0.239)","[0.239-0.486)", "[0.486-0.705)", "[0.705-0.95)", "[0.95-1.25)", "[1.25-1.8)","[1.8-3.7)", "[3.7-inf)")
+
+cnt_stats_b[1089,18]<-29252
+# bucketing values into bins
+group_tags <- cut(cnt_stats$s_g_ratio, 
+                  breaks=breaks, 
+                  include.lowest=TRUE, 
+                  right=FALSE, 
+                  labels=tags)
+# inspect bins
+summary(group_tags)
+
+ratio_groups <- factor(group_tags, 
+                           levels = tags,
+                           ordered = TRUE)
+# the real graph
+v <- cnt_stats %>% select(s_g_ratio,pi_Dur,pi_Port) #pick the variable 
+vgroup <- as_tibble(v) %>% 
+  mutate(tag = case_when(
+    s_g_ratio < 0.239 ~ tags[1],
+    s_g_ratio >= 0.239 & s_g_ratio < 0.486 ~ tags[2],
+    s_g_ratio >= 0.486 & s_g_ratio < 0.705 ~ tags[3],
+    s_g_ratio >= 0.705 & s_g_ratio < 0.95 ~ tags[4],
+    s_g_ratio >= 0.95 & s_g_ratio < 1.25 ~ tags[5],
+    s_g_ratio >= 1.25 & s_g_ratio < 1.8 ~ tags[6],
+    s_g_ratio >= 1.8 & s_g_ratio < 3.7 ~ tags[7],
+    s_g_ratio >= 3.7  ~ tags[8]
+    ))
+summary(vgroup)
+
+vgroup$tag <- factor(vgroup$tag,
+                       levels = tags,
+                       ordered = FALSE)
+
+ggplot(data = vgroup, mapping = aes(x=tag,y=pi_Dur)) + 
+  geom_jitter(aes(color='blue'),alpha=0.2) +
+  geom_boxplot(fill="bisque",color="black",alpha=0.3) + 
+  labs(x='s_g_ratio') +
+  guides(color=FALSE) +
+  theme_minimal() 
+```
+
+
+## plot tajD
+
+```{r}
+ggplot(cnt_tajD, aes(x=log10(g_s_ratio), y=TajD_Dur)) + geom_point(colour="#00B0F0") + geom_smooth(color="black") + theme_light() + xlim(-2.5, 2.5) +theme(axis.text=element_text(size=20))
+ggplot(cnt_tajD, aes(x=log10(s_g_ratio), y=TajD_Dur)) + geom_point(colour="#00B0F0") + geom_smooth(color="black") + theme_light() 
++theme(axis.text=element_text(size=20))
+ggplot(cnt_tajD, aes(x=log10(s_g_ratio), y=TajD_Port)) + geom_point(colour="#00B0F0") + geom_smooth(color="black") + theme_light() + xlim(-2.5, 2.5)+theme(axis.text=element_text(size=20))
+```
+
+```{r}
+cnt_tajD$log_ratio<-log10(cnt_tajD$g_s_ratio)
+cnt_tajD$abs_log_ratio<-abs(log10(cnt_tajD$g_s_ratio))
+cnt_tajD <- cnt_tajD[is.finite(cnt_tajD$g_s_ratio),]
+cnt_tajD <- cnt_tajD[is.finite(cnt_tajD$log_ratio),]
+cnt_tajD <- cnt_tajD[is.finite(cnt_tajD$abs_log_ratio),]
+
+ratio.lm3 = lm(TajD_Dur ~ abs_log_ratio, data=cnt_tajD)
+summary(ratio.lm3) # p-value: 0.1758
+
+ratio.lm4 = lm(TajD_Dur ~ log_ratio, data=cnt_tajD)
+summary(ratio.lm4) # p-value: 0.5925
+
+cnt_tajD <- cnt_tajD %>% mutate(cnt_tajD, g_s_ratio = g_mean/s_mean)
+```
+
+## quantiles vs tajD
+
+```{r}
+bin<-binning(cnt_tajD$s_g_ratio, bins=8, method="quantile",
+                     labels=NULL, ordered=TRUE, weights=NULL)
+
+plot(bin)
+
+cnt_tajD1<-cnt_tajD[,c(1,15,17,18,19)]
+cnt_tajD1 <- cnt_tajD1[complete.cases(cnt_tajD1),]
+# set up cut-off values 
+breaks <- c(0,0.239,0.486,0.705,0.95,1.25,1.8,3.7,300000000000)
+# specify interval/bin labels
+tags <- c("[0-0.239)","[0.239-0.486)", "[0.486-0.705)", "[0.705-0.95)", "[0.95-1.25)", "[1.25-1.8)","[1.8-3.7)", "[3.7-inf)")
+
+#cnt_stats_b[1089,18]<-29252
+# bucketing values into bins
+group_tags <- cut(cnt_tajD$s_g_ratio, 
+                  breaks=breaks, 
+                  include.lowest=TRUE, 
+                  right=FALSE, 
+                  labels=tags)
+# inspect bins
+summary(group_tags)
+
+ratio_groups <- factor(group_tags, 
+                           levels = tags,
+                           ordered = TRUE)
+# the real graph
+v <- cnt_tajD1 %>% select(s_g_ratio,TajD_Dur) #pick the variable 
+vgroup <- as_tibble(v) %>% 
+  mutate(tag = case_when(
+    s_g_ratio < 0.239 ~ tags[1],
+    s_g_ratio >= 0.239 & s_g_ratio < 0.486 ~ tags[2],
+    s_g_ratio >= 0.486 & s_g_ratio < 0.705 ~ tags[3],
+    s_g_ratio >= 0.705 & s_g_ratio < 0.95 ~ tags[4],
+    s_g_ratio >= 0.95 & s_g_ratio < 1.25 ~ tags[5],
+    s_g_ratio >= 1.25 & s_g_ratio < 1.8 ~ tags[6],
+    s_g_ratio >= 1.8 & s_g_ratio < 3.7 ~ tags[7],
+    s_g_ratio >= 3.7  ~ tags[8]
+    ))
+summary(vgroup)
+
+vgroup$tag <- factor(vgroup$tag,
+                       levels = tags,
+                       ordered = FALSE)
+
+ggplot(data = vgroup, mapping = aes(x=tag,y=TajD_Dur)) + 
+  geom_jitter(aes(color='blue'),alpha=0.2) +
+  geom_boxplot(fill="bisque",color="black",alpha=0.3) + 
+  labs(x='s_g_ratio') +
+  guides(color=FALSE) +
+  theme_minimal() + theme(axis.text=element_text(size=20))
+```
+
+check NAs in s_g_ratio
+or just 4 quantiles? focus on writing now come back later
+
+
+```{r}
+bin<-binning(cnt_tajD$g_s_ratio, bins=8, method="quantile",
+                     labels=NULL, ordered=TRUE, weights=NULL)
+
+plot(bin)
+
+cnt_tajD1<-cnt_tajD[,c(1,15,22)]
+cnt_tajD1 <- cnt_tajD1[complete.cases(cnt_tajD1),]
+# set up cut-off values 
+#0, 0.279, 0.548, 0.774, 1.02, 1.37, 2.02, 3.9
+breaks <- c(0, 0.279, 0.548, 0.774, 1.02, 1.37, 2.02, 3.9, 300000000000)
+# specify interval/bin labels
+tags <- c("[0-0.239)","[0.239-0.486)", "[0.486-0.705)", "[0.705-0.95)", "[0.95-1.25)", "[1.25-1.8)","[1.8-3.7)", "[3.7-inf)")
+tags <- c("1", "2", "3", "4", "5", "6", "7", "8")
+#cnt_stats_b[1089,18]<-29252
+# bucketing values into bins
+group_tags <- cut(cnt_tajD$g_s_ratio, 
+                  breaks=breaks, 
+                  include.lowest=TRUE, 
+                  right=FALSE, 
+                  labels=tags)
+# inspect bins
+summary(group_tags)
+
+ratio_groups <- factor(group_tags, 
+                           levels = tags,
+                           ordered = TRUE)
+# the real graph
+#0, 0.279, 0.548, 0.774, 1.02, 1.37, 2.02, 3.9
+v <- cnt_tajD1 %>% select(g_s_ratio,TajD_Dur) #pick the variable 
+vgroup <- as_tibble(v) %>% 
+  mutate(tag = case_when(
+    g_s_ratio < 0.279 ~ tags[1],
+    g_s_ratio >= 0.279 & g_s_ratio < 0.548 ~ tags[2],
+    g_s_ratio >= 0.548 & g_s_ratio < 0.774 ~ tags[3],
+    g_s_ratio >= 0.774 & g_s_ratio < 1.02 ~ tags[4],
+    g_s_ratio >= 1.02 & g_s_ratio < 1.37 ~ tags[5],
+    g_s_ratio >= 1.37 & g_s_ratio < 2.02 ~ tags[6],
+    g_s_ratio >= 2.02 & g_s_ratio < 3.9 ~ tags[7],
+    g_s_ratio >= 3.9  ~ tags[8]
+    ))
+summary(vgroup)
+
+vgroup$tag <- factor(vgroup$tag,
+                       levels = tags,
+                       ordered = FALSE)
+
+ggplot(data = vgroup, mapping = aes(x=tag,y=TajD_Dur)) + 
+  geom_jitter(aes(color='blue'),alpha=0.2) +
+  geom_boxplot(fill="bisque",color="black",alpha=0.3) + 
+  labs(x='g_s_ratio') +
+  guides(color=FALSE) +
+  theme_minimal() + theme(axis.text=element_text(size=20))
+```
+
+
+
+
+
+
+
+
+
+
+

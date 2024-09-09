@@ -1,0 +1,318 @@
+---
+title: "expression level and pi plots"
+author: "Meng"
+date: "2024-02-07"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/diversity/"
+stats  <- read.csv(paste0(directory,"ceratodon_pi_n_pi_s.csv"))
+```
+
+```{r}
+calculate_pi_real <- function(data) {
+    data <- data %>%
+      mutate(pi_syn = avg_pi * no_sites.x) %>%
+      mutate(pi_nonsyn = avg_pi_nonsyn * no_sites.y) #%>%
+      #mutate(ratio_pis = avg_pi_nonsyn / avg_pi) # issue with division by zero
+    sum_pi_syn <- sum(data$pi_syn)
+    sum_pi_nonsyn <- sum(data$pi_nonsyn)
+    sum_no_sites_x <- sum(data$no_sites.x)
+    sum_no_sites_y <- sum(data$no_sites.y)
+    
+    weighted_pi_syn <- sum_pi_syn / sum_no_sites_x
+    weighted_pi_nonsyn <- sum_pi_nonsyn / sum_no_sites_y
+    ratio_weighted_pis <- weighted_pi_nonsyn / weighted_pi_syn
+    
+    mean_avg_pi_syn <- mean(data$avg_pi)
+    mean_avg_pi_nonsyn <- mean(data$avg_pi_nonsyn)
+    #mean_ratio_pis <- mean(data$ratio_pis)
+    
+    sem_avg_pi_syn <- sd(data$avg_pi) / sqrt(length(data$avg_pi))
+    sem_avg_pi_nonsyn <- sd(data$avg_pi_nonsyn) / sqrt(length(data$avg_pi_nonsyn))
+    #sem_ratio_pis <- sd(data$ratio_pis) / sqrt(length(data$ratio_pis))
+  
+    result <- data.frame(
+      bias = unique(data$bias),
+      expr_level = unique(data$expr_level),
+      weighted_pi_syn = weighted_pi_syn,
+      weighted_pi_nonsyn = weighted_pi_nonsyn,
+      ratio_weighted_pis = ratio_weighted_pis,
+      mean_avg_pi_syn =  mean_avg_pi_syn,
+      mean_avg_pi_nonsyn = mean_avg_pi_nonsyn,
+      #mean_ratio_pis = mean_ratio_pis,
+      sem_avg_pi_syn = sem_avg_pi_syn,
+      sem_avg_pi_nonsyn = sem_avg_pi_nonsyn
+      #sem_ratio_pis = sem_ratio_pis
+    )
+    return(result)
+}
+```
+
+## linear model
+stats
+statsr
+```{r}
+modelr <- lm(avg_pi ~ log2FoldChange + baseMean, data = stats)
+summary(modelr)
+
+modelr <- lm(avg_pi ~ abs(log2FoldChange) + baseMean, data = stats)
+summary(modelr)
+```
+
+
+
+```{r}
+stats_qt1 <- stats %>% filter(baseMean <= 41.9)
+stats_qt2 <- stats %>% filter(baseMean > 41.9 & baseMean <= 251)
+stats_qt3 <- stats %>% filter(baseMean > 251 & baseMean <= 816)
+stats_qt4 <- stats %>% filter(baseMean > 816)
+
+# table(statsr_qt1$tag)
+unique_tags <- unique(stats$tag) # already unique
+
+pi_c_qt1 <- data.frame(
+            mean_pi_syn = numeric(),
+            mean_pi_nonsyn = numeric(),
+            mean_ratio_pis = numeric(),
+            lower_pi_syn = numeric(),
+            higher_pi_syn = numeric(),
+            lower_pi_nonsyn = numeric(),
+            higher_pi_nonsyn = numeric(),
+            lower_ratio_pis = numeric(),
+            higher_ratio_pis = numeric()
+    )
+for (tag in unique_tags) {
+    subset_data <- stats_qt1[stats_qt1$tag == tag, ]
+    pi_data <- bootstrap_calculate_pi(subset_data)
+    pi_data$tag <- tag
+    
+    if (nrow(pi_c_qt1) == 0) {
+        pi_c_qt1 <- pi_data
+      } else {
+        pi_c_qt1 <- rbind(pi_c_qt1 , pi_data)}
+}
+
+pi_c_qt2 <- data.frame(
+            mean_pi_syn = numeric(),
+            mean_pi_nonsyn = numeric(),
+            mean_ratio_pis = numeric(),
+            lower_pi_syn = numeric(),
+            higher_pi_syn = numeric(),
+            lower_pi_nonsyn = numeric(),
+            higher_pi_nonsyn = numeric(),
+            lower_ratio_pis = numeric(),
+            higher_ratio_pis = numeric()
+    )
+for (tag in unique_tags) {
+    subset_data <- stats_qt2[stats_qt2$tag == tag, ]
+    pi_data <- bootstrap_calculate_pi(subset_data)
+    pi_data$tag <- tag
+    
+    if (nrow(pi_c_qt2) == 0) {
+        pi_c_qt2 <- pi_data
+      } else {
+        pi_c_qt2 <- rbind(pi_c_qt2 , pi_data)}
+}
+
+pi_c_qt3 <- data.frame(
+            mean_pi_syn = numeric(),
+            mean_pi_nonsyn = numeric(),
+            mean_ratio_pis = numeric(),
+            lower_pi_syn = numeric(),
+            higher_pi_syn = numeric(),
+            lower_pi_nonsyn = numeric(),
+            higher_pi_nonsyn = numeric(),
+            lower_ratio_pis = numeric(),
+            higher_ratio_pis = numeric()
+    )
+for (tag in unique_tags) {
+    subset_data <- stats_qt3[stats_qt3$tag == tag, ]
+    pi_data <- bootstrap_calculate_pi(subset_data)
+    pi_data$tag <- tag
+    
+    if (nrow(pi_c_qt3) == 0) {
+        pi_c_qt3 <- pi_data
+      } else {
+        pi_c_qt3 <- rbind(pi_c_qt3 , pi_data)}
+}
+
+pi_c_qt4 <- data.frame(
+            mean_pi_syn = numeric(),
+            mean_pi_nonsyn = numeric(),
+            mean_ratio_pis = numeric(),
+            lower_pi_syn = numeric(),
+            higher_pi_syn = numeric(),
+            lower_pi_nonsyn = numeric(),
+            higher_pi_nonsyn = numeric(),
+            lower_ratio_pis = numeric(),
+            higher_ratio_pis = numeric()
+    )
+for (tag in unique_tags) {
+    subset_data <- stats_qt4[stats_qt4$tag == tag, ]
+    pi_data <- bootstrap_calculate_pi(subset_data)
+    pi_data$tag <- tag
+    
+    if (nrow(pi_c_qt4) == 0) {
+        pi_c_qt4 <- pi_data
+      } else {
+        pi_c_qt4 <- rbind(pi_c_qt4 , pi_data)}
+}
+
+```
+(-1.27,0) (-2.16,-1.27] (-3.02,-2.16]      (,-3.02]      (0,1.02]   (1.02,2.54] 
+          343           315           228           211           211           185 
+  (2.54,5.36]       (5.36,) 
+          226           234 
+
+```{r}
+tags <- c("(,-1.61]","(-1.61,-0.774]", "(-0.774,-0.354]", "(-0.356,0)", "(0,0.419]", "(0.419,0.97]","(0.97,1.92]", "(1.92,)")
+pi_c_qt1$tag <- factor(pi_c_qt1$tag,
+                       levels = tags,
+                       ordered = FALSE)
+pi_c_qt2$tag <- factor(pi_c_qt2$tag,
+                       levels = tags,
+                       ordered = FALSE)
+pi_c_qt3$tag <- factor(pi_c_qt3$tag,
+                       levels = tags,
+                       ordered = FALSE)
+pi_c_qt4$tag <- factor(pi_c_qt4$tag,
+                       levels = tags,
+                       ordered = FALSE)
+
+p1_1 <- ggplot(data = pi_c_qt1, mapping = aes(x=tag, y=mean_pi_syn)) + 
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_syn, ymax=higher_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("a") +labs(x ="qt1",y = expression(pi[s]))+ theme_classic() + theme(text = element_text(size = 10), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+
+p2_1 <- ggplot(data = pi_c_qt1, mapping = aes(x=tag, y=mean_pi_nonsyn)) + 
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_nonsyn, ymax=higher_pi_nonsyn), width=.2, position=position_dodge(.9))+ ggtitle("b") +labs(x ="qt1",y = expression(pi[n]))+ theme_classic() + theme(text = element_text(size = 10), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+
+p3_1 <- ggplot(data = pi_c_qt1, mapping = aes(x=tag, y=mean_ratio_pis)) + 
+    geom_point()+ geom_errorbar(aes(ymin=lower_ratio_pis, ymax=higher_ratio_pis), width=.2, position=position_dodge(.9))+ ggtitle("c") +labs(x ="qt1",y = expression(paste(pi[n], "/", pi[s], " ratio")))+ theme_classic() + theme(text = element_text(size = 10), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+
+p1_2 <- ggplot(data = pi_c_qt2, mapping = aes(x=tag, y=mean_pi_syn)) + 
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_syn, ymax=higher_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("") +labs(x ="qt2",y = expression(pi[s]))+ theme_classic() + theme(text = element_text(size = 10), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+
+p2_2 <- ggplot(data = pi_c_qt2, mapping = aes(x=tag, y=mean_pi_nonsyn)) + 
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_nonsyn, ymax=higher_pi_nonsyn), width=.2, position=position_dodge(.9))+ ggtitle("") +labs(x ="qt2",y = expression(pi[n]))+ theme_classic() + theme(text = element_text(size = 10), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+
+p3_2 <- ggplot(data = pi_c_qt2, mapping = aes(x=tag, y=mean_ratio_pis)) + 
+    geom_point()+ geom_errorbar(aes(ymin=lower_ratio_pis, ymax=higher_ratio_pis), width=.2, position=position_dodge(.9))+ ggtitle("") +labs(x ="qt2",y = expression(paste(pi[n], "/", pi[s], " ratio")))+ theme_classic() + theme(text = element_text(size = 10), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+
+p1_3 <- ggplot(data = pi_c_qt3, mapping = aes(x=tag, y=mean_pi_syn)) + 
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_syn, ymax=higher_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("") +labs(x ="qt3",y = expression(pi[s]))+ theme_classic() + theme(text = element_text(size = 10), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+
+p2_3 <- ggplot(data = pi_c_qt3, mapping = aes(x=tag, y=mean_pi_nonsyn)) + 
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_nonsyn, ymax=higher_pi_nonsyn), width=.2, position=position_dodge(.9))+ ggtitle("") +labs(x ="qt3",y = expression(pi[n]))+ theme_classic() + theme(text = element_text(size = 10), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+
+p3_3 <- ggplot(data = pi_c_qt3, mapping = aes(x=tag, y=mean_ratio_pis)) + 
+    geom_point()+ geom_errorbar(aes(ymin=lower_ratio_pis, ymax=higher_ratio_pis), width=.2, position=position_dodge(.9))+ ggtitle("") +labs(x ="qt3",y = expression(paste(pi[n], "/", pi[s], " ratio")))+ theme_classic() + theme(text = element_text(size = 10), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+
+
+p1_4 <- ggplot(data = pi_c_qt4, mapping = aes(x=tag, y=mean_pi_syn)) + 
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_syn, ymax=higher_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("") +labs(x ="qt4",y =expression(pi[s]))+ theme_classic() + theme(text = element_text(size = 10), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+
+p2_4 <- ggplot(data = pi_c_qt4, mapping = aes(x=tag, y=mean_pi_nonsyn)) + 
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_nonsyn, ymax=higher_pi_nonsyn), width=.2, position=position_dodge(.9))+ ggtitle("") +labs(x ="qt4",y = expression(pi[n]))+ theme_classic() + theme(text = element_text(size = 10), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+
+p3_4 <- ggplot(data = pi_c_qt4, mapping = aes(x=tag, y=mean_ratio_pis)) + 
+    geom_point()+ geom_errorbar(aes(ymin=lower_ratio_pis, ymax=higher_ratio_pis), width=.2, position=position_dodge(.9))+ ggtitle("") +labs(x ="qt4",y = expression(paste(pi[n], "/", pi[s], " ratio")))+ theme_classic() + theme(text = element_text(size = 10), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+
+(p1_1 | p1_2 | p1_3 | p1_4) / (p2_1 | p2_2 | p2_3 | p2_4) / (p3_1 | p3_2 | p3_3 | p3_4) + plot_layout(guides = "collect") 
+```
+
+
+
+```{r}
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/diversity/"
+write.table(pi_c_qt1, file=paste0(directory,"pi_c_qt1.txt"), sep = "\t",row.names = FALSE, quote = FALSE)
+write.table(pi_c_qt2, file=paste0(directory,"pi_c_qt2.txt"), sep = "\t",row.names = FALSE, quote = FALSE)
+write.table(pi_c_qt3, file=paste0(directory,"pi_c_qt3.txt"), sep = "\t",row.names = FALSE, quote = FALSE)
+write.table(pi_c_qt4, file=paste0(directory,"pi_c_qt4.txt"), sep = "\t",row.names = FALSE, quote = FALSE)
+
+pi_c_qt1 <- read.table(paste0(directory, "pi_c_qt1.txt"), header = T)
+pi_c_qt2 <- read.table(paste0(directory, "pi_c_qt2.txt"), header = T)
+pi_c_qt3 <- read.table(paste0(directory, "pi_c_qt3.txt"), header = T)
+pi_c_qt4 <- read.table(paste0(directory, "pi_c_qt4.txt"), header = T)
+```
+
+
+```{r}
+stats <- stats %>% mutate(expr_level = case_when(
+    baseMean <= 41.9 ~ "qt1",
+    baseMean > 41.9 & baseMean <= 251 ~ "qt2",
+    baseMean > 251 & baseMean <= 816 ~ "qt3",
+    baseMean > 816 ~ "qt4"
+))
+
+stats <- stats %>% mutate(bias = case_when(
+    log2FoldChange > 0 ~ "g",
+    log2FoldChange < 0 ~ "s"
+))
+
+table(stats$expr_level)
+
+grouped_data <- stats %>%
+  group_by(bias, expr_level)
+
+results_list <- lapply(split(grouped_data, interaction(grouped_data$bias, grouped_data$expr_level)), function(group) {
+  calculate_pi_real(group)
+})
+
+pi_expr_qt_c <- bind_rows(results_list)
+
+```
+
+```{r}
+stats_nonezero <- stats %>% filter(avg_pi >0 & avg_pi_nonsyn >0) # 159862
+stats_nonezero <- stats_nonezero %>% mutate(pi_ratio = avg_pi_nonsyn/avg_pi)
+ggplot(data = stats_nonezero, mapping = aes(baseMean, y=pi_ratio, colour = bias)) + geom_point(alpha =0.1)+ geom_smooth()+ ggtitle("") +labs(x ="log10(baseMean)",y = expression(pi[n]/pi[s]))+ theme_classic() + theme(text = element_text(size = 10)) 
+```
+
+
+```{r}
+p1c <- ggplot(data = pi_expr_qt_c, mapping = aes(x=expr_level, y=mean_avg_pi_syn, colour = bias)) + 
+    geom_point()+ geom_errorbar(aes(ymin=mean_avg_pi_syn - sem_avg_pi_syn, ymax=mean_avg_pi_syn + sem_avg_pi_syn), width=.2)+ ggtitle("c") +labs(x ="expression level quantiles",y = expression(pi[s]))+ theme_classic() + theme(text = element_text(size = 10)) 
+
+p2c <- ggplot(data = pi_expr_qt_c, mapping = aes(x=expr_level, y=mean_avg_pi_nonsyn, colour = bias)) + 
+    geom_point()+ geom_errorbar(aes(ymin=mean_avg_pi_nonsyn - sem_avg_pi_nonsyn, ymax=mean_avg_pi_nonsyn + sem_avg_pi_nonsyn), width=.2)+ ggtitle("d") +labs(x ="expression level quantiles",y = expression(pi[n]))+ theme_classic() + theme(text = element_text(size = 10)) 
+
+p1c + p2c + plot_layout(nrow = 1,guides = "collect") & theme(legend.position = "right")
+```
+```{r}
+p1 <- ggplot(data = pi_expr_qt_c, mapping = aes(x=expr_level, y=weighted_pi_syn, colour = bias)) + 
+    geom_point()+ ggtitle("") +labs(x ="expression level quantiles",y = expression(pi[s]))+ theme_classic() + theme(text = element_text(size = 10)) 
+
+p2 <- ggplot(data = pi_expr_qt_c, mapping = aes(x=expr_level, y=weighted_pi_nonsyn, colour = bias)) + 
+    geom_point()+ ggtitle("") +labs(x ="expression level quantiles",y = expression(pi[n]))+ theme_classic() + theme(text = element_text(size = 10)) 
+
+p1 + p2 + plot_layout(nrow = 1,guides = "collect") & theme(legend.position = "right")
+```
+```{r}
+pi_expr_qt_c <- pi_expr_qt_c %>% mutate(ratio_pis = weighted_pi_nonsyn / weighted_pi_syn)
+
+p3c <- ggplot(data = pi_expr_qt_c, mapping = aes(x=expr_level, y=ratio_pis, colour = bias)) + 
+    geom_point()+ ggtitle("ceratodon") +labs(x ="expression level quantiles",y = expression(paste(pi[n], "/", pi[s], " ratio")))+ theme_classic() + theme(text = element_text(size = 10)) 
+
+```
+
+
+```{r}
+
+```
+
+```{r}
+p3c <- ggplot(data = stats, mapping = aes(x=log10(baseMean), y=avg_pi, colour = bias)) + geom_point(alpha =0.1)+ geom_smooth()+ ggtitle("c") +labs(x ="log10(baseMean)",y = expression(pi[s]))+ theme_classic() + theme(text = element_text(size = 10)) 
+
+p4c <- ggplot(data = stats, mapping = aes(x=log10(baseMean), y=avg_pi_nonsyn, colour = bias)) + geom_point(alpha =0.1)+ geom_smooth()+ ggtitle("d") +labs(x ="log10(baseMean)",y = expression(pi[n]))+ theme_classic() + theme(text = element_text(size = 10)) 
+
+p3c + p4c
+```
+
+```{r}
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/diversity/"
+write.table(pi_expr_qt_c, file=paste0(directory,"pi_expr_qt_c.txt"), sep = "\t",row.names = FALSE, quote = FALSE)
+write.table(stats, file=paste0(directory,"stats.txt"), sep = "\t",row.names = FALSE, quote = FALSE)
+```
+

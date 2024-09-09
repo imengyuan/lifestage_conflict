@@ -1,0 +1,108 @@
+---
+title: "top GO for ceratodon"
+author: "Meng"
+date: "2023-11-02"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(dplyr)
+library(topGO)
+library(stringr)
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/deseq2/"
+```
+
+## gene to GO info
+extract gene GO mapping from R40 genome
+remove UV genes
+keep only expressed genes
+
+```{r}
+gene2GO <- read.table(paste0(directory, "CpurpureusR40_538_v1.1.annotation_info.txt"), sep = "\t")
+gene2GO <- gene2GO[, c(2,10)]
+colnames(gene2GO) <- c("gene", "GO")
+gene2GO <- gene2GO %>% filter(GO != "") # 20025
+
+# CepurR40.1G023200 -> gene-KC19_10G000900
+gene2GO$gene <- str_replace(gene2GO$gene, "CepurR40.", "gene-KC19_")
+
+gff<-read.table(paste0(directory,"R40_GG1U_combined.gene.final.gff"))
+colnames(gff)<-c("chrom","start","end","gene")
+
+gene2GO <- inner_join(gene2GO, gff, by = "gene")
+
+DE_c <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/deseq2/DE_results_all.txt", header =T) # 30107
+DE_c <- DE_c %>% filter(g_mean > 5 | s_mean > 5) # 25861 (including UV)
+DE_c <- DE_c %>% filter(chrom != "U" & chrom != "V")
+
+gene2GO <- inner_join(gene2GO, DE_c, by = c("gene", "chrom", "start", "end")) # 17354
+
+write.table(gene2GO, file = paste0(directory, "gene2GO_full.txt"), sep = "\t", quote = F, row.names = F)
+write.table(gene2GO[,c(1,2)], file = paste0(directory, "gene2GO.txt"), sep = "\t", quote = F, row.names = F) # need to replace space with comma
+
+```
+
+
+
+## interesting genes
+```{r}
+geness <- read.table(paste0(directory, "geness.txt"), header =T)
+genesg <- read.table(paste0(directory, "genesg.txt"), header =T)
+
+balsel_genes <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/balsel/balsel_genes_expressed.txt", header = T)
+g_bias <- balsel_genes %>% filter(log2FoldChange>0 & padj < 0.1) # 334
+
+#GO2gene <- read.table(paste0(directory,"GO2gene2.txt"))
+```
+
+
+```{r}
+#GO2gene <- readMappings(file=paste0(directory,"GO2gene2.txt"))
+#geneID2GO <- inverseList(GO2gene)
+
+geneID2GO <- readMappings(file = paste0(directory, "gene2GO.txt"))
+#str(head(GO2gene))
+str(head(geneID2GO))
+```
+
+```{r}
+# the gene universe (all the genes you have)
+geneNames <- names(geneID2GO)
+head(geneNames)
+
+#myInterestingGenes <- str_sub(genesg$gene,start=11)
+#myInterestingGenes <- str_sub(geness$gene,start=11)
+myInterestingGenes <- balsel_genes$gene
+myInterestingGenes <- g_bias$gene
+ 
+
+geneList <- factor(as.integer(geneNames %in% myInterestingGenes))
+names(geneList) <- geneNames
+str(geneList)
+```
+
+
+```{r}
+sampleGOdata <- new("topGOdata", ontology = "BP",
+                     allGenes = geneList,
+                     annot = annFUN.gene2GO, gene2GO = geneID2GO)
+```
+
+```{r}
+# resultFisher <- runTest(sampleGOdata, algorithm = "classic", statistic = "fisher")
+# weight_fisher_result=runTest(sampleGOdata, algorithm='weight01', statistic='fisher')
+
+
+weight01.fisher <- runTest(sampleGOdata, statistic = "fisher")
+results_table = GenTable(sampleGOdata, P_value=weight01.fisher, orderBy="P_value")
+
+
+write.csv(results_table, file=paste0(directory, "balsel_genes_GO.csv"),row.names = FALSE, quote=FALSE )
+write.csv(results_table, file=paste0(directory, "g_bias_GO.csv"),row.names = FALSE, quote=FALSE )
+
+write.csv(results_table, file=paste0(directory, "g_specific_GO.csv"),row.names = FALSE, col.names = FALSE, quote=FALSE )
+write.csv(results_table, file=paste0(directory, "s_specific_GO.csv"),row.names = FALSE, col.names = FALSE, quote=FALSE )
+
+```
+
+

@@ -1,0 +1,189 @@
+---
+title: "FC and tajD ceratodon"
+author: "Meng"
+date: "2023-12-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(patchwork)
+library(dplyr)
+library(ggplot2)
+library(rattle)
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/diversity/"
+```
+
+## merge tajD estimates
+```{r}
+# sarah's VCF
+# tajD <- read.csv(paste0(directory,"Ceratodon_tajD_auto_syn.csv")) # 24524
+# tajD <- read.csv(paste0(directory,"Ceratodon_tajD_auto_nonsyn.csv")) # 24808
+
+tajD <- read.csv(paste0(directory,"tajD_auto_variant_syn.csv")) # 27598
+tajD <- read.csv(paste0(directory,"tajD_auto_variant_nonsyn.csv")) # 27598
+
+tajD <- tajD[complete.cases(tajD),] # 21935 22343(nonsyn)
+colnames(tajD)[1] <- "chrom"
+
+DE_c <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/deseq2/DE_results_all.txt", header =T) # 30107
+DE_c <- DE_c %>% filter(g_mean > 5 | s_mean > 5) # 25861 (including UV)
+
+FC_tajD_c<- inner_join(DE_c, tajD, by=c("chrom","start","end")) # 18675
+FC_tajD_nc<- inner_join(DE_c, tajD, by=c("chrom","start","end")) # 18571
+
+write.table(FC_tajD_c, file = paste0(directory,"FC_tajD_syn_innerjoin.txt"), row.names = FALSE, quote = FALSE)
+write.table(FC_tajD_nc, file = paste0(directory,"FC_tajD_nonsyn_innerjoin.txt"), row.names = FALSE, quote = FALSE)
+
+FC_tajD_c <- read.table(paste0(directory,"FC_tajD_syn_innerjoin.txt"), header = T)
+FC_tajD_nc <- read.table(paste0(directory,"FC_tajD_nonsyn_innerjoin.txt"), header = T)
+```
+
+
+## separate data into FC bin
+```{r}
+tags <- c("s4", "s3", "s2", "s1", "g1", "g2", "g3", "g4")
+
+FC_tajD_c <- as_tibble(FC_tajD_c) %>% 
+  mutate(tag = case_when(
+    log2FoldChange > 0 & log2FoldChange <= 0.43028 ~ tags[5],
+    log2FoldChange > 0.43028 & log2FoldChange <= 0.996 ~ tags[6],
+    log2FoldChange > 0.996 & log2FoldChange <= 1.99 ~ tags[7],
+    log2FoldChange > 1.99   ~ tags[8],
+    
+    log2FoldChange <= -1.739 ~ tags[1],
+    log2FoldChange > -1.739 & log2FoldChange <= -0.8416 ~ tags[2],
+    log2FoldChange > -0.8416 & log2FoldChange <= -0.3853 ~ tags[3],
+    log2FoldChange > -0.3853 & log2FoldChange < 0 ~ tags[4]
+    ))
+
+table(FC_tajD_c$tag)
+
+FC_tajD_nc <- as_tibble(FC_tajD_nc) %>% 
+  mutate(tag = case_when(
+    log2FoldChange > 0 & log2FoldChange <= 0.43028 ~ tags[5],
+    log2FoldChange > 0.43028 & log2FoldChange <= 0.996 ~ tags[6],
+    log2FoldChange > 0.996 & log2FoldChange <= 1.99 ~ tags[7],
+    log2FoldChange > 1.99   ~ tags[8],
+    
+    log2FoldChange <= -1.739 ~ tags[1],
+    log2FoldChange > -1.739 & log2FoldChange <= -0.8416 ~ tags[2],
+    log2FoldChange > -0.8416 & log2FoldChange <= -0.3853 ~ tags[3],
+    log2FoldChange > -0.3853 & log2FoldChange < 0 ~ tags[4]
+    ))
+
+table(FC_tajD_nc$tag)
+
+```
+(sarah's vcf)
+g1   g2   g3   g4   s1   s2   s3   s4 
+2539 2550 2549 2441 2276 2252 2149 2061 
+g1   g2   g3   g4   s1   s2   s3   s4 
+2478 2549 2589 2485 2174 2131 2112 2148
+
+  g1   g2   g3   g4   s1   s2   s3   s4 
+2525 2525 2534 2409 2266 2244 2138 2034 
+
+  g1   g2   g3   g4   s1   s2   s3   s4 
+2465 2543 2579 2469 2172 2118 2097 2128 
+
+## Taj D within each bin
+```{r}
+tags <- c("(,-1.61]","(-1.61,-0.774]", "(-0.774,-0.354]", "(-0.354,0)", "(0,0.419]", "(0.419,0.97]","(0.97,1.92]", "(1.92,)")
+FC_tajD_c <- as_tibble(FC_tajD_c) %>% 
+  mutate(tag = case_when(
+    log2FoldChange > 0 & log2FoldChange <= 0.419 ~ tags[5],
+    log2FoldChange > 0.419 & log2FoldChange <= 0.97 ~ tags[6],
+    log2FoldChange > 0.97 & log2FoldChange <= 1.92 ~ tags[7],
+    log2FoldChange > 1.92   ~ tags[8],
+    
+    log2FoldChange <= -1.61 ~ tags[1],
+    log2FoldChange > -1.61 & log2FoldChange <= -0.774 ~ tags[2],
+    log2FoldChange > -0.774 & log2FoldChange <= -0.354 ~ tags[3],
+    log2FoldChange > -0.354 & log2FoldChange < 0 ~ tags[4]
+
+    ))
+table(FC_tajD_c$tag)
+
+FC_tajD_nc <- as_tibble(FC_tajD_nc) %>% 
+  mutate(tag = case_when(
+    log2FoldChange > 0 & log2FoldChange <= 0.419 ~ tags[5],
+    log2FoldChange > 0.419 & log2FoldChange <= 0.97 ~ tags[6],
+    log2FoldChange > 0.97 & log2FoldChange <= 1.92 ~ tags[7],
+    log2FoldChange > 1.92   ~ tags[8],
+    
+    log2FoldChange <= -1.61 ~ tags[1],
+    log2FoldChange > -1.61 & log2FoldChange <= -0.774 ~ tags[2],
+    log2FoldChange > -0.774 & log2FoldChange <= -0.354 ~ tags[3],
+    log2FoldChange > -0.354 & log2FoldChange < 0 ~ tags[4]
+
+    ))
+table(FC_tajD_nc$tag)
+```
+(-0.356,0) (-0.774,-0.354]  (-1.61,-0.774]        (,-1.61]       (0,0.419] 
+           2104            2142            2212            2280            2479 
+   (0.419,0.97]     (0.97,1.92]         (1.92,) 
+           2505            2539            2556 
+
+(-0.356,0) (-0.774,-0.354]  (-1.61,-0.774]        (,-1.61]       (0,0.419] 
+           2009            2023            2160            2373            2423 
+   (0.419,0.97]     (0.97,1.92]         (1.92,) 
+           2499            2572            2607 
+         
+g1   g2   g3   g4   s1   s2   s3   s4 
+2539 2550 2549 2441 2276 2252 2149 2061 
+g1   g2   g3   g4   s1   s2   s3   s4 
+2478 2549 2589 2485 2174 2131 2112 2148
+
+## get mean & sem
+```{r}
+mean_tajD_c <- FC_tajD_c %>% group_by(tag) %>%
+  dplyr::summarise(
+    count = length(TajD_Pop),
+    mean_tajD = mean(TajD_Pop),
+    sem_tajD = sd(TajD_Pop)/sqrt(length(TajD_Pop))
+  )
+
+mean_tajD_nc <- FC_tajD_nc %>% group_by(tag) %>%
+  dplyr::summarise(
+    count = length(TajD_Pop),
+    mean_tajD = mean(TajD_Pop),
+    sem_tajD = sd(TajD_Pop)/sqrt(length(TajD_Pop))
+  )
+
+mean_tajD_c <- mean_tajD_c %>% mutate(tag = factor(tag, levels = c("s4", "s3", "s2", "s1", "g1", "g2", "g3", "g4")))
+levels(mean_tajD_c$tag)
+
+mean_tajD_nc <- mean_tajD_nc %>% mutate(tag = factor(tag, levels = c("s4", "s3", "s2", "s1", "g1", "g2", "g3", "g4")))
+levels(mean_tajD_nc$tag)
+```
+
+
+## plot the output
+```{r}
+tags <- c("(,-1.61]","(-1.61,-0.774]", "(-0.774,-0.354]", "(-0.354,0)", "(0,0.419]", "(0.419,0.97]","(0.97,1.92]", "(1.92,)")
+mean_tajD_c$tag <- factor(mean_tajD_c$tag,
+                       levels = tags,
+                       ordered = FALSE)
+mean_tajD_nc$tag <- factor(mean_tajD_nc$tag,
+                       levels = tags,
+                       ordered = FALSE)
+
+
+p3 <- ggplot(data = mean_tajD_c, mapping = aes(x=tag, y=mean_tajD)) + 
+    geom_point()+ geom_errorbar(aes(ymin=mean_tajD - sem_tajD, ymax=mean_tajD + sem_tajD), width=.2, position=position_dodge(.9))+ ggtitle("c") +labs(x ="log2FoldChange",y = expression(D[s]))+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+
+p4 <- ggplot(data = mean_tajD_nc, mapping = aes(x=tag, y=mean_tajD)) + 
+    geom_point()+ geom_errorbar(aes(ymin=mean_tajD - sem_tajD, ymax=mean_tajD + sem_tajD), width=.2, position=position_dodge(.9))+ ggtitle("d") +labs(x ="log2FoldChange",y = expression(D[n]))+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+
+p3 + p4
+```
+
+## write output
+```{r}
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/diversity/"
+write.table(mean_tajD_c, file = paste0(directory,"mean_tajD_s_apr.txt"), row.names = FALSE, quote = FALSE)
+
+write.table(mean_tajD_nc, file = paste0(directory,"mean_tajD_n_apr.txt"), row.names = FALSE, quote = FALSE)
+```
+

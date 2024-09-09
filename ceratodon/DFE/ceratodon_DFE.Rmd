@@ -1,0 +1,493 @@
+---
+title: "ceratodon_DFE"
+author: "Meng"
+date: "2023-02-15"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+setwd("~/Dropbox/ceratodon/c2023")
+```
+
+## bootstrap code for sfs (DFE input)
+mar 17: use new list of U and V genes (need to relax on p to get more genes)
+
+
+
+
+can get DFE for U and V genes (all genes based on expression level, and then all expression level's s and g-specific genes)
+g_specific.U.filt.nonsyn.vcf.txt g_specific.V.filt.nonsyn.vcf.txt s_specific.U.filt.nonsyn.vcf.txt s_specific.V.filt.nonsyn.vcf.txt
+g_specific.U.filt.syn.vcf.txt    g_specific.V.filt.syn.vcf.txt    s_specific.U.filt.syn.vcf.txt    s_specific.V.filt.syn.vcf.txt
+
+how to deal with missing data
+need to shrink the table
+use auto first (meybe some weird stuff going on sex chromosomes)
+
+# sfs_bootstrap.R
+```{r}
+vcf_nonsyn <- read.table("vcf.txt/s_specific.U.filt.nonsyn.vcf.txt",fill=TRUE)
+vcf_syn <- read.table("vcf.txt/s_specific.U.filt.syn.vcf.txt",fill=TRUE)
+```
+
+for U and V genes
+```{r}
+library(dplyr)
+#setwd("/ohta2/meng.yuan/rumex/diversity2022/bootstrap")
+#setwd("/ohta2/meng.yuan/ceratodon/VCF_genes")
+setwd("~/Dropbox/ceratodon/c2023/vcf.txt")
+# read vcf
+args = commandArgs(trailingOnly=TRUE)
+vcf_syn <- read.table(paste0(args[1] ,".filt.syn.vcf.txt"),fill=TRUE)
+vcf_nonsyn <- read.table(paste0(args[1] ,".filt.nonsyn.vcf.txt"),fill=TRUE)
+
+x <- 1
+repeat {
+    # vcf_syn
+    vcf_syn_bs = vcf_syn[sample(nrow(vcf_syn), nrow(vcf_syn), replace=TRUE), ]
+    vcf_syn_bs$alt <- rowSums(vcf_syn_bs[,3:11]==1,na.rm=T)  # 9 samples: 3:11, 18 samples: 3:20
+    vcf_syn_bs$minor <- case_when(vcf_syn_bs$alt <= 5 ~ vcf_syn_bs$alt, vcf_syn_bs$alt > 5 ~ 9 - vcf_syn_bs$alt)  # 9 samples: 5 - 9, 18 samples: 9 - 18
+    sfs_syn = data.frame(table(vcf_syn_bs$minor))
+    file_out = paste0(args[1], ".syn.sfs_", x ,".txt")
+    # add if statement to make sure the sfs had a length of 10
+    # what's the differentce between U and V??
+    n <- 10 - nrows(sfs_syn)
+    sfs_syn <- as.data.frame(c(sfs_syn[,2],replicate(n, 0)))  # or 4, 18 samples: 9
+    write.table(t(sfs_syn), file=file_out, sep = " ", col.names =F, quote = F, row.names =F)
+
+    # vcf_nonsyn
+    vcf_nonsyn_bs = vcf_nonsyn[sample(nrow(vcf_nonsyn), nrow(vcf_nonsyn), replace=TRUE), ]
+    vcf_nonsyn_bs$alt <- rowSums(vcf_nonsyn_bs[,3:11]==1,na.rm=T)
+    vcf_nonsyn_bs$minor <- case_when(vcf_nonsyn_bs$alt <= 5 ~ vcf_nonsyn_bs$alt, vcf_nonsyn_bs$alt > 5 ~ 9 - vcf_nonsyn_bs$alt)
+    sfs_nonsyn <- data.frame(table(vcf_nonsyn_bs$minor))
+    file_out <- paste0(args[1], ".nonsyn.sfs_", x ,".txt")
+    n <- 10 - nrows(sfs_nonsyn)
+    sfs_nonsyn <- as.data.frame(c(sfs_nonsyn[,2],replicate(n, 0)))
+    write.table(t(sfs_nonsyn), file=file_out, sep = " ", col.names =F, quote = F, row.names =F)
+    # repeat
+    x = x+1
+    if (x == 201){
+        break
+    }}
+```
+
+
+# sfs_bootstrap_auto.R
+get sfs from real sample (revise output file name)
+```{r}
+library(dplyr)
+setwd("~/Dropbox/ceratodon/c2023/vcf.txt")
+# read vcf
+args = commandArgs(trailingOnly=TRUE)
+vcf_syn_bs <- read.table(paste0(args[1] ,".filt.syn.vcf.txt"),fill=TRUE)
+vcf_nonsyn_bs <- read.table(paste0(args[1] ,".filt.nonsyn.vcf.txt"),fill=TRUE)
+    # vcf_syn
+    vcf_syn_bs$alt <- rowSums(vcf_syn_bs[,3:20]==1,na.rm=T)  # 9 samples: 3:11, 18 samples: 3:20
+    vcf_syn_bs$minor <- case_when(vcf_syn_bs$alt <= 9 ~ vcf_syn_bs$alt, vcf_syn_bs$alt > 9 ~ 18 - vcf_syn_bs$alt)  # 9 samples: 5 - 9, 18 samples: 9 - 18
+    sfs_syn = data.frame(table(vcf_syn_bs$minor))
+    file_out = paste0(args[1], ".syn.sfs.txt")
+    sfs_syn <- as.data.frame(c(sfs_syn[,2],replicate(9, 0)))  # or 4, 18 samples: 9
+    write.table(t(sfs_syn), file=file_out, sep = " ", col.names =F, quote = F, row.names =F)
+    # vcf_nonsyn
+    vcf_nonsyn_bs$alt <- rowSums(vcf_nonsyn_bs[,3:20]==1,na.rm=T)
+    vcf_nonsyn_bs$minor <- case_when(vcf_nonsyn_bs$alt <= 9 ~ vcf_nonsyn_bs$alt, vcf_nonsyn_bs$alt > 9 ~ 18 - vcf_nonsyn_bs$alt)
+    sfs_nonsyn <- data.frame(table(vcf_nonsyn_bs$minor))
+    file_out <- paste0(args[1], ".nonsyn.sfs.txt")
+    sfs_nonsyn <- as.data.frame(c(sfs_nonsyn[,2],replicate(9, 0)))
+    write.table(t(sfs_nonsyn), file=file_out, sep = " ", col.names =F, quote = F, row.names =F)
+```
+
+```{r}
+library(dplyr)
+setwd("~/Dropbox/ceratodon/c2023/vcf.txt")
+# read vcf
+args = commandArgs(trailingOnly=TRUE)
+vcf_syn <- read.table(paste0(args[1] ,".filt.syn.vcf.txt"),fill=TRUE)
+vcf_nonsyn <- read.table(paste0(args[1] ,".filt.nonsyn.vcf.txt"),fill=TRUE)
+
+x <- 1
+repeat {
+    # vcf_syn
+    vcf_syn_bs = vcf_syn[sample(nrow(vcf_syn), nrow(vcf_syn), replace=TRUE), ]
+    vcf_syn_bs$alt <- rowSums(vcf_syn_bs[,3:20]==1,na.rm=T)  # 9 samples: 3:11, 18 samples: 3:20
+    vcf_syn_bs$minor <- case_when(vcf_syn_bs$alt <= 9 ~ vcf_syn_bs$alt, vcf_syn_bs$alt > 9 ~ 18 - vcf_syn_bs$alt)  # 9 samples: 5 - 9, 18 samples: 9 - 18
+    sfs_syn = data.frame(table(vcf_syn_bs$minor))
+    file_out = paste0(args[1], ".syn.sfs_", x ,".txt")
+    sfs_syn <- as.data.frame(c(sfs_syn[,2],replicate(9, 0)))  # or 4, 18 samples: 9
+    write.table(t(sfs_syn), file=file_out, sep = " ", col.names =F, quote = F, row.names =F)
+
+    # vcf_nonsyn
+    vcf_nonsyn_bs = vcf_nonsyn[sample(nrow(vcf_nonsyn), nrow(vcf_nonsyn), replace=TRUE), ]
+    vcf_nonsyn_bs$alt <- rowSums(vcf_nonsyn_bs[,3:20]==1,na.rm=T)
+    vcf_nonsyn_bs$minor <- case_when(vcf_nonsyn_bs$alt <= 9 ~ vcf_nonsyn_bs$alt, vcf_nonsyn_bs$alt > 9 ~ 18 - vcf_nonsyn_bs$alt)
+    sfs_nonsyn <- data.frame(table(vcf_nonsyn_bs$minor))
+    file_out <- paste0(args[1], ".nonsyn.sfs_", x ,".txt")
+    sfs_nonsyn <- as.data.frame(c(sfs_nonsyn[,2],replicate(9, 0)))
+    write.table(t(sfs_nonsyn), file=file_out, sep = " ", col.names =F, quote = F, row.names =F)
+    # repeat
+    x = x+1
+    if (x == 201){
+        break
+    }}
+```
+
+
+# plot DFE w/ CI
+need to make some changes for more groups: U, V, auto
+## organize the output of DFE_a, get mean, sd for the plot
+
+qt 1 2 3 4 repeat 4 times
+```{r}
+bs_g <- read.table("./DFE/g_specific.auto_p01_bs.prop_muts.txt")
+bs_s <- read.table("./DFE/s_specific.auto_p01_bs.prop_muts.txt")
+
+bs_g <- read.table("./DFE/gs_ratio_bs.prop_muts.txt")
+bs_s <- read.table("./DFE/ss_ratio_bs.prop_muts.txt")
+
+
+# 4 categories is fine
+bs_g$V5 <- rowSums(bs_g[,3:4])
+bs_g <- bs_g[,c(1:2,5)]
+colnames(bs_g) <- c("0~1", "1~10", ">10")
+
+bs_s$V5 <- rowSums(bs_s[,3:4])
+bs_s <- bs_s[,c(1:2,5)]
+colnames(bs_s) <- c("0~1", "1~10", ">10")
+
+bs_s$Category <- "sporophyte_specific"
+bs_g$Category <- "gametophyte_specific"
+
+# convert to long format
+g_long <- gather(bs_g, Nes, Prop, "0~1" : ">10", factor_key=TRUE)
+s_long <- gather(bs_s, Nes, Prop, "0~1" : ">10", factor_key=TRUE)
+
+# get error bar
+data_summary <- function(data, varname, groupnames){
+  require(plyr)
+  summary_func <- function(x, col){
+    c(mean = mean(x[[col]], na.rm=TRUE),
+      sd = sd(x[[col]], na.rm=TRUE))
+  }
+  data_sum<-ddply(data, groupnames, .fun=summary_func,
+                  varname)
+  data_sum <- rename(data_sum, c("mean" = varname))
+ return(data_sum)
+}
+
+bs_all <-rbind(g_long,s_long)
+
+# this is the real sample
+#prop <- read.table("./DFE/dfe_prop.txt", header = TRUE) 
+prop <- read.table("./DFE/dfe_prop_auto_p01.txt", header = TRUE)
+prop <- read.table("./DFE/final_prop_ss_gs.txt", header = TRUE)
+# mean and sd from bootstrapping
+df3 <- data_summary(bs_all, varname="Prop", 
+                    groupnames=c("Category", "Nes"))
+
+
+# df3 merge to prop
+colnames(df3)[3] <- "mean"
+df3$Quantile <- "qt1"
+prop <- left_join(prop, df3, by=c("Category","Nes"))
+prop <- left_join(prop, df3, by=c("Category","Nes","Quantile"))
+
+# larger variation than in rumex
+write.table(prop, file = "./DFE/final_prop_auto_p01.txt", row.names = F, quote = F)
+write.table(bs_all, file = "./DFE/bs_all_long_auto_p01.txt", row.names = F, quote = F)
+```
+
+```{r}
+bs_g <- read.table("/Users/yuanmeng/Dropbox/popgen_diversity/2022/pollen_specific.prop_muts.txt")
+bs_s <- read.table("/Users/yuanmeng/Dropbox/popgen_diversity/2022/leaf_specific.prop_muts.txt")
+
+# 4 categories is fine
+bs_s$Category <- "sporophyte-specific (2n)"
+bs_g$Category <- "gametophyte-specific (n)"
+
+bs_all <- rbind(bs_s,bs_g)
+bs_all$V5 <- 1- bs_all$V1
+bs_all <- bs_all[,c(5,6)]
+colnames(bs_all)[2] <- c(">1")
+
+df3 <- data_summary(bs_all, varname=">1", 
+                    groupnames="Category")
+colnames(df3)[2] <- "mean"
+
+prop <- read.table("/Users/yuanmeng/Dropbox/popgen_diversity/2022/dfe_prop_shrink.txt", header = TRUE)
+prop[1,2] <-"gametophyte-specific (n)"
+prop[2,2] <-"sporophyte-specific (2n)"
+
+prop <- left_join(prop, df3, by="Category")
+
+# larger variation than in rumex
+write.csv(prop, file = "/Users/yuanmeng/Dropbox/popgen_diversity/2022/final_prop_shrink.csv", row.names = F, quote = F)
+#write.table(bs_all, file = "./DFE/bs_all_long_auto_p01_shrink.txt", row.names = F, quote = F)
+```
+
+make gametophyte specific darker green
+```{r}
+prop <- read.csv("./DFE/final_prop_auto_p01_shrink.csv", header = TRUE)
+
+prop$Category <- factor(prop$Category, level=c("gametophyte-specific (n)","sporophyte-specific (2n)")) # haploid is darker
+ggplot(prop, aes(x=Category,y=Prop,fill=Category)) + geom_bar(stat="identity", position=position_dodge()) + theme_classic() +scale_fill_manual(values = c("#238B45","#CCEBC5"))  + labs(y="Proportion of mutations") + geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(.9)) + theme(text = element_text(size = 20))
+
+prop$Category <- factor(prop$Category, level=c("gametophyte-specific (n)","sporophyte-specific (2n)")) # haploid is darker
+ggplot(prop, aes(x=Category,y=Prop,fill=Category)) + geom_bar(stat="identity", position=position_dodge()) + theme_classic() +scale_fill_manual(values = c("#238B45","#CCEBC5"))  + labs(y="Proportion of mutations") + geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(.9)) + theme(text = element_text(size = 20))
+
+```
+
+```{r}
+prop$Category <- factor(prop$Category, level=c("gametophyte-specific (n)","sporophyte-specific (2n)")) # haploid is darker
+ggplot(prop, aes(x=Category,y=Prop,fill=Category)) + geom_bar(stat="identity", position=position_dodge()) + theme_classic() +scale_fill_manual(values = c("#238B45","#CCEBC5"))  + labs(y="Proportion of mutations") + geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(.9)) + theme(text = element_text(size = 20))
+
+```
+
+
+
+```{r}
+prop <- read.table("./DFE/dfe_prop_auto_qt.txt", header = TRUE)
+###################qt1
+bs_g <- read.table("./DFE/g_qt1.auto_bs.prop_muts.txt")
+bs_s <- read.table("./DFE/s_qt1.auto_bs.prop_muts.txt")
+# 4 categories is fine
+bs_g$V5 <- rowSums(bs_g[,3:4])
+bs_g <- bs_g[,c(1:2,5)]
+colnames(bs_g) <- c("0~1", "1~10", ">10")
+bs_s$V5 <- rowSums(bs_s[,3:4])
+bs_s <- bs_s[,c(1:2,5)]
+colnames(bs_s) <- c("0~1", "1~10", ">10")
+bs_s$Category <- "sporophyte_specific"
+bs_g$Category <- "gametophyte_specific"
+# convert to long format
+g_long <- gather(bs_g, Nes, Prop, "0~1" : ">10", factor_key=TRUE)
+s_long <- gather(bs_s, Nes, Prop, "0~1" : ">10", factor_key=TRUE)
+bs_all <-rbind(g_long,s_long)
+df1 <- data_summary(bs_all, varname="Prop", 
+                    groupnames=c("Category", "Nes"))
+colnames(df1)[3] <- "mean"
+df1$Quantile <- "qt1"
+
+### ################# qt2
+bs_g <- read.table("./DFE/g_qt2.auto_bs.prop_muts.txt")
+bs_s <- read.table("./DFE/s_qt2.auto_bs.prop_muts.txt")
+# 4 categories is fine
+bs_g$V5 <- rowSums(bs_g[,3:4])
+bs_g <- bs_g[,c(1:2,5)]
+colnames(bs_g) <- c("0~1", "1~10", ">10")
+bs_s$V5 <- rowSums(bs_s[,3:4])
+bs_s <- bs_s[,c(1:2,5)]
+colnames(bs_s) <- c("0~1", "1~10", ">10")
+bs_s$Category <- "sporophyte_specific"
+bs_g$Category <- "gametophyte_specific"
+# convert to long format
+g_long <- gather(bs_g, Nes, Prop, "0~1" : ">10", factor_key=TRUE)
+s_long <- gather(bs_s, Nes, Prop, "0~1" : ">10", factor_key=TRUE)
+bs_all <-rbind(g_long,s_long)
+df2 <- data_summary(bs_all, varname="Prop", 
+                    groupnames=c("Category", "Nes"))
+colnames(df2)[3] <- "mean"
+df2$Quantile <- "qt2"
+
+###############qt3
+bs_g <- read.table("./DFE/g_qt3.auto_bs.prop_muts.txt")
+bs_s <- read.table("./DFE/s_qt3.auto_bs.prop_muts.txt")
+# 4 categories is fine
+bs_g$V5 <- rowSums(bs_g[,3:4])
+bs_g <- bs_g[,c(1:2,5)]
+colnames(bs_g) <- c("0~1", "1~10", ">10")
+bs_s$V5 <- rowSums(bs_s[,3:4])
+bs_s <- bs_s[,c(1:2,5)]
+colnames(bs_s) <- c("0~1", "1~10", ">10")
+bs_s$Category <- "sporophyte_specific"
+bs_g$Category <- "gametophyte_specific"
+# convert to long format
+g_long <- gather(bs_g, Nes, Prop, "0~1" : ">10", factor_key=TRUE)
+s_long <- gather(bs_s, Nes, Prop, "0~1" : ">10", factor_key=TRUE)
+bs_all <-rbind(g_long,s_long)
+df3 <- data_summary(bs_all, varname="Prop", 
+                    groupnames=c("Category", "Nes"))
+colnames(df3)[3] <- "mean"
+df3$Quantile <- "qt3"
+
+################# qt4
+bs_g <- read.table("./DFE/g_qt4.auto_bs.prop_muts.txt")
+bs_s <- read.table("./DFE/s_qt4.auto_bs.prop_muts.txt")
+# 4 categories is fine
+bs_g$V5 <- rowSums(bs_g[,3:4])
+bs_g <- bs_g[,c(1:2,5)]
+colnames(bs_g) <- c("0~1", "1~10", ">10")
+bs_s$V5 <- rowSums(bs_s[,3:4])
+bs_s <- bs_s[,c(1:2,5)]
+colnames(bs_s) <- c("0~1", "1~10", ">10")
+bs_s$Category <- "sporophyte_specific"
+bs_g$Category <- "gametophyte_specific"
+# convert to long format
+g_long <- gather(bs_g, Nes, Prop, "0~1" : ">10", factor_key=TRUE)
+s_long <- gather(bs_s, Nes, Prop, "0~1" : ">10", factor_key=TRUE)
+bs_all <-rbind(g_long,s_long)
+df4 <- data_summary(bs_all, varname="Prop", 
+                    groupnames=c("Category", "Nes"))
+colnames(df4)[3] <- "mean"
+df4$Quantile <- "qt4"
+
+df_all <-rbind(df1, df2, df3, df4)
+prop <- left_join(prop, df_all, by=c("Category","Nes","Quantile"))
+write.table(prop, file = "./DFE/final_prop_auto_qt.txt", row.names = F, quote = F)
+
+
+```
+
+## get DFE plot
+```{r}
+brewer.pal(n = 8, name = "Paired")
+#prop <- read.table("dfe_prop.txt", header = TRUE)
+prop <- read.table("~/Dropbox/ceratodon/c2023/DFE/final_prop_auto_p01.txt", header = TRUE)
+prop2 <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/DFE/final_prop.txt", header = TRUE)
+prop$Category <- factor(prop$Category)
+levels(prop$Category) <- c("gametophyte-specific (n)","sporophyte-specific (2n)")
+prop$Category <- factor(prop$Category, level=c("sporophyte-specific (2n)","gametophyte-specific (n)")) # haploid is darker
+
+prop2$Category <- factor(prop2$Category)
+levels(prop2$Category) <- c("sporophyte-specific (2n)","gametophyte-specific (n)")
+prop$Category <- factor(prop$Category, level=c("sporophyte-specific (2n)","gametophyte-specific (n)")) # haploid is darker
+
+# for paper
+ggplot(prop, aes(x=Nes,y=Prop,fill=Category)) + geom_bar(stat="identity", position=position_dodge()) + theme_classic() + scale_x_discrete(limits=c("0~1", "1~10", ">10")) + scale_fill_manual(values = c("#CCEBC5", "#238B45"))  + labs(y="Proportion of mutations") + geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(.9)) + theme(text = element_text(size = 20))
+
+ggplot(prop2, aes(x=Nes,y=Prop,fill=Category)) + geom_bar(stat="identity", position=position_dodge()) + theme_classic() + scale_x_discrete(limits=c("0~1", "1~10", ">10")) + scale_fill_manual(values = c("#CCEBC5", "#238B45"))  + labs(y="Proportion of mutations") + geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(.9)) + theme(text = element_text(size = 20))
+
+
+# for poster, legend size
+# ggplot(prop, aes(x=Nes,y=Prop,fill=Category)) + geom_bar(stat="identity", position=position_dodge()) + theme_classic() + scale_x_discrete(limits=c("0~1", "1~10", ">10")) + scale_fill_manual(values = c("#CCEBC5", "#238B45"))  + labs(y="", x="") + geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(.9)) + theme(text = element_text(size = 40), legend.position="top")
+```
+
+```{r}
+prop <- read.table("./DFE/dfe_prop_qt.txt", header = TRUE)
+prop <- read.table("./DFE/final_prop_auto_qt.txt", header = TRUE)
+
+ggplot(prop, aes(x=Nes,y=Prop,fill=Category)) + geom_bar(stat="identity", position=position_dodge()) + theme_classic() + scale_x_discrete(limits=c("0~1", "1~10", ">10")) + scale_fill_manual(values = c("#CCEBC5", "#238B45"))  + labs(y="Proportion of mutations") + theme(text = element_text(size = 14))+ggtitle("DFE of autosomal biased genes in Ceratodon")+
+    facet_grid(.~Quantile,scales="free_x", switch = "x", space = "free_x") 
+
+
+ggplot(prop, aes(x=Nes,y=Prop,fill=Category)) + geom_bar(stat="identity", position=position_dodge()) + theme_classic() + scale_x_discrete(limits=c("0~1", "1~10", ">10")) + scale_fill_manual(values = c("#CCEBC5", "#238B45"))  + labs(y="Proportion of mutations") + geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(.9)) + theme(text = element_text(size = 15))+
+    facet_grid(.~Quantile,scales="free_x", switch = "x", space = "free_x") 
+```
+
+
+```{r}
+prop <- read.table("./DFE/dfe_prop_specific_sex_tpm.txt", header = TRUE)
+
+ggplot(prop, aes(x=Nes,y=Prop,fill=Category)) + geom_bar(stat="identity", position=position_dodge()) + theme_classic() + scale_x_discrete(limits=c("0~1", "1~10", ">10")) + scale_fill_manual(values = c("#CCEBC5", "#238B45"))  + labs(y="Proportion of mutations") + theme(text = element_text(size = 14))+ggtitle("DFE of sex-linked phase-specific genes in Ceratodon")+
+    facet_grid(.~Chrom,scales="free_x", switch = "x", space = "free_x") 
+
+
+```
+
+
+## get alpha bs for plotting alpha
+
+alpha bootstrap samples
+```{r}
+# bs_g <- read.table("./DFE/g_specific.auto_p01_bs.alpha_omega.txt")
+# bs_s <- read.table("./DFE/s_specific.auto_p01_bs.alpha_omega.txt")
+
+bs_g <- read.table("./DFE/g_specific.auto_p01_bs_Apr17.alpha_omega.txt")
+bs_s <- read.table("./DFE/s_specific.auto_p01_bs_Apr17.alpha_omega.txt")
+
+bs_g <- read.table("./DFE/g_qt1.auto_bs_Apr18.alpha_omega.txt")
+bs_s <- read.table("./DFE/s_qt1.auto_bs_Apr18.alpha_omega.txt")
+
+# 4 categories is fine
+
+colnames(bs_g) <- c("alpha", "omega")
+colnames(bs_s) <- c("alpha", "omega")
+
+bs_s$Category <- "sporophyte_specific"
+bs_g$Category <- "gametophyte_specific"
+
+# get error bar
+data_summary <- function(data, varname, groupnames){
+  require(plyr)
+  summary_func <- function(x, col){
+    c(mean = mean(x[[col]], na.rm=TRUE),
+      sd = sd(x[[col]], na.rm=TRUE))
+  }
+  data_sum<-ddply(data, groupnames, .fun=summary_func,
+                  varname)
+  data_sum <- rename(data_sum, c("mean" = varname))
+ return(data_sum)
+}
+
+bs_all <-rbind(bs_g,bs_s)
+
+# mean and sd from bootstrapping
+df_a <- data_summary(bs_all, varname="alpha", 
+                    groupnames=c("Category"))
+colnames(df_a)[2] <- "mean"
+
+df_o <- data_summary(bs_all, varname="omega", 
+                    groupnames=c("Category"))
+colnames(df_o)[2] <- "mean"
+
+# this is the real sample
+# alpha <- read.table("/Users/yuanmeng/Dropbox/ceratodon/c2023/DFE/alpha_auto_p01.txt", header=TRUE)
+# omega <- read.table("/Users/yuanmeng/Dropbox/ceratodon/c2023/DFE/omega_auto_p01.txt", header=TRUE)
+
+alpha <- read.table("/Users/yuanmeng/Dropbox/ceratodon/c2023/DFE/alpha_auto_p01_apr17.txt", header=TRUE)
+omega <- read.table("/Users/yuanmeng/Dropbox/ceratodon/c2023/DFE/omega_auto_p01_apr17.txt", header=TRUE)
+
+alpha <- read.table("/Users/yuanmeng/Dropbox/ceratodon/c2023/DFE/alpha_test.txt", header=TRUE)
+omega <- read.table("/Users/yuanmeng/Dropbox/ceratodon/c2023/DFE/omega_test.txt", header=TRUE)
+
+alpha <- left_join(alpha, df_a, by = "Category")
+omega <- left_join(omega, df_o, by = "Category")
+
+# 
+# write.table(alpha, file = "/Users/yuanmeng/Dropbox/ceratodon/c2023/DFE/final_alpha_auto_p01.txt", row.names = F, quote = F)
+# write.table(omega, file = "/Users/yuanmeng/Dropbox/ceratodon/c2023/DFE/final_omega_auto_p01.txt", row.names = F, quote = F)
+write.table(alpha, file = "/Users/yuanmeng/Dropbox/ceratodon/c2023/DFE/final_alpha_auto_p01_apr17.txt", row.names = F, quote = F)
+write.table(omega, file = "/Users/yuanmeng/Dropbox/ceratodon/c2023/DFE/final_omega_auto_p01_apr17.txt", row.names = F, quote = F)
+```
+
+## plot alpha, omega
+
+```{r}
+ggplot(alpha, aes(x=Category, y=alpha,fill=Category)) + geom_bar(stat="identity", position=position_dodge()) + theme_classic()  + labs(y="Proportion of mutations") + geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(.9)) + theme(text = element_text(size = 15))+ scale_fill_manual(values = c("#CCEBC5", "#238B45"))
+
+
+ggplot(omega, aes(x=Category, y=omega,fill=Category)) + geom_bar(stat="identity", position=position_dodge()) + theme_classic()  + labs(y="Proportion of mutations") + geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(.9)) + theme(text = element_text(size = 15))+ scale_fill_manual(values = c("#CCEBC5", "#238B45"))
+
+
+```
+
+
+```{r}
+ggplot(alpha, aes(x=Category, y=alpha,fill=Category)) + geom_bar(stat="identity", position=position_dodge()) + theme_classic()  + labs(y="Proportion of mutations") + geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(.9)) + theme(text = element_text(size = 15))+ scale_fill_manual(values = c("#CCEBC5", "#238B45"))
+
+
+ggplot(omega, aes(x=Category, y=omega,fill=Category)) + geom_bar(stat="identity", position=position_dodge()) + theme_classic()  + labs(y="Proportion of mutations") + geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(.9)) + theme(text = element_text(size = 15))+ scale_fill_manual(values = c("#CCEBC5", "#238B45"))
+
+```
+
+test
+```{r}
+ggplot(alpha, aes(x=Category, y=alpha,fill=Category)) + geom_bar(stat="identity", position=position_dodge()) + theme_classic()  + labs(y="Proportion of mutations") + geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(.9)) + theme(text = element_text(size = 15))+ scale_fill_manual(values = c("#CCEBC5", "#238B45"))
+
+
+ggplot(omega, aes(x=Category, y=omega,fill=Category)) + geom_bar(stat="identity", position=position_dodge()) + theme_classic()  + labs(y="Proportion of mutations") + geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2, position=position_dodge(.9)) + theme(text = element_text(size = 15))+ scale_fill_manual(values = c("#CCEBC5", "#238B45"))
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+

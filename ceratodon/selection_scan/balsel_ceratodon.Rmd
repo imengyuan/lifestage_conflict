@@ -1,0 +1,487 @@
+---
+title: "balancing selection in rumex"
+author: "Meng"
+date: "2023-11-27"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(dplyr)
+library(ggplot2)
+library(patchwork)
+library(tidyr)
+data="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/balsel/"
+```
+
+## read input files
+```{r}
+scan1_1 <- read.table(paste0(data,"chrom01/ceratodon_scan_DAF_Chr01_2066.txt"), header = T)
+scan1_2 <- read.table(paste0(data,"chrom01/ceratodon_scan_DAF_Chr01_502066.txt"), header = T) 
+scan1_1 <- read.table(paste0(data,"chrom01/ceratodon_scan_DAF_Chr01_28002066.txt"), header = T)
+scan1_2 <- read.table(paste0(data,"chrom01/ceratodon_scan_DAF_Chr01_28502066.txt"), header = T) 
+
+scan1_merged <- inner_join(scan1_1, scan1_2, by = c("physPos", "genPos"))
+
+p1 <- ggplot(scan1_merged, aes(x = physPos/1000000, y = CLR.x))+geom_point(aes(colour=log10(s_hat.x)),size = 0.3)+
+    xlab("Position on Chromosome (Mb)")+ylab("Composite Likelihood Ratio")+theme_bw() +scale_color_gradient2(name = expression('log'[10]~hat(italic(a))), limits = c(-3, 9), midpoint = 0, high="red", mid = 'white', low="blue")+ theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside")+ theme(text = element_text(size = 10))
+
+p2 <- ggplot(scan1_merged, aes(x = physPos/1000000, y = CLR.y))+geom_point(aes(colour=log10(s_hat.y)),size = 0.3)+
+    xlab("Position on Chromosome (Mb)")+ylab("Composite Likelihood Ratio")+theme_bw() +scale_color_gradient2(name = expression('log'[10]~hat(italic(a))), limits = c(-3, 9), midpoint = 0, high="red", mid = 'white', low="blue")+ theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside")+ theme(text = element_text(size = 10))
+
+
+p1 <- ggplot(scan1_merged, aes(x = physPos/1000000, y = CLR.x))+geom_point(size = 0.3)+
+    xlab("Position on Chromosome (Mb)")+ylab("Composite Likelihood Ratio")+theme_bw() + theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside")+ theme(text = element_text(size = 10))
+
+p2 <- ggplot(scan1_merged, aes(x = physPos/1000000, y = CLR.y))+geom_point(size = 0.3)+
+    xlab("Position on Chromosome (Mb)")+ylab("Composite Likelihood Ratio")+theme_bw() + theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside")+ theme(text = element_text(size = 10))
+
+
+p1 / p2 + plot_layout(guides = "collect") & theme(legend.position = "right")
+
+
+```
+
+```{r}
+ggplot(scan1_merged, aes(x = physPos/1000000, y = CLR.x - CLR.y))+geom_point(aes(colour=log10(s_hat.y)),size = 0.3)+
+    xlab("Position on Chromosome (Mb)")+ylab("Composite Likelihood Ratio")+theme_bw() +scale_color_gradient2(name = expression('log'[10]~hat(italic(a))), limits = c(-3, 9), midpoint = 0, high="red", mid = 'white', low="blue")+ theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside")+ theme(text = element_text(size = 10))
+
+ggplot(scan1_merged, aes(x = physPos/1000000, y = CLR.x - CLR.y))+geom_point(size = 0.3)+
+    xlab("Position on Chromosome (Mb)")+ylab("Composite Likelihood Ratio")+theme_bw() +theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside")+ theme(text = element_text(size = 10))
+
+```
+
+## merge scan for each chrom
+ceratodon_scan_DAF_Chr01.txt
+```{r}
+scan1 <- read.table(paste0(data,"chrom01/ceratodon_scan_DAF_Chr01.txt"), header = T) 
+str(scan1)
+scan1$physPos <- as.numeric(scan1$physPos)
+scan1 <- scan1[!is.na(scan1$physPos), ]
+write.table(scan1, file = paste0(data,"chrom01/ceratodon_scan_DAF_Chr01.txt"), quote = F,row.names = F, sep = "\t")
+
+p1 <- ggplot(scan1, aes(x = physPos/1000000, y = CLR))+geom_point(aes(colour=log10(s_hat)),size = 0.3)+
+    xlab("Position on Chromosome (Mb)")+ylab("Composite Likelihood Ratio")+theme_bw() +scale_color_gradient2(name = expression('log'[10]~hat(italic(a))), limits = c(-3, 9), midpoint = 0, high="red", mid = 'white', low="blue")+ theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside")+ theme(text = element_text(size = 10))
+
+p2 <- ggplot(scan1, aes(x = physPos/1000000, y = CLR))+geom_point(size = 0.3,alpha=0.2, color="red")+
+    xlab("Position on Chromosome (Mb)")+ylab("Composite Likelihood Ratio")+theme_bw() + theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside")+ theme(text = element_text(size = 10))
+
+p1 / p2 + plot_layout(guides = "collect") & theme(legend.position = "right")
+
+```
+
+```{r}
+scan2 <- read.table(paste0(data,"chrom02/ceratodon_scan_DAF_Chr02_feb.txt"), header = T) 
+scan2$physPos <- as.numeric(scan2$physPos)
+scan2 <- scan2[!is.na(scan2$physPos), ]
+scan2$s_hat <- as.numeric(scan2$s_hat)
+
+scan2_2 <- read.table(paste0(data,"chrom02/ceratodon_scan_DAF_Chr02.txt"), header = T) 
+
+p1 <- ggplot(scan2, aes(x = physPos/1000000, y = CLR))+geom_point(aes(colour=log10(s_hat)),size = 0.3)+
+    xlab("Position on Chromosome (Mb)")+ylab("Composite Likelihood Ratio")+theme_bw() +scale_color_gradient2(name = expression('log'[10]~hat(italic(a))), limits = c(-3, 9), midpoint = 0, high="red", mid = 'white', low="blue")+ theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside")+ theme(text = element_text(size = 10))
+
+p2 <- ggplot(scan2_2, aes(x = physPos/1000000, y = CLR))+geom_point(aes(colour=log10(s_hat)),size = 0.3)+
+    xlab("Position on Chromosome (Mb)")+ylab("Composite Likelihood Ratio")+theme_bw() +scale_color_gradient2(name = expression('log'[10]~hat(italic(a))), limits = c(-3, 9), midpoint = 0, high="red", mid = 'white', low="blue")+ theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside")+ theme(text = element_text(size = 10))
+
+p1 / p2 + plot_layout(guides = "collect") & theme(legend.position = "right")
+
+scan <- inner_join(scan2, scan2_2, by = "physPos")
+scan$genPos.x <- as.numeric(scan$genPos.x)
+scan$genPos.y <- as.numeric(scan$genPos.y)
+scan$CLR.x <- as.numeric(scan$CLR.x)
+scan$CLR.y <- as.numeric(scan$CLR.y)
+scan <- scan %>% mutate(genPos = genPos.x - genPos.y) %>% mutate(CLR = CLR.x - CLR.y)
+mean(scan$genPos) # 0
+mean(scan$CLR) # 2.697938
+summary(scan$CLR)
+
+ggplot(scan2_2, aes(x = physPos/1000000, y = genPos))+geom_point(size = 0.3)+xlab("Position on Chromosome (Mb)")+ylab("gen pos")+theme_bw() + theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside")+ theme(text = element_text(size = 10))
+```
+
+
+all 12 chroms
+```{r}
+# scan1 <- read.table(paste0(data,"chrom01/ceratodon_scan_DAF_Chr01.txt"), header = T) 
+# str(scan1)
+# scan2$physPos <- as.numeric(scan2$physPos)
+# scan2 <- scan2[!is.na(scan2$physPos), ]
+# write.table(scan2, file = paste0(data,"chrom02/ceratodon_scan_DAF_Chr02.txt"), quote = F,row.names = F, sep = "\t")
+
+scan1 <- read.table(paste0(data,"chrom01/ceratodon_scan_DAF_Chr01.txt"), header = T) 
+scan2 <- read.table(paste0(data,"chrom02/ceratodon_scan_DAF_Chr02.txt"), header = T) 
+scan3 <- read.table(paste0(data,"chrom03/ceratodon_scan_DAF_Chr03.txt"), header = T) 
+scan5 <- read.table(paste0(data,"chrom05/ceratodon_scan_DAF_Chr05.txt"), header = T) 
+scan6 <- read.table(paste0(data,"chrom06/ceratodon_scan_DAF_Chr06.txt"), header = T) 
+scan7 <- read.table(paste0(data,"chrom07/ceratodon_scan_DAF_Chr07.txt"), header = T) 
+scan12 <- read.table(paste0(data,"chrom12/ceratodon_scan_DAF_Chr12.txt"), header = T) 
+scan4 <- read.table(paste0(data,"chrom04/ceratodon_scan_DAF_Chr04.txt"), header = T) 
+scan8 <- read.table(paste0(data,"chrom08/ceratodon_scan_DAF_Chr08.txt"), header = T) 
+scan9 <- read.table(paste0(data,"chrom09/ceratodon_scan_DAF_Chr09.txt"), header = T) 
+scan10 <- read.table(paste0(data,"chrom10/ceratodon_scan_DAF_Chr10.txt"), header = T) 
+scan11 <- read.table(paste0(data,"chrom11/ceratodon_scan_DAF_Chr11.txt"), header = T) 
+
+scan1$chrom <- "Chr01"
+scan2$chrom <- "Chr02"
+scan3$chrom <- "Chr03"
+scan4$chrom <- "Chr04"
+scan5$chrom <- "Chr05"
+scan6$chrom <- "Chr06"
+scan7$chrom <- "Chr07"
+scan8$chrom <- "Chr08"
+scan9$chrom <- "Chr09"
+scan10$chrom <- "Chr10"
+scan11$chrom <- "Chr11"
+scan12$chrom <- "Chr12"
+
+# scanc1 <- rbind(scan1, scan2, scan3, scan4)
+# scanc2 <- rbind(scan5, scan6, scan7, scan8)
+# scanc3 <- rbind(scan9,scan10, scan11,scan12)
+
+scanc1 <- rbind(scan1, scan2, scan3, scan4, scan5, scan6)
+scanc2 <- rbind(scan7, scan8, scan9, scan10, scan11, scan12)
+
+scanc <- rbind(scan1, scan2, scan3, scan4, scan5, scan6, scan7, scan8, scan9, scan10, scan11, scan12)
+write.table(scanc, file = paste0(data,"ceratodon_scan_DAF.txt"), quote = F,row.names = F, sep = "\t")
+scanc <- read.table(paste0(data,"ceratodon_scan_DAF.txt"), header = T)
+
+scan11 <- scan11[,1:7]
+```
+7822484
+7775633
+
+   838286 ceratodon_input_DAF_Chr01.txt +1
+   885112 ceratodon_input_DAF_Chr02.txt +1
+   765846 ceratodon_input_DAF_Chr03.txt -1
+   748662 ceratodon_input_DAF_Chr04.txt +1
+   654954 ceratodon_input_DAF_Chr05.txt 0
+   603158 ceratodon_input_DAF_Chr06.txt -1
+   526720 ceratodon_input_DAF_Chr07.txt +1
+   520024 ceratodon_input_DAF_Chr08.txt +1
+   605444 ceratodon_input_DAF_Chr09.txt +1
+   511626 ceratodon_input_DAF_Chr10.txt -90000 mistake with 11
+   590200 ceratodon_input_DAF_Chr11.txt 0
+   493882 ceratodon_input_DAF_Chr12.txt 0
+  7743914 total
+
+```{r}
+p1 <- ggplot(scan1, aes(x = physPos/1000000, y = CLR))+geom_point(aes(colour=log10(s_hat)),size = 0.3)+
+    facet_grid(.~chrom,scales="free_x", switch = "x", space = "free_x") + 
+    xlab("Position on Chromosome (Mb)")+ylab("Composite Likelihood Ratio")+theme_bw() +scale_color_gradient2(name = expression('log'[10]~hat(italic(a))), limits = c(-3, 9), midpoint = 0, high="red", mid = 'white', low="blue")+ theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside")+ theme(text = element_text(size = 10))
+
+p2 <- ggplot(scan2, aes(x = physPos/1000000, y = CLR))+geom_point(aes(colour=log10(s_hat)),size = 0.3)+
+    facet_grid(.~chrom,scales="free_x", switch = "x", space = "free_x") + 
+    xlab("Position on Chromosome (Mb)")+ylab("Composite Likelihood Ratio")+theme_bw() +scale_color_gradient2(name = expression('log'[10]~hat(italic(a))), limits = c(-3, 9), midpoint = 0, high="red", mid = 'white', low="blue")+ theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside")+ theme(text = element_text(size = 10))
+
+p1 / p2 + plot_layout(guides = "collect") & theme(legend.position = "right")
+
+```
+
+
+plot all chroms
+```{r}
+p1 <- ggplot(scanc1, aes(x = physPos/1000000, y = CLR))+geom_point(aes(colour=log10(s_hat)),size = 0.3)+
+    facet_grid(.~chrom,scales="free_x", switch = "x", space = "free_x") + 
+    xlab("Position on Chromosome (Mb)")+ylab("Composite Likelihood Ratio")+theme_bw() +scale_color_gradient2(name = expression('log'[10]~hat(italic(a))), limits = c(-3, 9), midpoint = 0, high="red", mid = 'white', low="blue")+ theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside")+ theme(text = element_text(size = 10))
+
+p2 <- ggplot(scanc2, aes(x = physPos/1000000, y = CLR))+geom_point(aes(colour=log10(s_hat)),size = 0.3)+
+    facet_grid(.~chrom,scales="free_x", switch = "x", space = "free_x") + 
+    xlab("Position on Chromosome (Mb)")+ylab("Composite Likelihood Ratio")+theme_bw() +scale_color_gradient2(name = expression('log'[10]~hat(italic(a))), limits = c(-3, 9), midpoint = 0, high="red", mid = 'white', low="blue")+ theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside")+ theme(text = element_text(size = 10))
+
+p1 / p2 + plot_layout(guides = "collect") & theme(legend.position = "right")
+
+```
+plot all chroms with the cutoff line
+```{r}
+p1 <- ggplot(scanc1, aes(x = physPos/1000000, y = CLR))+geom_point(aes(colour=log10(s_hat)),size = 0.3)+
+    facet_grid(.~chrom,scales="free_x", switch = "x", space = "free_x") + 
+    xlab("Position on Chromosome (Mb)")+ylab("Composite Likelihood Ratio")+theme_bw() +scale_color_gradient2(name = expression('log'[10]~hat(italic(a))), limits = c(-3, 9), midpoint = 0, high="red", mid = 'white', low="blue")+ theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside")+ theme(text = element_text(size = 10))+ geom_hline(yintercept = 956.1769, linetype="dashed", color = "black", size =0.3)
+
+p2 <- ggplot(scanc2, aes(x = physPos/1000000, y = CLR))+geom_point(aes(colour=log10(s_hat)),size = 0.3)+
+    facet_grid(.~chrom,scales="free_x", switch = "x", space = "free_x") + 
+    xlab("Position on Chromosome (Mb)")+ylab("Composite Likelihood Ratio")+theme_bw() +scale_color_gradient2(name = expression('log'[10]~hat(italic(a))), limits = c(-3, 9), midpoint = 0, high="red", mid = 'white', low="blue")+ theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside")+ theme(text = element_text(size = 10))+ geom_hline(yintercept = 956.1769, linetype="dashed",color = "black", size =0.3)
+
+p1 / p2 + plot_layout(guides = "collect") & theme(legend.position = "right")
+
+```
+plot gen pos
+```{r}
+p1 <- ggplot(scanc1, aes(x = physPos/1000000, y = genPos))+geom_point(aes(colour=log2(CLR)),size = 0.3)+facet_grid(.~chrom,scales="free_x", switch = "x", space = "free_x") + 
+    xlab("Position on Chromosome (Mb)")+ylab("genetic pos")+theme_bw() + theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside")+ theme(text = element_text(size = 10))
+
+p2 <- ggplot(scanc2, aes(x = physPos/1000000, y = genPos))+geom_point(aes(colour=log2(CLR)),size = 0.3)+facet_grid(.~chrom,scales="free_x", switch = "x", space = "free_x") + 
+    xlab("Position on Chromosome (Mb)")+ylab("genetic pos")+theme_bw() + theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside")+ theme(text = element_text(size = 10))
+
+p1 / p2 + plot_layout(guides = "collect") & theme(legend.position = "right")
+
+```
+
+
+
+```{r}
+p1 <- ggplot(scanc1, aes(x = physPos/1000000, y = CLR))+geom_point(aes(colour=log10(s_hat)),size = 0.3)+
+    facet_grid(.~chrom,scales="free_x", switch = "x", space = "free_x") + 
+    xlab("Position on Chromosome (Mb)")+ylab("Composite Likelihood Ratio")+theme_bw() +scale_color_gradient2(name = expression('log'[10]~hat(italic(a))), limits = c(-3, 9), midpoint = 0, high="red", mid = 'white', low="blue")+ theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside")+ theme(text = element_text(size = 10))
+
+
+p2 <- ggplot(scanc1, aes(x = physPos/1000000, y = CLR))+geom_point(size = 0.3,alpha=0.3)+
+    facet_grid(.~chrom,scales="free_x", switch = "x", space = "free_x")+
+    xlab("Position on Chromosome (Mb)")+ylab("Composite Likelihood Ratio")+theme_bw() + theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside")+ theme(text = element_text(size = 10))
+
+p1 / p2 + plot_layout(guides = "collect") & theme(legend.position = "right")
+
+```
+
+
+## get 95% of CLR
+```{r}
+quantile(scanc$CLR, probs = 0.95) # 7822484
+summary(scanc$CLR)
+
+scanc0 <- filter(scanc, CLR>0) # 6787488
+nrow(scanc0)
+
+quantile(scanc0$CLR, probs = 0.95)
+summary(scanc0$CLR)
+
+scanc95 <- filter(scanc0, CLR>=956.1769) # 339375
+nrow(scanc95)
+write.table(scanc95, file=paste0(data,"balsel_scanc95.txt"), row.names = FALSE, quote = FALSE)
+scanc95 <- read.table(paste0(data,"balsel_scanc95.txt"), header = T)
+
+table(scanc95$chrom)
+```
+    
+     95% 
+863.1683
+
+   Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
+   0.00    0.13   26.56  180.95  196.85 3391.25 
+   
+     95% 
+956.1769 
+    Min.  1st Qu.   Median     Mean  3rd Qu.     Max. 
+   0.000    2.764   51.910  208.538  241.412 3391.252
+   
+chrom01 chrom02 chrom03 chrom04 chrom05 chrom06 chrom07 chrom08 chrom09 chrom10 chrom11 chrom12 
+  10292  202941   23203   28906   27682    9198    7985    2293    2243   10309   10309    4014    
+
+7822484 sites tested
+6787488 with non-zero CLR
+339375 sites in the 95% quantile of non-zero CLR
+113296 sites in genic regions, 963 genes
+334 significant g biased, 280 s-biased, 193 unbiased genes (expressed)
+
+## get the list of candidate balsel genes
+perform GO enrichment of these candidate genes
+how many of these genes are gemetophyte-expressed / gametophyte-biased? what are the functions?
+```{r}
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/deseq2/"
+gff<-read.table(paste0(directory,"R40_GG1U_combined.gene.final.gff"))
+colnames(gff)<-c("chrom","start","end","gene")
+
+# test <- scanc95 %>% filter(chrom == "Chr07")
+# result <- test %>% inner_join(gff, by = "chrom") %>%
+#     filter(physPos >= start & physPos <= end) 
+
+
+window_size <- 7000
+num_windows <- floor(nrow(scanc95) / window_size) # 48
+
+results <- list()
+for (i in 1:49) {
+    start <- (i - 1) * window_size + 1
+    end <- i * window_size
+    window_df <- scanc95[start:end, ]
+
+    result <- window_df %>% inner_join(gff, by = "chrom") %>%
+        filter(physPos >= start & physPos <= end) 
+    
+    results[[i]] <- result
+}
+
+result <- do.call(rbind, results)
+
+write.table(result, file=paste0(data,"balsel_sites.txt"), row.names = FALSE, quote = FALSE)
+#result <- read.table(paste0(data,"balsel_sites.txt"), header = T)
+
+# get info for each gene
+result_CLR <- result %>%
+    group_by(gene) %>%
+    summarise(mean_CLR = mean(CLR), max_CLR = max(CLR), no_sites = length(CLR))
+
+write.table(result_CLR, file=paste0(data,"balsel_genes_full.txt"), row.names = FALSE, quote = FALSE)
+result_CLR <- read.table(paste0(data,"balsel_sites.txt"), header = T)
+
+result_CLR <- result_CLR %>% filter(g_mean > 5 | s_mean > 5) 
+write.table(result_CLR, file=paste0(data,"balsel_genes_expressed.txt"), row.names = FALSE, quote = FALSE)
+```
+
+
+
+## add info on expression level, gene annotation
+all genes should be expressed
+
+
+
+
+```{r}
+DE_c <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/deseq2/DE_results_all.txt", header =T) # 30107
+DE_c <- DE_c %>% filter(g_mean > 5 | s_mean > 5) # 25861 (including UV)
+
+DE_c <- DE_c %>% filter(chrom != "U" & chrom != "V")
+gameto <- DE_c %>% filter(log2FoldChange > 0 & padj < 0.1) # 8851
+unbiased <- DE_c %>% filter(padj >= 0.1) # 5263
+sporo <- DE_c %>% filter(log2FoldChange < 0 & padj < 0.1) # 7787
+
+
+result_CLR <- result_CLR %>% left_join(DE_c, by = "gene")
+g_bias <- result_CLR %>% filter(log2FoldChange>0 & padj < 0.1) # 334
+s_bias <- result_CLR %>% filter(log2FoldChange<0 & padj < 0.1) # 280
+unbiased <- result_CLR %>% filter(padj >= 0.1) # 193
+
+```
+
+
+
+## gametophyte-biased genes have higher CLR than unbiased genes?
+```{r}
+g_bias$category <- "g_bias"
+s_bias$category <- "s_bias"
+unbiased$category <- "unbiased"
+
+bias <- rbind(g_bias,s_bias,unbiased)
+str(bias)
+bias$category <- factor(bias$category)
+write.table(bias, file=paste0(data,"balsel_genes_bias.txt"), row.names = FALSE, quote = FALSE)
+biasc <- read.table(paste0(data,"balsel_genes_bias.txt"), header =T)
+
+
+ggplot(biasc, aes(x=category, y=max_CLR)) + 
+  geom_boxplot() +theme_bw()+theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside",legend.position ="none")+ theme(text = element_text(size = 15))
+str(biasc)
+
+group_by(bias, category) %>%
+  summarise(
+    count = n(),
+    mean = mean(max_CLR, na.rm = TRUE),
+    sd = sd(max_CLR, na.rm = TRUE)
+  )
+
+aov <- aov(max_CLR ~ category, data = biasc)
+summary(aov)
+```
+count mean sd
+g_bias	334	1583.677	513.5396	
+s_bias	280	1526.166	479.1133	
+unbiased	193	1463.623	461.1151	
+
+             Df    Sum Sq Mean Sq F value Pr(>F)  
+category      2   1796518  898259   3.748  0.024 *
+Residuals   804 192688464  239662                 
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+
+## contigency test
+non including UV genes
+contigency table
+category, g_biased, unbiased, s_biased
+balancing_sel, 334, 193, 280
+whole_genome, 8851, 5263, 7787
+
+```{r}
+bias_table <- read.csv(paste0(data,"contigency_table.txt"))
+bias_table
+row.names(bias_table) <- bias_table[,1]
+tablep <- bias_table[,2:3]
+tablel <- bias_table[,3:4]
+table <- bias_table[,c(2,4)]
+```
+
+
+chi square test
+```{r}
+chisq.test(tablep)
+chisq.test(tablel)
+chisq.test(table)
+```
+	Pearson's Chi-squared test with Yates' continuity correction
+
+data:  tablep
+X-squared = 0.070209, df = 1, p-value = 0.791
+
+
+	Pearson's Chi-squared test with Yates' continuity correction
+
+data:  tablel
+X-squared = 0.025175, df = 1, p-value = 0.8739
+
+
+	Pearson's Chi-squared test with Yates' continuity correction
+
+data:  table
+X-squared = 0.29595, df = 1, p-value = 0.5864
+
+```{r}
+fisher.test(tablep)
+fisher.test(tablel)
+fisher.test(table)
+```
+
+	Fisher's Exact Test for Count Data
+
+data:  tablep
+p-value = 0.7832
+alternative hypothesis: true odds ratio is not equal to 1
+95 percent confidence interval:
+ 0.8564096 1.2391712
+sample estimates:
+odds ratio 
+  1.029035 
+  
+	Fisher's Exact Test for Count Data
+
+data:  tablel
+p-value = 0.8487
+alternative hypothesis: true odds ratio is not equal to 1
+95 percent confidence interval:
+ 0.8416412 1.2337738
+sample estimates:
+odds ratio 
+  1.019855 
+
+
+	Fisher's Exact Test for Count Data
+
+data:  table
+p-value = 0.5645
+alternative hypothesis: true odds ratio is not equal to 1
+95 percent confidence interval:
+ 0.8899837 1.2382432
+sample estimates:
+odds ratio 
+  1.049471 
+
+category, g_biased, unbiased, s_biased
+balancing_sel, 334, 193, 280
+whole_genome, 8851, 5263, 7787
+
+```{r}
+tablep <- bias_table[,2:3]
+tablel <- bias_table[,3:4]
+
+table <- bias_table[,c(1,3,4)]
+cnts <- gather(bias_table, group, count, g_biased:s_biased)
+#cnts <- read.table(paste0(directory,"biased_cnts.txt"), header =T)
+#cnts <- cnts[1:4,]
+hcols <- c("black", "grey" ,"white")
+p2 <- ggplot(cnts) +
+geom_col(aes(x = category, y = count, fill = group), position = "fill", colour ="black")  + xlab("") + ylab("Proportion of genes") + theme_classic() +ggtitle("b") + scale_fill_manual(values = hcols) + theme(axis.text=element_text(size=10), axis.title=element_text(size=10)) + guides(fill = guide_legend(override.aes = list(size = 10)))
+
+#ggplot(cnts) +
+#geom_col(aes(x = category, y = count, fill = lifestage), colour ="black")  + xlab("") + ylab("Number of specific genes") + theme_light() + scale_fill_manual(values = hcols) + theme(axis.text=element_text(size=18), axis.title=element_text(size=18)) + guides(fill = guide_legend(override.aes = list(size = 12)))
+
+p1 + p2 + plot_layout(guides = "collect") & theme(legend.position = "right")
+```
+
+

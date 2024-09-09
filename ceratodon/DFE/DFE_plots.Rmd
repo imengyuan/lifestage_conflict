@@ -1,0 +1,132 @@
+---
+title: "ceratodon DFE"
+author: "Meng"
+date: "2023-10-05"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/DFE/"
+data_summary <- function(data, varname, groupnames){
+  require(plyr)
+  summary_func <- function(x, col){
+    c(mean = mean(x[[col]], na.rm=TRUE),
+      sd = sd(x[[col]], na.rm=TRUE),
+      sem = sd(x[[col]], na.rm=TRUE) / sqrt(length(x[[col]])),
+      lower <- quantile(x[[col]], 0.025),
+      upper <- quantile(x[[col]], 0.975))
+  }
+  data_sum<-ddply(data, groupnames, .fun=summary_func,
+                  varname)
+ return(data_sum)
+}
+```
+
+
+## get mean, SEM from bootstrapping
+```{r}
+read_and_process_data <- function(directory, qt_number) {
+  bs_g <- read.table(paste0(directory, "g_qt", qt_number, "_bs.prop_muts.txt"))
+  bs_s <- read.table(paste0(directory, "s_qt", qt_number, "_bs.prop_muts.txt"))
+  bs_u <- read.table(paste0(directory, "u_qt", qt_number, "_bs.prop_muts.txt"))
+  
+  bs_g$V5 <- rowSums(bs_g[, 3:4])
+  bs_g <- bs_g[, c(1:2, 5)]
+  colnames(bs_g) <- c("0~1", "1~10", ">10")
+
+  bs_s$V5 <- rowSums(bs_s[, 3:4])
+  bs_s <- bs_s[, c(1:2, 5)]
+  colnames(bs_s) <- c("0~1", "1~10", ">10")
+
+  bs_u$V5 <- rowSums(bs_u[, 3:4])
+  bs_u <- bs_u[, c(1:2, 5)]
+  colnames(bs_u) <- c("0~1", "1~10", ">10")
+
+  bs_s$Category <- "sporophyte"
+  bs_g$Category <- "gametophyte"
+  bs_u$Category <- "unbiased"
+  
+  # Convert to long format
+  g_long <- gather(bs_g, Nes, Prop, "0~1" : ">10", factor_key = TRUE)
+  s_long <- gather(bs_s, Nes, Prop, "0~1" : ">10", factor_key = TRUE)
+  u_long <- gather(bs_u, Nes, Prop, "0~1" : ">10", factor_key = TRUE)
+  
+  # get error bar
+  bs_all <-rbind(g_long,s_long,u_long)
+  summary <- data_summary(bs_all, varname="Prop", 
+                    groupnames=c("Category", "Nes"))
+  return(summary)
+}
+
+prop_qt_list <- list()
+
+# Loop through the different quantiles
+for (qt_number in 1:4) {
+  prop_qt <- read_and_process_data(directory, qt_number)
+  prop_qt$Quantile <- paste0("qt", qt_number)
+  prop_qt_list[[qt_number]] <- prop_qt
+}
+
+df <- do.call(rbind, prop_qt_list)
+colnames(df)[6:7] <- c("lower", "higher")
+write.table(df, file = paste0(directory,"final_prop_qt_apr.txt"), row.names = F, quote = F)
+```
+
+
+## plot DFE mean & CI
+```{r}
+df$Category <- factor(df$Category)
+levels(df$Category)
+df$Category <- factor(df$Category, level=c("sporophyte","gametophyte", "unbiased"))
+
+ggplot(df, aes(x=Nes,y=mean,fill=Category)) + geom_bar(stat="identity", position=position_dodge()) + theme_classic() + scale_x_discrete(limits=c("0~1", "1~10", ">10")) + scale_fill_manual(values = c("#E6F5D0", "#B8E186", "#238B45"))  + labs(x=expression(italic(paste(N[e], "s"))), y="Proportion of mutations") + geom_errorbar(aes(ymin=lower, ymax=higher), width=.2, position=position_dodge(.9)) +ggtitle("b") + theme(text = element_text(size = 10))+
+    facet_grid(.~Quantile,scales="free_x", switch = "x", space = "free_x") 
+```
+
+# all quantiles combined/no expression level quantiles
+```{r}
+bs_g <- read.table(paste0(directory, "genesg_a_bs.prop_muts.txt"))
+bs_s <- read.table(paste0(directory, "geness_a_bs.prop_muts.txt"))
+bs_u <- read.table(paste0(directory, "unbiased_bs.prop_muts.txt"))
+
+bs_g$V5 <- rowSums(bs_g[, 3:4])
+bs_g <- bs_g[, c(1:2, 5)]
+colnames(bs_g) <- c("0~1", "1~10", ">10")
+
+bs_s$V5 <- rowSums(bs_s[, 3:4])
+bs_s <- bs_s[, c(1:2, 5)]
+colnames(bs_s) <- c("0~1", "1~10", ">10")
+
+bs_u$V5 <- rowSums(bs_u[, 3:4])
+bs_u <- bs_u[, c(1:2, 5)]
+colnames(bs_u) <- c("0~1", "1~10", ">10")
+
+bs_s$Category <- "sporophyte"
+bs_g$Category <- "gametophyte"
+bs_u$Category <- "unbiased"
+  
+# Convert to long format
+g_long <- gather(bs_g, Nes, Prop, "0~1" : ">10", factor_key = TRUE)
+s_long <- gather(bs_s, Nes, Prop, "0~1" : ">10", factor_key = TRUE)
+u_long <- gather(bs_u, Nes, Prop, "0~1" : ">10", factor_key = TRUE)
+
+# get error bar
+bs_all <-rbind(g_long,s_long,u_long)
+df2 <- data_summary(bs_all, varname="Prop", 
+                    groupnames=c("Category", "Nes"))
+colnames(df2)[6:7] <- c("lower", "higher")
+write.table(df2, file = paste0(directory,"final_prop_apr.txt"), row.names = F, quote = F)
+```
+
+
+```{r}
+df2$Category <- factor(df2$Category)
+levels(df2$Category)
+df2$Category <- factor(df2$Category, level=c("sporophyte","gametophyte", "unbiased"))
+
+ggplot(df2, aes(x=Nes,y=mean,fill=Category)) + geom_bar(stat="identity", position=position_dodge()) + theme_classic() + scale_x_discrete(limits=c("0~1", "1~10", ">10")) + scale_fill_manual(values = c("#E6F5D0", "#B8E186", "#238B45"))  + labs(x=expression(italic(paste(N[e], "s"))), y="Proportion of mutations") + geom_errorbar(aes(ymin=lower, ymax=higher), width=.2, position=position_dodge(.9)) +ggtitle("b") + theme(text = element_text(size = 15))
+```
+

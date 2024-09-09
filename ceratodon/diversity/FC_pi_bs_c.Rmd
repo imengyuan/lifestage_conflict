@@ -1,0 +1,265 @@
+---
+title: "FC diversity and bootstrapping in ceratodon"
+author: "Meng"
+date: "2023-12-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(patchwork)
+library(binr)
+library(dplyr)
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/diversity/"
+```
+
+## merge pi estimates
+```{r}
+pixy <- read.table(paste0(directory,"auto_syn_geneWise_pi.txt"), header=TRUE) 
+pixy <- pixy[complete.cases(pixy),] # 27598
+pixy <- pixy %>% filter(no_sites >= 50) # 21396
+colnames(pixy)[2:4] <- c("chrom", "start", "end")
+
+DE_c <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/deseq2/DE_results_all.txt", header =T) # 30107
+DE_c <- DE_c %>% filter(g_mean > 5 | s_mean > 5) # 25861 (including UV)
+
+ratio_pixy <- inner_join(DE_c, pixy, by=c("chrom", "start", "end"))# 21084 (18615 no UV)
+write.csv(ratio_pixy, file = paste0(directory,"ratio_pixy_innerjoin.csv"), row.names = FALSE, quote = FALSE)
+ratio_pixy <- read.csv(paste0(directory,"ratio_pixy_innerjoin.csv"))
+
+#ratio_pixy <- read.csv(paste0(directory,"ratio_pixy_innerjoin.txt"))
+pixy <- read.table(paste0(directory,"auto_nonsyn_geneWise_pi.txt"), header=TRUE) 
+pixy <- pixy[complete.cases(pixy),] # 32725
+pixy <- pixy %>% filter(no_sites >= 50) #32349
+head(pixy)
+colnames(pixy)[2:5] <- c("chrom", "start", "end","avg_pi_nonsyn")
+
+stats <- inner_join(ratio_pixy, pixy, by=c("pop", "chrom", "start", "end")) #  (18615 no UV)
+write.csv(stats, file = paste0(directory,"ceratodon_pi_n_pi_s.csv"), row.names = FALSE, quote = FALSE)
+stats  <- read.csv(paste0(directory,"ceratodon_pi_n_pi_s.csv"))
+```
+
+
+## determine FC bins
+```{r}
+g_bias <- DE_c %>% filter(log2FoldChange>0) # 13434
+s_bias <- DE_c %>% filter(log2FoldChange<0) # 12427
+
+bins.quantiles(g_bias$log2FoldChange, 4, 4, verbose = FALSE)
+bins.quantiles(s_bias$log2FoldChange, 4, 4, verbose = FALSE)
+
+DE_c <- DE_c %>%  mutate(tag = case_when(
+    log2FoldChange > 0 & log2FoldChange <= 0.43028 ~ tags[5],
+    log2FoldChange > 0.43028 & log2FoldChange <= 0.996 ~ tags[6],
+    log2FoldChange > 0.996 & log2FoldChange <= 1.99 ~ tags[7],
+    log2FoldChange > 1.99   ~ tags[8],
+    
+    log2FoldChange <= -1.739 ~ tags[1],
+    log2FoldChange > -1.739 & log2FoldChange <= -0.8416 ~ tags[2],
+    log2FoldChange > -0.8416 & log2FoldChange <= -0.3853 ~ tags[3],
+    log2FoldChange > -0.3853 & log2FoldChange < 0 ~ tags[4]
+    ))
+table(DE_c$tag)
+```
+                       
+## separate data into FC bin
+```{r}
+tags <- c("s4", "s3", "s2", "s1", "g1", "g2", "g3", "g4")
+
+stats <- as_tibble(stats) %>% 
+  mutate(tag = case_when(
+    log2FoldChange > 0 & log2FoldChange <= 0.43028 ~ tags[5],
+    log2FoldChange > 0.43028 & log2FoldChange <= 0.996 ~ tags[6],
+    log2FoldChange > 0.996 & log2FoldChange <= 1.99 ~ tags[7],
+    log2FoldChange > 1.99   ~ tags[8],
+    
+    log2FoldChange <= -1.739 ~ tags[1],
+    log2FoldChange > -1.739 & log2FoldChange <= -0.8416 ~ tags[2],
+    log2FoldChange > -0.8416 & log2FoldChange <= -0.3853 ~ tags[3],
+    log2FoldChange > -0.3853 & log2FoldChange < 0 ~ tags[4]
+    ))
+
+table(stats$tag)
+```
+g1   g2   g3   g4   s1   s2   s3   s4 
+2564 2544 2517 2390 2319 2265 2073 1943 
+           
+## function to do bootstraps and get pi_n pi_s and the ratio
+```{r}
+# a function to calculate the weighted average of pi_n pi_s
+calculate_pi <- function(data) {
+    data <- data %>%
+      mutate(pi_syn = avg_pi * no_sites.x) %>%
+      mutate(pi_nonsyn = avg_pi_nonsyn * no_sites.y)
+    sum_pi_syn <- sum(data$pi_syn)
+    sum_pi_nonsyn <- sum(data$pi_nonsyn)
+    sum_no_sites_x <- sum(data$no_sites.x)
+    sum_no_sites_y <- sum(data$no_sites.y)
+    weighted_pi_syn <- sum_pi_syn / sum_no_sites_x
+    weighted_pi_nonsyn <- sum_pi_nonsyn / sum_no_sites_y
+    ratio_weighted_pis <- weighted_pi_nonsyn / weighted_pi_syn
+    result <- data.frame(
+      tag = unique(data$tag),
+      weighted_pi_syn = weighted_pi_syn,
+      weighted_pi_nonsyn = weighted_pi_nonsyn,
+      ratio_weighted_pis = ratio_weighted_pis
+    )
+    return(result)
+  }
+  
+# bootstrap and calculate the mean and 95% of weighted average of pi_n pi_s pi_n/pi_s
+bootstrap_calculate_pi <- function(data, iterations = 1000) {
+    # set up the output format
+    results <- data.frame(tag = character(), weighted_pi_syn = numeric(), weighted_pi_nonsyn = numeric(),   ratio_weighted_pis = numeric(), stringsAsFactors = FALSE)
+    
+    # bootstrap 1000 times and save to result
+    for (i in 1:iterations) {
+      resampled_data <- data[sample(nrow(data), replace = TRUE), ]
+      calculated_values <- calculate_pi(resampled_data)
+      if (nrow(results) == 0) {
+        results <- calculated_values
+      } else {
+        results <- rbind(results, calculated_values)}
+    }
+
+    # calculate the mean and 95% CI from bootstrapped values
+    output <- data.frame(
+            tag = unique(results$tag),
+            mean_pi_syn = mean(results$weighted_pi_syn),
+            mean_pi_nonsyn = mean(results$weighted_pi_nonsyn),
+            mean_ratio_pis = mean(results$ratio_weighted_pis),
+            lower_pi_syn = quantile(results$weighted_pi_syn, 0.025),
+            higher_pi_syn = quantile(results$weighted_pi_syn, 0.975),
+            lower_pi_nonsyn = quantile(results$weighted_pi_nonsyn, 0.025),
+            higher_pi_nonsyn = quantile(results$weighted_pi_nonsyn, 0.975),
+            lower_ratio_pis = quantile(results$ratio_weighted_pis, 0.025),
+            higher_ratio_pis = quantile(results$ratio_weighted_pis, 0.975)
+    )
+    return(output)
+  }
+```
+
+
+## plot mean & CI
+```{r}
+grouped_data <- stats %>%
+  group_by(tag)
+
+results_list <- lapply(split(grouped_data, grouped_data$tag), function(group) {
+  bootstrap_calculate_pi(group)
+})
+
+pi_c <- bind_rows(results_list)
+
+pi_c <- pi_c %>% mutate(tag = factor(tag, levels = c("s4", "s3", "s2", "s1", "g1", "g2", "g3", "g4")))
+levels(pi_c$tag)
+```
+
+
+```{r}
+p4 <- ggplot(data = pi_c, mapping = aes(x=tag, y=mean_pi_syn)) + 
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_syn, ymax=higher_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("d") +labs(x ="log2FoldChange",y = expression(pi[s]))+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+
+p5 <- ggplot(data = pi_c, mapping = aes(x=tag, y=mean_pi_nonsyn)) + 
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_nonsyn, ymax=higher_pi_nonsyn), width=.2, position=position_dodge(.9))+ ggtitle("e") +labs(x ="log2FoldChange",y = expression(pi[n]))+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+
+p6 <- ggplot(data = pi_c, mapping = aes(x=tag, y=mean_ratio_pis)) + 
+    geom_point()+ geom_errorbar(aes(ymin=lower_ratio_pis, ymax=higher_ratio_pis), width=.2, position=position_dodge(.9))+ ggtitle("f") +labs(x ="log2FoldChange",y = expression(paste(pi[n], "/", pi[s], " ratio")))+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+
+p4 + p5 + p6 + plot_layout(nrow = 3,guides = "collect") 
+```
+
+plot both rumex and ceratodon
+```{r}
+(p1 | p4) / (p2 | p5) / (p3 | p6)
+```
+
+## mean & sem plots rather than mean & CI
+function to get mean and sem
+```{r}
+calculate_pi_real <- function(data) {
+    data <- data %>%
+      mutate(pi_syn = avg_pi * no_sites.x) %>%
+      mutate(pi_nonsyn = avg_pi_nonsyn * no_sites.y) #%>%
+      #mutate(ratio_pis = avg_pi_nonsyn / avg_pi) # issue with division by zero
+    sum_pi_syn <- sum(data$pi_syn)
+    sum_pi_nonsyn <- sum(data$pi_nonsyn)
+    sum_no_sites_x <- sum(data$no_sites.x)
+    sum_no_sites_y <- sum(data$no_sites.y)
+    
+    weighted_pi_syn <- sum_pi_syn / sum_no_sites_x
+    weighted_pi_nonsyn <- sum_pi_nonsyn / sum_no_sites_y
+    ratio_weighted_pis <- weighted_pi_nonsyn / weighted_pi_syn
+    
+    mean_avg_pi_syn <- mean(data$avg_pi)
+    mean_avg_pi_nonsyn <- mean(data$avg_pi_nonsyn)
+    #mean_ratio_pis <- mean(data$ratio_pis)
+    
+    sem_avg_pi_syn <- sd(data$avg_pi) / sqrt(length(data$avg_pi))
+    sem_avg_pi_nonsyn <- sd(data$avg_pi_nonsyn) / sqrt(length(data$avg_pi_nonsyn))
+    #sem_ratio_pis <- sd(data$ratio_pis) / sqrt(length(data$ratio_pis))
+  
+    result <- data.frame(
+      tag = unique(data$tag),
+      count = length(data$tag),
+      weighted_pi_syn = weighted_pi_syn,
+      weighted_pi_nonsyn = weighted_pi_nonsyn,
+      ratio_weighted_pis = ratio_weighted_pis,
+      mean_avg_pi_syn =  mean_avg_pi_syn,
+      mean_avg_pi_nonsyn = mean_avg_pi_nonsyn,
+      #mean_ratio_pis = mean_ratio_pis,
+      sem_avg_pi_syn = sem_avg_pi_syn,
+      sem_avg_pi_nonsyn = sem_avg_pi_nonsyn
+      #sem_ratio_pis = sem_ratio_pis
+    )
+    return(result)
+}
+```
+
+
+```{r}
+grouped_data <- stats %>%
+  group_by(tag)
+
+results_list <- lapply(split(grouped_data, grouped_data$tag), function(group) {
+  calculate_pi_real(group)
+})
+
+pi_c_real <- bind_rows(results_list)
+
+pi_c_real <- pi_c_real %>% mutate(tag = factor(tag, levels = c("s4", "s3", "s2", "s1", "g1", "g2", "g3", "g4")))
+levels(pi_c_real$tag)
+```
+
+```{r}
+p4_2 <- ggplot(data = pi_c_real, mapping = aes(x=tag, y=mean_avg_pi_syn)) + 
+    geom_point()+ geom_errorbar(aes(ymin=mean_avg_pi_syn - sem_avg_pi_syn, ymax=mean_avg_pi_syn + sem_avg_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("c") +labs(x ="log2FoldChange",y =expression(pi[s]))+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+
+p5_2 <- ggplot(data = pi_c_real, mapping = aes(x=tag, y=mean_avg_pi_nonsyn)) + 
+    geom_point()+ geom_errorbar(aes(ymin=mean_avg_pi_nonsyn - sem_avg_pi_nonsyn, ymax=mean_avg_pi_nonsyn + sem_avg_pi_nonsyn), width=.2, position=position_dodge(.9))+ ggtitle("d") +labs(x ="log2FoldChange",y =expression(pi[n]))+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+
+p4_2 + p5_2 + plot_layout(nrow = 1,guides = "collect") 
+```
+
+p3 p6 are just place holders
+```{r}
+(p1_2 | p4_2) / (p2_2 | p5_2) / (p3 | p6)
+```
+
+
+## save the output
+```{r}
+# save the output
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/diversity/"
+write.table(pi_c, file=paste0(directory,"pi_weighted_mean_CI_apr10.txt"), sep = "\t",row.names = FALSE, quote = FALSE)
+write.table(pi_c_real, file=paste0(directory,"pi_c_real.txt_apr"), sep = "\t",row.names = FALSE, quote = FALSE)
+#pi_c <- read.table(paste0(directory,"pi_sd_weighted.txt"),header=T)
+
+tag_cnt <- group_by(stats, tag) %>%
+  dplyr::summarise(
+    count = n()
+  )
+pi_c <- left_join(tag_cnt, pi_c, by = "tag")
+
+```
+

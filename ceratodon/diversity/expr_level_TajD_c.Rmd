@@ -1,0 +1,164 @@
+---
+title: "tajD and expr level"
+author: "Meng"
+date: "2024-03-28"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(patchwork)
+library(dplyr)
+library(ggplot2)
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/diversity/"
+FC_tajD_c <- read.table(paste0(directory,"FC_tajD_syn_innerjoin.txt"), header = T)
+FC_tajD_nc <- read.table(paste0(directory,"FC_tajD_nonsyn_innerjoin.txt"), header = T)
+```
+
+```{r}
+get_tajD <- function(data) {
+        count <- length(data$TajD_Pop)
+        mean_tajD <- mean(data$TajD_Pop)
+        sem_tajD <- sd(data$TajD_Pop)/sqrt(length(data$TajD_Pop))
+        bias <- unique(data$bias)
+        expr_level <- unique(data$expr_level)
+        
+        result <- data.frame(
+        count = count,
+        mean_tajD = mean_tajD,
+        sem_tajD = sem_tajD,
+        bias = bias,
+        expr_level = expr_level
+        )
+  return(result)
+}
+```
+
+
+## TajD syn
+```{r}
+# FC_tajD_c <- FC_tajD_c %>% mutate(expr_level = case_when(
+#     baseMean <= 41.9 ~ "qt1",
+#     baseMean > 41.9 & baseMean <= 251 ~ "qt2",
+#     baseMean > 251 & baseMean <= 816 ~ "qt3",
+#     baseMean > 816 ~ "qt4"
+# ))
+
+FC_tajD_c <- FC_tajD_c %>% mutate(expr_level = case_when(
+    baseMean <= 9.78 ~ "qt1",
+    baseMean > 9.78 & baseMean <= 25.73 ~ "qt2",
+    baseMean > 25.73 & baseMean <= 58.94 ~ "qt3",
+    baseMean > 58.94 & baseMean <= 126.3 ~ "qt4",
+    baseMean > 126.3 & baseMean <= 242.92 ~ "qt5",
+    baseMean > 242.92 & baseMean <= 409.55 ~ "qt6",
+    baseMean > 409.55 & baseMean <= 647.09 ~ "qt7",
+    baseMean > 647.09 & baseMean <= 1020 ~ "qt8",
+    baseMean > 1020 & baseMean <= 1815.6 ~ "qt9",
+    baseMean > 1815.6 ~ "qt10"
+))
+
+FC_tajD_c <- FC_tajD_c %>% mutate(bias = case_when(
+    log2FoldChange > 0 ~ "g",
+    log2FoldChange < 0 ~ "s"
+))
+
+table(FC_tajD_c$expr_level)
+table(FC_tajD_c$bias)
+
+grouped_data <- FC_tajD_c %>%
+  group_by(bias, expr_level)
+
+
+results_list <- lapply(split(grouped_data, interaction(grouped_data$bias, grouped_data$expr_level)), function(group) {
+  get_tajD(group)
+})
+
+tajD_expr_syn_c <- bind_rows(results_list)
+```
+qt1 qt10  qt2  qt3  qt4  qt5  qt6  qt7  qt8  qt9 
+1265 2326 1378 1472 1659 1907 2123 2210 2227 2250
+ qt1  qt2  qt3  qt4 
+3478 4324 5348 5667  
+    g     s 
+10079  8738 
+
+## TajD nonsyn
+```{r}
+# FC_tajD_nc <- FC_tajD_nc %>% mutate(expr_level = case_when(
+#     baseMean <= 41.9 ~ "qt1",
+#     baseMean > 41.9 & baseMean <= 251 ~ "qt2",
+#     baseMean > 251 & baseMean <= 816 ~ "qt3",
+#     baseMean > 816 ~ "qt4"
+# ))
+FC_tajD_nc <- FC_tajD_nc %>% mutate(expr_level = case_when(
+    baseMean <= 9.78 ~ "qt1",
+    baseMean > 9.78 & baseMean <= 25.73 ~ "qt2",
+    baseMean > 25.73 & baseMean <= 58.94 ~ "qt3",
+    baseMean > 58.94 & baseMean <= 126.3 ~ "qt4",
+    baseMean > 126.3 & baseMean <= 242.92 ~ "qt5",
+    baseMean > 242.92 & baseMean <= 409.55 ~ "qt6",
+    baseMean > 409.55 & baseMean <= 647.09 ~ "qt7",
+    baseMean > 647.09 & baseMean <= 1020 ~ "qt8",
+    baseMean > 1020 & baseMean <= 1815.6 ~ "qt9",
+    baseMean > 1815.6 ~ "qt10"
+))
+
+FC_tajD_nc <- FC_tajD_nc %>% mutate(bias = case_when(
+    log2FoldChange > 0 ~ "g",
+    log2FoldChange < 0 ~ "s"
+))
+
+table(FC_tajD_nc$expr_level)
+table(FC_tajD_nc$bias)
+
+grouped_data <- FC_tajD_nc %>%
+  group_by(bias, expr_level)
+
+results_list <- lapply(split(grouped_data, interaction(grouped_data$bias, grouped_data$expr_level)), function(group) {
+  get_tajD(group)
+})
+
+tajD_expr_nonsyn_c <- bind_rows(results_list)
+```
+qt1 qt10  qt2  qt3  qt4  qt5  qt6  qt7  qt8  qt9 
+1456 1976 1596 1638 1773 1945 2078 2090 2071 2043 
+
+qt1  qt2  qt3  qt4 
+3986 4542 5103 5035 
+  g     s 
+10101  8565 
+
+
+## 10 bins
+```{r}
+tajD_expr_syn_c <- tajD_expr_syn_c %>% mutate(expr_level = factor(expr_level, levels = c("qt1", "qt2", "qt3", "qt4", "qt5", "qt6", "qt7", "qt8","qt9", "qt10")))
+levels(tajD_expr_syn_c$expr_level)
+
+tajD_expr_nonsyn_c <- tajD_expr_nonsyn_c %>% mutate(expr_level = factor(expr_level, levels = c("qt1", "qt2", "qt3", "qt4", "qt5", "qt6", "qt7", "qt8","qt9", "qt10")))
+levels(tajD_expr_nonsyn_c$expr_level)
+
+
+p1c <- ggplot(data = tajD_expr_syn_c, mapping = aes(x=expr_level, y=mean_tajD, colour = bias)) + 
+    geom_point(position=position_dodge(.9))+ geom_errorbar(aes(ymin=mean_tajD - sem_tajD, ymax=mean_tajD + sem_tajD), width=.2, position=position_dodge(.9))+ ggtitle("c") +labs(x ="expression level quantiles",y = expression(D[s]))+ theme_classic() + theme(text = element_text(size = 10)) 
+
+p2c <- ggplot(data = tajD_expr_nonsyn_c, mapping = aes(x=expr_level, y=mean_tajD, colour = bias)) + 
+    geom_point(position=position_dodge(.9))+ geom_errorbar(aes(ymin=mean_tajD - sem_tajD, ymax=mean_tajD + sem_tajD), width=.2, position=position_dodge(.9))+ ggtitle("d") +labs(x ="expression level quantiles",y = expression(D[n]))+ theme_classic() + theme(text = element_text(size = 10)) 
+
+p1c + p2c + plot_layout(nrow = 1,guides = "collect") & theme(legend.position = "right")
+```
+
+## continuous
+```{r}
+p3c <- ggplot(data = FC_tajD_c, mapping = aes(x=baseMean, y=TajD_Pop, colour = bias)) + geom_point()+ geom_smooth()+ ggtitle("c") +labs(x ="expression level",y = expression(D[s]))+ theme_classic() + theme(text = element_text(size = 10)) + xlim(0,20000)
+
+p4c <- ggplot(data = FC_tajD_nc, mapping = aes(x=baseMean, y=TajD_Pop, colour = bias)) + geom_point()+ geom_smooth()+ ggtitle("d") +labs(x ="expression level",y = expression(D[n]))+ theme_classic() + theme(text = element_text(size = 10)) + xlim(0,20000)
+
+p3c + p4c
+```
+
+
+```{r}
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/diversity/"
+write.table(tajD_expr_syn_c, file=paste0(directory,"tajD_expr_syn_c.txt"), sep = "\t",row.names = FALSE, quote = FALSE)
+write.table(tajD_expr_nonsyn_c, file=paste0(directory,"tajD_expr_nonsyn_c.txt"), sep = "\t",row.names = FALSE, quote = FALSE)
+```
+

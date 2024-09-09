@@ -1,0 +1,386 @@
+---
+title: "ceratodon separate expression"
+author: "Meng"
+date: "2022-11-14"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(ggplot2)
+library(dplyr)
+library("DESeq2")
+library('RColorBrewer')
+library("stringr")
+library(VennDiagram)
+library(rattle)
+setwd("/Users/yuanmeng/Dropbox/ceratodon/deseq2")
+```
+
+
+## 1. prep dataset
+```{r}
+readcnt<-read.table("readcnts_ceratodon.filt.txt",header=T)
+head(readcnt)
+readcnt_matrix<-as.matrix(readcnt[ , -c(1:6)])
+rownames(readcnt_matrix) <- readcnt[ , 1]
+head(readcnt_matrix)
+str(readcnt_matrix)
+meta_data <- data.frame(colnames(readcnt_matrix))
+write.csv(meta_data, file="meta_dataNov14.csv", row.names = FALSE)
+meta_data<-read.csv("meta_data_full.csv")
+rownames(meta_data) <- colnames(readcnt_matrix)
+
+meta_data$id <- seq.int(nrow(meta_data)) 
+l_m <- meta_data %>% filter(sex == "m") %>% select(id)
+l_f <- meta_data %>% filter(sex == "f") %>% select(id)
+
+readcnt <- readcnt[ , -c(1:6)]
+readcnt_m <- readcnt[,c(1:21,t(l_m))]
+readcnt_f <- readcnt[,c(1:21,t(l_f))]
+
+meta_data_m <- meta_data %>% filter(sex == "m" | sex == "unsexed") %>% select(2)
+meta_data_f <- meta_data %>% filter(sex == "f" | sex == "unsexed") %>% select(2)
+
+readcnt_matrix_m<-as.matrix(readcnt_m)
+readcnt_matrix_f<-as.matrix(readcnt_f)
+rownames(readcnt_matrix_m) <- readcnt[ , 1]
+rownames(readcnt_matrix_f) <- readcnt[ , 1]
+str(readcnt_matrix_m)
+str(readcnt_matrix_f)
+```
+Mar 17: get unfiltered DE genes lists 
+
+## 2. run deseq2
+```{r}
+dds_m <- DESeqDataSetFromMatrix(countData = readcnt_matrix_m, 
+                              colData = meta_data_m,
+                              design = ~ tissue)
+dds_m <- DESeq(dds_m)
+resultsNames(dds_m) #"tissue_sporophyte_vs_gametophyte"
+res_m <- results(dds_m)
+head(res_m)
+summary(res_m)
+result_m <- res_m[complete.cases(res_m),]
+nrow(res_m) # 34932 
+nrow(result_m) # 30362
+
+# DE_tissue_TX<-as.data.frame(subset(result_all, padj<.1 & abs(log2FoldChange)>1))
+# DE_tissue_TX <- DE_tissue_TX %>% mutate(gene = rownames(DE_tissue_TX))
+```
+
+```{r}
+dds_f <- DESeqDataSetFromMatrix(countData = readcnt_matrix_f, 
+                              colData = meta_data_f,
+                              design = ~ tissue)
+dds_f <- DESeq(dds_f)
+resultsNames(dds_f) #"tissue_sporophyte_vs_gametophyte"
+res_f <- results(dds_f)
+head(res_f)
+summary(res_f)
+result_f <- res_f[complete.cases(res_f),]
+nrow(res_f) # 34932 
+nrow(result_f) # 28603
+
+```
+
+3. DE analysis
+```{r}
+DE_m<-as.data.frame(subset(result_m, baseMean >= 1))
+DE_f<-as.data.frame(subset(result_f, baseMean >= 1))
+
+DE_m <- DE_m %>% mutate(gene = rownames(DE_m))
+DE_f <- DE_f %>% mutate(gene = rownames(DE_f))
+
+DE_m<-inner_join(DE_m, gff, by="gene")
+DE_f<-inner_join(DE_f, gff, by="gene")
+
+#write.csv(DE_m, file = "/Users/yuanmeng/Dropbox/ceratodon/deseq2/DE_results/DE_results_m.csv", row.names = FALSE, quote = FALSE) 
+write.table(DE_m, file = "/Users/yuanmeng/Dropbox/ceratodon/deseq2/DE_results/DE_results_m.txt", row.names = FALSE, quote = FALSE, sep = "\t") 
+write.table(DE_f, file = "/Users/yuanmeng/Dropbox/ceratodon/deseq2/DE_results/DE_results_f.txt", row.names = FALSE, quote = FALSE, sep = "\t") 
+#write.table(s_specific[,c(2:4)],file="s_specific_auto.bed",sep="\t",row.names = FALSE, col.names = FALSE, quote=FALSE)
+```
+
+
+
+```{r}
+DE_c<-as.data.frame(subset(result_m, padj < 0.05 & abs(log2FoldChange)>1 & baseMean >= 1))
+DE_c<-as.data.frame(subset(result_m, padj < 0.05 & baseMean >= 1))
+DE_c <- DE_c %>% mutate(gene = rownames(DE_c))
+head(DE_c) # 13059
+DE_c <- DE_c[,c(7,1:6)]
+
+DE_c_sporophyte <-  DE_c %>% filter(log2FoldChange>0) # 5068
+DE_c_gametophyte <-  DE_c %>% filter(log2FoldChange<0) # 6269
+# only keep V genes
+head(DE_c_sporophyte)
+
+#write.csv(DE_c_sporophyte[c(1:200),c(1,7)], file = "sporophyte_biased_pi.csv", row.names = FALSE, quote = FALSE) 
+
+# use the gff with sex chromosome
+gff<-read.table("R40_GG1U_combined.gene.final.gff")
+head(gff)
+colnames(gff)<-c("chrom","start","end","gene")
+table(gff$chrom)
+write.csv(table(gff$chrom),file="gff_LG.csv")
+
+# 
+sporophyte_LG<-inner_join(DE_c_sporophyte, gff, by="gene")
+table(sporophyte_LG$chrom)
+write.csv(table(sporophyte_LG$chrom),file="sporophyte_LG_Nov14.csv")
+#sum(table(sporophyte_LG$chrom))
+
+gametophyte_LG<-inner_join(DE_c_gametophyte, gff, by="gene")
+write.csv(table(gametophyte_LG$chrom),file="gametophyte_LG_Nov14.csv")
+table(gametophyte_LG$chrom)
+#sum(table(gametophyte_LG$chrom))
+
+write.csv(sporophyte_LG, file = "sporophyte_biased_gene_Nov14male.csv", row.names = FALSE, quote = FALSE) 
+write.csv(gametophyte_LG, file = "gametophyte_biased_gene_Nov14male.csv", row.names = FALSE, quote = FALSE)
+
+```
+
+U genes
+```{r}
+DE_c_f<-as.data.frame(subset(result_f, padj < 0.05 & abs(log2FoldChange)>1 & baseMean >= 1))
+DE_c_f<-as.data.frame(subset(result_f, padj < 0.05 & baseMean >= 1))
+DE_c_f <- DE_c_f %>% mutate(gene = rownames(DE_c_f))
+head(DE_c_f) # 12791
+DE_c_f <- DE_c_f[,c(7,1:6)]
+
+DE_c_f_sporophyte <-  DE_c_f %>% filter(log2FoldChange>0) 
+DE_c_f_gametophyte <-  DE_c_f %>% filter(log2FoldChange<0) 
+# only keep V genes
+head(DE_c_f_sporophyte)
+
+sporophyte_LG_f<-inner_join(DE_c_f_sporophyte, gff, by="gene")
+table(sporophyte_LG_f$chrom)
+write.csv(table(sporophyte_LG_f$chrom),file="sporophyte_LG_f_Nov14.csv")
+#sum(table(sporophyte_LG_f$chrom))
+
+
+gametophyte_LG_f<-inner_join(DE_c_f_gametophyte, gff, by="gene")
+write.csv(table(gametophyte_LG_f$chrom),file="gametophyte_LG_f_Nov14.csv")
+table(gametophyte_LG_f$chrom)
+#sum(table(gametophyte_LG_f$chrom))
+
+write.csv(sporophyte_LG_f, file = "sporophyte_biased_gene_Nov14female.csv", row.names = FALSE, quote = FALSE) 
+write.csv(gametophyte_LG_f, file = "gametophyte_biased_gene_Nov14female.csv", row.names = FALSE, quote = FALSE)
+
+```
+
+## Plot cnts
+
+```{r}
+#cnts<-read.table("/Users/yuanmeng/Dropbox/ceratodon/deseq2/DE.cnt_Nov14.txt", header = TRUE)
+cnts<-read.table("/Users/yuanmeng/Dropbox/ceratodon/deseq2/DE.cnt_Mar20.txt", header = TRUE)
+cnts<-read.table("/Users/yuanmeng/Dropbox/ceratodon/deseq2/DE.cnt_Mar20_noFC.txt", header = TRUE)
+#cnts<-read.table("/Users/yuanmeng/Dropbox/ceratodon/deseq2/DE.cnt.txt", header = TRUE)
+cnts$lifestage <- factor(cnts$lifestage, level=c("sporophyte-bias","gametophyte-bias"))
+
+hcols <- c("black",  "white")
+ggplot(cnts) +
+geom_col(aes(x = chrom, y = count, fill = lifestage), position = "fill", colour ="black")  + xlab("") + ylab("Proportion of DE genes") + theme_light() + scale_fill_manual(values = hcols) + theme(axis.text=element_text(size=18), axis.title=element_text(size=18)) + guides(fill = guide_legend(override.aes = list(size = 18)))
+
+
+```
+
+
+
+## TPM
+try thr same thing?
+look at tpm for genes on U and V
+I think I tested this before... Male gametophyte samples shouldnt have U expression, does it show this?
+```{r}
+readcnt<-read.table("readcnts_ceratodon.filt.txt",header=T)
+readcnt<-readcnt[ , -c(2:5)]
+head(readcnt)
+
+readcnt[-(1:2)] <- readcnt[-(1:2)]/readcnt[,2][row(readcnt[-(1:2)])]
+readcnt[,-c(1:2)] <- apply(readcnt[,-c(1:2)],2, function(x){x * 1e6 / sum(x)})
+sum(readcnt[,17])
+
+n<-data.frame(colnames(readcnt))
+readcnt_m <- readcnt[,c(1:21,t(l_m))]
+readcnt_f <- readcnt[,c(1:21,t(l_f))]
+
+readcnt <- readcnt %>% mutate(s_mean=rowMeans(readcnt[,c(3:23)])) %>% mutate(g_mean=rowMeans(readcnt[,c(24:59)])) %>% mutate(g_mean_m=rowMeans(readcnt[,t(l_m)])) %>% mutate(g_mean_f=rowMeans(readcnt[,t(l_f)]))
+
+s_specific_auto <- readcnt %>% filter(s_mean>2 & g_mean<0.5) %>% select(1) 
+g_specific_auto <- readcnt %>% filter(g_mean>2 & s_mean<0.5) %>% select(1)  
+
+s_specific_m <- readcnt %>% filter(s_mean>2 & g_mean_m<0.5) %>% select(1) 
+g_specific_m <- readcnt %>% filter(g_mean_m>2 & s_mean<0.5) %>% select(1)  
+
+s_specific_f <- readcnt %>% filter(s_mean>2 & g_mean_f<0.5) %>% select(1) 
+g_specific_f <- readcnt %>% filter(g_mean_f>2 & s_mean<0.5) %>% select(1)  
+
+
+colnames(g_specific_auto)<-"gene"
+colnames(s_specific_auto)<-"gene"
+s_specific_auto <- left_join(s_specific_auto,gff,by="gene")
+sa <- data.frame(table(s_specific_auto$chrom))
+sum(sa[c(1:12),2])
+
+g_specific_auto <- left_join(g_specific_auto,gff,by="gene")
+ga <- data.frame(table(g_specific_auto$chrom))
+sum(ga[c(1:12),2])
+
+
+colnames(g_specific_m)<-"gene"
+colnames(s_specific_m)<-"gene"
+s_specific_m <- left_join(s_specific_m,gff,by="gene")
+sm <- data.frame(table(s_specific_m$chrom))
+sum(sm[c(1:12),2])
+
+g_specific_m <- left_join(g_specific_m,gff,by="gene")
+gm <- data.frame(table(g_specific_m$chrom))
+sum(gm[c(1:12),2])
+
+colnames(g_specific_f)<-"gene"
+colnames(s_specific_f)<-"gene"
+s_specific_f <- left_join(s_specific_f,gff,by="gene")
+sf <- data.frame(table(s_specific_f$chrom))
+sum(sf[c(1:12),2])
+
+g_specific_f <- left_join(g_specific_f,gff,by="gene")
+gf <- data.frame(table(g_specific_f$chrom))
+sum(gf[c(1:12),2])
+```
+
+
+```{r}
+cnts<-read.table("/Users/yuanmeng/Dropbox/ceratodon/deseq2/DE.cnt_specific_Nov22.txt", header = TRUE)
+
+cnts<-read.table("/Users/yuanmeng/Dropbox/ceratodon/deseq2/DE.cnt_specific_Mar20_p005.txt", header = TRUE)
+cnts<-read.table("/Users/yuanmeng/Dropbox/ceratodon/deseq2/DE.cnt_specific_Mar20_p01.txt", header = TRUE)
+
+cnts$lifestage <- factor(cnts$lifestage, level=c("sporophyte-specific","gametophyte-specific"))
+
+hcols <- c("black",  "white")
+ggplot(cnts) +
+geom_col(aes(x = chrom, y = count, fill = lifestage), position = "fill", colour ="black")  + xlab("") + ylab("Proportion of specific genes") + theme_light() + scale_fill_manual(values = hcols) + theme(axis.text=element_text(size=18), axis.title=element_text(size=18)) + guides(fill = guide_legend(override.aes = list(size = 12)))
+
+```
+
+
+# redo a combined stacked counts plot
+
+```{r}
+cnts1<-read.table("/Users/yuanmeng/Dropbox/ceratodon/deseq2/DE.cnt_specific_Mar20_p005.txt", header = TRUE)
+cnts2<-read.table("/Users/yuanmeng/Dropbox/ceratodon/deseq2/DE.cnt_Mar20.txt", header = TRUE)
+cnts1$category <- "specific genes"
+cnts2$category <- "biased genes"
+cnt_combined <- rbind(cnts1,cnts2)
+
+#cnt_combined <- cnt_combined %>% 
+
+#ggplot(cnt_combined, aes(x = chrom, y = count, fill = lifestage)) + geom_col() +facet_grid(.~category,scales="free_x", switch = "x", space = "free_x") 
+hcols <- c("black",  "white")
+ggplot(cnts) +
+geom_col(aes(x = chrom, y = count, fill = lifestage), colour ="black")  + xlab("") + ylab("Proportion of specific genes") + theme_light() + scale_fill_manual(values = hcols) + theme(axis.text=element_text(size=18), axis.title=element_text(size=18)) + guides(fill = guide_legend(override.aes = list(size = 12)))
+
+hcols <- c("black",  "white")
+
+```
+
+## Oct 2023
+
+```{r}
+# rumex
+g <- as.data.frame(table(genesg$chrom.x))
+sum(g[c(1:12),2])
+
+cnts<-read.table("/Users/yuanmeng/Downloads/ceratodon.cnt.txt", header = TRUE)
+cnts$lifestage <- factor(cnts$lifestage, level=c("sporophyte-specific","gametophyte-specific"))
+
+hcols <- c("black",  "white")
+ggplot(cnts) +
+geom_col(aes(x = chrom, y = count, fill = lifestage), position = "fill", colour ="black")  + xlab("") + ylab("Proportion of specific genes") + theme_light() + scale_fill_manual(values = hcols) + theme(axis.text=element_text(size=18), axis.title=element_text(size=18)) + guides(fill = guide_legend(override.aes = list(size = 12)))
+
+ggplot(cnts) +
+geom_col(aes(x = chrom, y = count, fill = lifestage), colour ="black")  + xlab("") + ylab("Number of specific genes") + theme_light() + scale_fill_manual(values = hcols) + theme(axis.text=element_text(size=18), axis.title=element_text(size=18)) + guides(fill = guide_legend(override.aes = list(size = 12)))
+```
+
+
+
+## fisher's exact teston specific genes
+```{r}
+cnts1<-read.table("/Users/yuanmeng/Dropbox/ceratodon/deseq2/DE.cnt_specific_Mar20_p005.txt", header = TRUE)
+cnts2<-read.table("/Users/yuanmeng/Dropbox/ceratodon/deseq2/DE.cnt_Mar20.txt", header = TRUE)
+cnts1
+
+table1 <- read.table("/Users/yuanmeng/Dropbox/ceratodon/c2023/auto_U_contigency_specific.txt", header=T)
+row.names(table1) <- c("A", "U")
+fisher.test(table1)
+
+table2 <- read.table("/Users/yuanmeng/Dropbox/ceratodon/c2023/auto_V_contigency_specific.txt", header=T)
+row.names(table2) <- c("A", "V")
+fisher.test(table2)
+```
+	Fisher's Exact Test for Count Data
+
+data:  table1
+p-value = 0.004002
+alternative hypothesis: true odds ratio is not equal to 1
+95 percent confidence interval:
+ 0.1746958 0.7595655
+sample estimates:
+odds ratio 
+ 0.3622758 
+ 
+ 
+ Fisher's Exact Test for Count Data
+
+data:  table2
+p-value = 0.7143
+alternative hypothesis: true odds ratio is not equal to 1
+95 percent confidence interval:
+ 0.413805 1.955580
+sample estimates:
+odds ratio 
+ 0.8785419
+
+
+## fisher's exact teston biased genes
+```{r}
+table1 <- read.table("/Users/yuanmeng/Dropbox/ceratodon/c2023/auto_U_contigency_bias.txt", header=T)
+row.names(table1) <- c("A", "U")
+fisher.test(table1)
+
+table2 <- read.table("/Users/yuanmeng/Dropbox/ceratodon/c2023/auto_V_contigency_bias.txt", header=T)
+row.names(table2) <- c("A", "V")
+fisher.test(table2)
+```
+Fisher's Exact Test for Count Data
+
+data:  table1
+p-value < 2.2e-16
+alternative hypothesis: true odds ratio is not equal to 1
+95 percent confidence interval:
+ 2.134912 2.910768
+sample estimates:
+odds ratio 
+  2.489065 
+
+Fisher's Exact Test for Count Data
+
+data:  table2
+p-value < 2.2e-16
+alternative hypothesis: true odds ratio is not equal to 1
+95 percent confidence interval:
+ 3.899331 5.495073
+sample estimates:
+odds ratio 
+  4.617869 
+
+
+
+```{r}
+cnts<-read.table("DE.cnt.txt", header = TRUE)
+hcols <- c("black",  "white")
+ggplot(cnts) +
+geom_col(aes(x = chrom, y = count, fill = lifestage), position = "fill", colour ="black")  + xlab("") + ylab("Proportion of DE genes") + theme_light() + scale_fill_manual(values = hcols) + theme(axis.text=element_text(size=12), axis.title=element_text(size=12)) 
+
+
+```
+
