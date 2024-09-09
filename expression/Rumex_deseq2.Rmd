@@ -199,10 +199,6 @@ nrow(genes_c[genes_c$log2FoldChange<=-3.95662,]) # 1359
 ```
 
 
-```{r}
-# p_specific <- genes %>% filter(is.infinite(p_l_ratio)) #1944
-# l_specific <- genes %>% filter(p_l_ratio == 0) # 1282
-```
 
 ```{r}
 # gff <-read.table(paste0(directory,"TE_filtered_REF_LA.gff"))

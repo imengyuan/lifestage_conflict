@@ -97,8 +97,6 @@ table(statsr$tag)
 g1   g2   g3   g4   s1   s2   s3   s4 
 1210 1130 1042 1009 1811 1847 1845 1840
 
-g1   g2   g3   g4   s1   s2   s3   s4 
-1097 1105 1093 1096 1835 1838 1836 1834 
 ## function to do bootstraps and get pi_n pi_s and the ratio
 ```{r}
 # a function to calculate the weighted average of pi_n pi_s
