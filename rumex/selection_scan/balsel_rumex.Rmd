@@ -10,6 +10,7 @@ library(dplyr)
 library(ggplot2)
 library(patchwork)
 library(tidyr)
+library(car)
 data="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/balsel/"
 ```
 
@@ -36,8 +37,8 @@ levels(scan$chrom)<- c("A1", "A4", "A2", "XY", "A3")
 scan <- scan %>% mutate(chrom = factor(chrom, levels = c("A1","A2","A3","A4","XY")))
 ```
 
-## plot inversion on A2, A3
 
+## plot inversion on A2, A3
 ```{r}
 scan3$chrom <- "A2"
 scan5$chrom <- "A3"
@@ -62,7 +63,6 @@ lines_data_facet_A2 <- data.frame(xintercept = c(5.6,69), facet = "A2")
 lines_data_facet_A3 <- data.frame(xintercept = c(0,34), facet = "A3")
 lines_data_facet_A4 <- data.frame(xintercept = c(95,115), facet = "A4")
 
-
 p7 <- ggplot(scan, aes(x = physPos/1000000, y = genPos))+
     facet_grid(.~chrom,scales="free_x", switch = "x", space = "free_x") + geom_point(size=0.3, alpha=0.5)+ ggtitle("a") +
     xlab("")+ylab("Genetic position (cM)")+theme_bw()+theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside",legend.position ="none")+ theme(text = element_text(size = 10), panel.spacing = unit(0.5, "lines"))
@@ -78,6 +78,42 @@ p8 <- ggplot(scan, aes(x = physPos/1000000, y = CLR))+geom_point(aes(colour=log1
 
 p7 / p8 + plot_layout(guides = "collect") & theme(legend.position = "right")
 ```
+
+check the number of genes in inversions
+```{r}
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/deseq2/"
+gff <- read.table(paste0(directory,"REF_LA_filtered_annotation.genes.gff"))
+colnames(gff) <- c("gene","chrom", "start", "end")
+gff<- gff %>% mutate(chrom = factor(chrom))
+levels(gff$chrom)[1:5]
+levels(gff$chrom)[1:5]<- c("A1", "A4", "A2", "XY", "A3")
+
+gene_A2 <- gff %>% filter(chrom == "A2" & start/1000000 > 5.6 & start/1000000 < 69) # 2411
+gene_A3 <- gff %>% filter(chrom == "A3" & start/1000000 < 34) # 1878
+gene_A4 <- gff %>% filter(chrom == "A4" & start/1000000 > 95 & start/1000000 < 115) # 842
+(2411+1878+842)/30641 # 0.1674554
+
+# category, inversion, no_inversion
+# balancing_sel, 138, 361
+# whole_genome, 5131, 30641
+
+data <- matrix(c(138, 361, 5131, 30641), nrow = 2, byrow = TRUE)
+rownames(data) <- c("balancing_sel", "whole_genome")
+colnames(data) <- c("inversion", "no_inversion")
+contingency_table <- as.table(data)
+fisher.test(contingency_table)
+mosaicplot(contingency_table, color = c("darkblue", "orange3"))
+```
+Fisher's Exact Test for Count Data
+
+data:  contingency_table
+p-value = 2.547e-14
+alternative hypothesis: true odds ratio is not equal to 1
+95 percent confidence interval:
+ 1.858105 2.791634
+sample estimates:
+odds ratio 
+  2.282759
 
 
 ## get 95% of CLR
@@ -115,6 +151,7 @@ table(scan95$chrom)[1:5]
      Min.   1st Qu.    Median      Mean   3rd Qu.      Max. 
    0.0000    0.8816    1.9159    4.6037    4.2158 2558.8470 
    
+
 ## genes in inversions
 ```{r}
 scan95 <- scan95 %>% mutate(physPos_mb = physPos/1000000)
@@ -146,6 +183,7 @@ write.table(inversion2, file=paste0(data,"inversion_sites_all.txt"), row.names =
 A1 A4 A2 XY A3 
  0  1 63  0 61 /74
  
+
 
 ## get the list of candidate genes
 perform GO enrichment of these candidate genes
@@ -224,6 +262,158 @@ LG1 LG2 LG3 LG4 LG5
 A1 A4 A2 XY A3 
 43  6 50 27 29 
 
+## get info on pi
+### pi_S
+```{r}
+genes <- read.table(paste0(data,"balsel_genes_expressed.txt"), header =T)
+genes <- genes %>% filter(l_mean > 5 | p_mean > 5)
+genes <- as.data.frame(genes[,1])
+colnames(genes) <- "gene"
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/pixy/"
+statsr <- read.csv(paste0(directory,"rumex_pi_n_pi_s.csv"))
+
+genes <- inner_join(genes, statsr, by = "gene")
+genes2 <- anti_join(statsr, genes, by = "gene")
+mean(genes2$avg_pi)
+mean(genes$avg_pi)
+mean(statsr$avg_pi)
+
+genes$category <- "balsel"
+genes2$category <- "no_balsel"
+genes_test <- rbind(genes, genes2)
+
+leveneTest(avg_pi ~ category, data = genes_test)
+t.test(avg_pi ~ category, data = genes_test, var.equal = F)
+
+leveneTest(avg_pi_nonsyn ~ category, data = genes_test)
+t.test(avg_pi_nonsyn ~ category, data = genes_test, var.equal = T)
+
+genes_test <- genes_test %>% filter(avg_pi !=0 & avg_pi_nonsyn != 0)
+genes_test$pi_ratio <- genes_test$avg_pi_nonsyn / genes_test$avg_pi
+
+leveneTest(pi_ratio ~ category, data = genes_test)
+t.test(pi_ratio ~ category, data = genes_test, var.equal = F)
+
+```
+[1] 0.007979622
+[1] 0.009978655
+[1] 0.008037546
+
+Levene's Test for Homogeneity of Variance (center = median)
+         Df F value   Pr(>F)   
+group     1  7.2432 0.007127 **
+      11732                    
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+	Welch Two Sample t-test
+
+data:  avg_pi by category
+t = 3.1196, df = 335.84, p-value = 0.001968
+alternative hypothesis: true difference in means between group balsel and group no_balsel is not equal to 0
+95 percent confidence interval:
+ 0.0005652972 0.0024948357
+sample estimates:
+   mean in group balsel mean in group no_balsel 
+            0.009925987             0.008395920 
+
+Levene's Test for Homogeneity of Variance (center = median)
+         Df F value Pr(>F)
+group     1  1.1813 0.2771
+      11732               
+
+	Two Sample t-test
+
+data:  avg_pi_nonsyn by category
+t = 0.2815, df = 11732, p-value = 0.7783
+alternative hypothesis: true difference in means between group balsel and group no_balsel is not equal to 0
+95 percent confidence interval:
+ -0.0002786207  0.0003720641
+sample estimates:
+   mean in group balsel mean in group no_balsel 
+            0.002762534             0.002715813 
+
+Levene's Test for Homogeneity of Variance (center = median)
+         Df F value  Pr(>F)  
+group     1  4.8045 0.02841 *
+      10832                  
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+	Welch Two Sample t-test
+
+data:  pi_ratio by category
+t = -3.6316, df = 378.95, p-value = 0.0003204
+alternative hypothesis: true difference in means between group balsel and group no_balsel is not equal to 0
+95 percent confidence interval:
+ -0.21444288 -0.06379582
+sample estimates:
+   mean in group balsel mean in group no_balsel 
+              0.4805279               0.6196472 
+
+### D_S
+```{r}
+genes <- read.table(paste0(data,"balsel_genes_expressed.txt"), header =T)
+genes <- genes %>% filter(l_mean > 5 | p_mean > 5)
+genes <- as.data.frame(genes[,1])
+colnames(genes) <- "gene"
+
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/pixy/"
+FC_tajD <- read.table(paste0(directory,"FC_tajD_syn_innerjoin.txt"), header =T)
+genes <- inner_join(genes, FC_tajD, by = "gene")
+genes2 <- anti_join(FC_tajD, genes, by = "gene")
+genes$category <- "balsel"
+genes2$category <- "no_balsel"
+genes_test <- rbind(genes, genes2)
+
+leveneTest(TajD_TX ~ category, data = genes_test)
+t.test(TajD_TX ~ category, data = genes_test, var.equal = T)
+
+
+FC_tajD_n <- read.table(paste0(directory,"FC_tajD_nonsyn_innerjoin.txt"), header =T)
+genes <- inner_join(genes, FC_tajD_n, by = "gene")
+genes2 <- anti_join(FC_tajD_n, genes, by = "gene")
+genes$category <- "balsel"
+genes2$category <- "no_balsel"
+genes_test <- rbind(genes, genes2)
+
+leveneTest(TajD_TX ~ category, data = genes_test)
+t.test(TajD_TX ~ category, data = genes_test, var.equal = T)
+
+```
+Levene's Test for Homogeneity of Variance (center = median)
+         Df F value Pr(>F)
+group     1  0.0052 0.9423
+      10861 
+
+Two Sample t-test
+
+data:  TajD_TX by category
+t = 0.86268, df = 10861, p-value = 0.3883
+alternative hypothesis: true difference in means between group balsel and group no_balsel is not equal to 0
+95 percent confidence interval:
+ -0.07769293  0.19983248
+sample estimates:
+   mean in group balsel mean in group no_balsel 
+             -0.3074957              -0.3685655
+             
+Levene's Test for Homogeneity of Variance (center = median)
+         Df F value Pr(>F)
+group     1  0.0344 0.8529
+      12656               
+
+	Two Sample t-test
+
+data:  TajD_TX by category
+t = 0.46259, df = 12656, p-value = 0.6437
+alternative hypothesis: true difference in means between group balsel and group no_balsel is not equal to 0
+95 percent confidence interval:
+ -0.08318556  0.13457731
+sample estimates:
+   mean in group balsel mean in group no_balsel 
+             -0.6975787              -0.7232746 
+
+
 ## check for disease resistance genes
 lift the expressed criteria here
 ```{r}
@@ -240,31 +430,6 @@ disease_genes_balsel <- inner_join(disease_genes, genes, by = c("chrom", "start"
 write.table(disease_genes_balsel, file=paste0(data,"disease_genes_balsel.txt"), row.names = FALSE, quote = FALSE)
 
 ```
-
-
-
-## get max_CLR per gene for the whole genome
-
-```{r}
-window_size <- 7000
-num_windows <- floor(nrow(scan) / window_size) # 706
-results <- list()
-for (i in 1:707) {
-    start <- (i - 1) * window_size + 1
-    end <- i * window_size
-    window_df <- scan[start:end, ]
-    
-    result <- window_df %>% inner_join(gff, by = "chrom") %>%
-        filter(physPos >= start & physPos <= end) 
-    
-    results[[i]] <- result}
-
-result <- do.call(rbind, results) # 937846
-length(results) # 318, half way thru
-write.table(result, file=paste0(data,"balsel_sites_wholegenome.txt"), row.names = FALSE, quote = FALSE)
-```
-
-
 
 
 ## gametophyte-biased genes have higher CLR than unbiased genes?

@@ -10,6 +10,7 @@ library(dplyr)
 library(ggplot2)
 library(patchwork)
 library(tidyr)
+library(car)
 data="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/balsel/"
 ```
 
@@ -279,11 +280,6 @@ directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Man
 gff<-read.table(paste0(directory,"R40_GG1U_combined.gene.final.gff"))
 colnames(gff)<-c("chrom","start","end","gene")
 
-# test <- scanc95 %>% filter(chrom == "Chr07")
-# result <- test %>% inner_join(gff, by = "chrom") %>%
-#     filter(physPos >= start & physPos <= end) 
-
-
 window_size <- 7000
 num_windows <- floor(nrow(scanc95) / window_size) # 48
 
@@ -314,15 +310,13 @@ result_CLR <- read.table(paste0(data,"balsel_sites.txt"), header = T)
 
 result_CLR <- result_CLR %>% filter(g_mean > 5 | s_mean > 5) 
 write.table(result_CLR, file=paste0(data,"balsel_genes_expressed.txt"), row.names = FALSE, quote = FALSE)
+result_CLR <- read.table(paste0(data,"balsel_genes_expressed.txt"), header = T)
 ```
 
 
 
 ## add info on expression level, gene annotation
 all genes should be expressed
-
-
-
 
 ```{r}
 DE_c <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/deseq2/DE_results_all.txt", header =T) # 30107
@@ -341,7 +335,151 @@ unbiased <- result_CLR %>% filter(padj >= 0.1) # 193
 
 ```
 
+## get info on pi
+compare diversity stats of candidate genes vs not candidate genes
+### pi
+```{r}
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/diversity/"
+stats  <- read.csv(paste0(directory,"ceratodon_pi_n_pi_s.csv"))
 
+genes <- read.table(paste0(data,"balsel_genes_expressed.txt"), header = T)
+genes <- as.data.frame(genes[,1])
+colnames(genes) <- "gene"
+
+genes <- inner_join(genes, stats, by = "gene")
+genes2 <- anti_join(stats, genes, by = "gene")
+mean(genes2$avg_pi)
+mean(genes$avg_pi)
+mean(stats$avg_pi)
+
+genes$category <- "balsel"
+genes2$category <- "no_balsel"
+genes_test <- rbind(genes, genes2)
+
+leveneTest(avg_pi ~ category, data = genes_test)
+t.test(avg_pi ~ category, data = genes_test, var.equal = F)
+
+leveneTest(avg_pi_nonsyn ~ category, data = genes_test)
+t.test(avg_pi_nonsyn ~ category, data = genes_test, var.equal = F)
+
+genes_test <- genes_test %>% filter(avg_pi !=0 & avg_pi_nonsyn != 0)
+genes_test$pi_ratio <- genes_test$avg_pi_nonsyn / genes_test$avg_pi
+
+leveneTest(pi_ratio ~ category, data = genes_test)
+t.test(pi_ratio ~ category, data = genes_test, var.equal = T)
+
+```
+ Levene's Test for Homogeneity of Variance (center = median)
+         Df F value    Pr(>F)    
+group     1  23.126 1.529e-06 ***
+      18613                      
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+	Welch Two Sample t-test
+
+data:  avg_pi by category
+t = -0.52045, df = 775.73, p-value = 0.6029
+alternative hypothesis: true difference in means between group balsel and group no_balsel is not equal to 0
+95 percent confidence interval:
+ -0.0010753762  0.0006246543
+sample estimates:
+   mean in group balsel mean in group no_balsel 
+             0.01370084              0.01392620 
+
+Levene's Test for Homogeneity of Variance (center = median)
+         Df F value  Pr(>F)  
+group     1  6.3756 0.01158 *
+      18613                  
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+	Welch Two Sample t-test
+
+data:  avg_pi_nonsyn by category
+t = -1.5565, df = 799.25, p-value = 0.12
+alternative hypothesis: true difference in means between group balsel and group no_balsel is not equal to 0
+95 percent confidence interval:
+ -6.972570e-04  8.051509e-05
+sample estimates:
+   mean in group balsel mean in group no_balsel 
+            0.004067815             0.004376185 
+
+Two Sample t-test
+
+data:  pi_ratio by category
+t = 0.5308, df = 15980, p-value = 0.5956
+alternative hypothesis: true difference in means between group balsel and group no_balsel is not equal to 0
+95 percent confidence interval:
+ -0.04054895  0.07066572
+sample estimates:
+   mean in group balsel mean in group no_balsel 
+              0.4460509               0.4309925 
+### D
+```{r}
+genes <- read.table(paste0(data,"balsel_genes_expressed.txt"), header = T)
+genes <- as.data.frame(genes[,1])
+colnames(genes) <- "gene"
+
+directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/diversity/"
+FC_tajD <- read.table(paste0(directory,"FC_tajD_syn_innerjoin.txt"), header = T)
+genes <- inner_join(genes, FC_tajD, by = "gene")
+genes2 <- anti_join(FC_tajD, genes, by = "gene")
+genes$category <- "balsel"
+genes2$category <- "no_balsel"
+genes_test <- rbind(genes, genes2)
+
+leveneTest(TajD_Pop ~ category, data = genes_test)
+t.test(TajD_Pop ~ category, data = genes_test, var.equal = F)
+
+
+FC_tajD_n <- read.table(paste0(directory,"FC_tajD_nonsyn_innerjoin.txt"), header = T)
+genes <- inner_join(genes, FC_tajD_n, by = "gene")
+genes2 <- anti_join(FC_tajD_n, genes, by = "gene")
+genes$category <- "balsel"
+genes2$category <- "no_balsel"
+genes_test <- rbind(genes, genes2)
+
+leveneTest(TajD_Pop ~ category, data = genes_test)
+t.test(TajD_Pop ~ category, data = genes_test, var.equal = F)
+
+```
+Levene's Test for Homogeneity of Variance (center = median)
+         Df F value    Pr(>F)    
+group     1  90.747 < 2.2e-16 ***
+      18673                      
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+	Welch Two Sample t-test
+
+data:  TajD_Pop by category
+t = -16.534, df = 766.22, p-value < 2.2e-16
+alternative hypothesis: true difference in means between group balsel and group no_balsel is not equal to 0
+95 percent confidence interval:
+ -0.7825531 -0.6164545
+sample estimates:
+   mean in group balsel mean in group no_balsel 
+            -0.67608317              0.02342063 
+            
+Levene's Test for Homogeneity of Variance (center = median)
+         Df F value    Pr(>F)    
+group     1  55.746 8.613e-14 ***
+      18569                      
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+	Welch Two Sample t-test
+
+data:  TajD_Pop by category
+t = -14.817, df = 766.32, p-value < 2.2e-16
+alternative hypothesis: true difference in means between group balsel and group no_balsel is not equal to 0
+95 percent confidence interval:
+ -0.6544247 -0.5013035
+sample estimates:
+   mean in group balsel mean in group no_balsel 
+             -0.7511957              -0.1733316 
+            
 
 ## gametophyte-biased genes have higher CLR than unbiased genes?
 ```{r}
@@ -483,5 +621,9 @@ geom_col(aes(x = category, y = count, fill = group), position = "fill", colour =
 
 p1 + p2 + plot_layout(guides = "collect") & theme(legend.position = "right")
 ```
+
+
+
+
 
 

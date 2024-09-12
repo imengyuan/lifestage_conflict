@@ -34,75 +34,72 @@ gene2GO <- inner_join(gene2GO, gff, by = "gene")
 DE_c <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/deseq2/DE_results_all.txt", header =T) # 30107
 DE_c <- DE_c %>% filter(g_mean > 5 | s_mean > 5) # 25861 (including UV)
 DE_c <- DE_c %>% filter(chrom != "U" & chrom != "V")
-
 gene2GO <- inner_join(gene2GO, DE_c, by = c("gene", "chrom", "start", "end")) # 17354
 
-write.table(gene2GO, file = paste0(directory, "gene2GO_full.txt"), sep = "\t", quote = F, row.names = F)
-write.table(gene2GO[,c(1,2)], file = paste0(directory, "gene2GO.txt"), sep = "\t", quote = F, row.names = F) # need to replace space with comma
+write.csv(gene2GO, file = paste0(directory, "gene2GO_full.csv"))
+write.table(gene2GO[,c(1,2)], file = paste0(directory, "gene2GO.txt"), sep = "\t", quote = F, row.names = F) 
+
+gene2GO <- gene2GO %>% filter(log2FoldChange>0) # 9420
+write.table(gene2GO[,c(1,2)], file = paste0(directory, "gene2GO_gbias.txt"), sep = "\t", quote = F, row.names = F) 
 
 ```
-
 
 
 ## interesting genes
 ```{r}
+sbias <- read.table(paste0(directory, "sporo_biased_p01_FC2.txt"), header =T)
+gbias <- read.table(paste0(directory, "gameto_biased_p01_FC2.txt"), header =T)
+
 geness <- read.table(paste0(directory, "geness.txt"), header =T)
 genesg <- read.table(paste0(directory, "genesg.txt"), header =T)
 
 balsel_genes <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/balsel/balsel_genes_expressed.txt", header = T)
-g_bias <- balsel_genes %>% filter(log2FoldChange>0 & padj < 0.1) # 334
+balsel_gbias <- balsel_genes %>% filter(log2FoldChange>0 & padj < 0.1) # 334
 
-#GO2gene <- read.table(paste0(directory,"GO2gene2.txt"))
+myInterestingGenes <- genesg$gene
+myInterestingGenes <- geness$gene
+
+myInterestingGenes <- gbias$gene
+myInterestingGenes <- sbias$gene
+
+myInterestingGenes <- balsel_genes$gene
+myInterestingGenes <- balsel_gbias$gene
+
 ```
 
 
 ```{r}
-#GO2gene <- readMappings(file=paste0(directory,"GO2gene2.txt"))
-#geneID2GO <- inverseList(GO2gene)
-
 geneID2GO <- readMappings(file = paste0(directory, "gene2GO.txt"))
-#str(head(GO2gene))
+# for comparing g biased balsel genes
+# geneID2GO <- readMappings(file = paste0(directory, "gene2GO_gbias.txt"))
 str(head(geneID2GO))
-```
 
-```{r}
 # the gene universe (all the genes you have)
 geneNames <- names(geneID2GO)
 head(geneNames)
 
-#myInterestingGenes <- str_sub(genesg$gene,start=11)
-#myInterestingGenes <- str_sub(geness$gene,start=11)
-myInterestingGenes <- balsel_genes$gene
-myInterestingGenes <- g_bias$gene
- 
-
 geneList <- factor(as.integer(geneNames %in% myInterestingGenes))
 names(geneList) <- geneNames
 str(geneList)
-```
 
-
-```{r}
 sampleGOdata <- new("topGOdata", ontology = "BP",
                      allGenes = geneList,
                      annot = annFUN.gene2GO, gene2GO = geneID2GO)
+
+weight01.fisher <- runTest(sampleGOdata, algorithm='weight01', statistic = "fisher")
+results_table = GenTable(sampleGOdata, P_value=weight01.fisher, orderBy="P_value")
 ```
 
+
 ```{r}
-# resultFisher <- runTest(sampleGOdata, algorithm = "classic", statistic = "fisher")
-# weight_fisher_result=runTest(sampleGOdata, algorithm='weight01', statistic='fisher')
-
-
-weight01.fisher <- runTest(sampleGOdata, statistic = "fisher")
-results_table = GenTable(sampleGOdata, P_value=weight01.fisher, orderBy="P_value")
-
-
 write.csv(results_table, file=paste0(directory, "balsel_genes_GO.csv"),row.names = FALSE, quote=FALSE )
-write.csv(results_table, file=paste0(directory, "g_bias_GO.csv"),row.names = FALSE, quote=FALSE )
+write.csv(results_table, file=paste0(directory, "balsel_gbias_GO.csv"),row.names = FALSE, quote=FALSE )
 
-write.csv(results_table, file=paste0(directory, "g_specific_GO.csv"),row.names = FALSE, col.names = FALSE, quote=FALSE )
-write.csv(results_table, file=paste0(directory, "s_specific_GO.csv"),row.names = FALSE, col.names = FALSE, quote=FALSE )
+write.csv(results_table, file=paste0(directory, "gspecific_GO.csv"),row.names = FALSE, col.names = FALSE, quote=FALSE )
+write.csv(results_table, file=paste0(directory, "sspecific_GO.csv"),row.names = FALSE, col.names = FALSE, quote=FALSE )
 
+write.csv(results_table, file=paste0(directory, "gbias_GO.csv"),row.names = FALSE, col.names = FALSE, quote=FALSE )
+write.csv(results_table, file=paste0(directory, "sbias_GO.csv"),row.names = FALSE, col.names = FALSE, quote=FALSE )
 ```
 
 
