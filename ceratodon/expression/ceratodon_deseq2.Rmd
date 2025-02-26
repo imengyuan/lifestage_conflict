@@ -200,11 +200,19 @@ DE_c <- DE_c %>% filter(padj<0.1) # 17557 # 18977
 DE_c_sporophyte <-  DE_c %>% filter(log2FoldChange<0) # 8999
 DE_c_gametophyte <-  DE_c %>% filter(log2FoldChange>0) # 9978
 write.table(DE_c, file =paste0(directory,"DE_results_filtered.txt"), row.names = FALSE, quote = FALSE, sep = "\t") 
+write.csv(DE_c, file =paste0(directory,"DE_results_filtered.csv"), row.names = FALSE, quote = FALSE) 
+DE_c <- DE_c %>% filter(chrom == "U" | chrom == "V")
+write.csv(DE_c, file =paste0(directory,"DE_results_filt_UV.csv"), row.names = FALSE, quote = FALSE) 
+# specific genes on U or V
+DE_c <- DE_c %>% filter(log2FoldChange< -2)
+DE_c$chrom <- factor(DE_c$chrom) 
+table(DE_c$chrom)
+write.csv(DE_c, file =paste0(directory,"s_biased_UV.csv"), row.names = FALSE, quote = FALSE) 
 
 gameto <- DE_c %>% filter(log2FoldChange > 0 & padj < 0.1) # 9978
 unbiased <- DE_c %>% filter(padj >= 0.1) # 6884
 sporo <- DE_c %>% filter(log2FoldChange < 0 & padj < 0.1) # 8999
-as.data.frame(table(gameto$chrom))
+t <- as.data.frame(table(gameto$chrom))
 as.data.frame(table(unbias$chrom))
 as.data.frame(table(sporo$chrom))
 write.table(gameto, file = paste0(directory,"gameto_biased_p01.txt"), row.names = FALSE, quote = FALSE)

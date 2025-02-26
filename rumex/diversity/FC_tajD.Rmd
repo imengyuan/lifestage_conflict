@@ -142,21 +142,11 @@ levels(mean_tajD_n$tag)
 
 ## plot the output
 ```{r}
-tags <- c("(,-3.02]","(-3.02,-2.16]", "(-2.16,-1.27]", "(-1.27,0)", "(0,1.02]", "(1.02,2.54]","(2.54,5.36]", "(5.36,)")
-mean_tajD$tag <- factor(mean_tajD$tag,
-                       levels = tags,
-                       ordered = FALSE)
-levels(mean_tajD$tag)
-mean_tajD_n$tag <- factor(mean_tajD_n$tag,
-                       levels = tags,
-                       ordered = FALSE)
-levels(mean_tajD_n$tag)
-
 p1 <- ggplot(data = mean_tajD, mapping = aes(x=tag, y=mean_tajD)) + 
     geom_point()+ geom_errorbar(aes(ymin=mean_tajD - sem_tajD, ymax=mean_tajD + sem_tajD), width=.2, position=position_dodge(.9))+ ggtitle("a") +labs(x ="log2FoldChange",y = expression(D[s]))+ theme_classic()+ theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
 
 p2 <- ggplot(data = mean_tajD_n, mapping = aes(x=tag, y=mean_tajD)) + 
-    geom_point()+ geom_errorbar(aes(ymin=mean_tajD - sem_tajD, ymax=mean_tajD + sem_tajD), width=.2, position=position_dodge(.9))+ ggtitle("b") +labs(x ="log2FoldChange",y = expression(D[n]))+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
+    geom_point()+ geom_errorbar(aes(ymin=mean_tajD - sem_tajD, ymax=mean_tajD + sem_tajD), width=.2, position=position_dodge(.9))+ ggtitle("b") +labs(x ="log2FoldChange",y = expression(D[n]))+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank()) 
 
 p1 + p2
 ```
@@ -171,6 +161,8 @@ p1 + p2
 directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/pixy/"
 write.table(mean_tajD, file = paste0(directory,"mean_tajD_s_apr.txt"), row.names = FALSE, quote = FALSE)
 write.table(mean_tajD_n, file = paste0(directory,"mean_tajD_n_apr.txt"), row.names = FALSE, quote = FALSE)
-#mean_tajD <- read.table(paste0(directory,"mean_tajD_s.txt"), header = T)
+mean_tajD <- read.table(paste0(directory,"mean_tajD_s_apr.txt"), header = T)
+mean_tajD_n <- read.table(paste0(directory,"mean_tajD_n_apr.txt"), header = T)
+
 ```
 

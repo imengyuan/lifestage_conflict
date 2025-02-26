@@ -144,7 +144,7 @@ pi_unbiased_c$category <- "unbiased"
 pi_genes_c <- rbind(pi_genesg_a, pi_geness_a, pi_unbiased_c)
 directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/diversity/"
 write.table(pi_genes_c, file = paste0(directory,"specific_genes_pi_apr.txt"), row.names = FALSE, sep = "\t", quote = FALSE)
-
+pi_genes_c <- read.table(paste0(directory,"specific_genes_pi_apr.txt"), header = T)
 pi_genes_c$category <- factor(pi_genes_c$category)
 levels(pi_genes_c$category) 
 pi_genes_c$category <- factor(pi_genes_c$category,
@@ -154,13 +154,13 @@ pi_genes_c$category <- factor(pi_genes_c$category,
 ## plot bs mean & CI
 ```{r}
 p4 <- ggplot(data = pi_genes_c, mapping = aes(x=category, y=mean_pi_syn)) + 
-    geom_point()+ geom_errorbar(aes(ymin=lower_pi_syn, ymax=higher_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("d") +labs(y = expression(pi[s]))+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_syn, ymax=higher_pi_syn), width=.1, position=position_dodge(.9))+ ggtitle("d") +labs(y = expression(pi[s]))+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
 
 p5 <- ggplot(data = pi_genes_c, mapping = aes(x=category, y=mean_pi_nonsyn)) + 
-    geom_point()+ geom_errorbar(aes(ymin=lower_pi_nonsyn, ymax=higher_pi_nonsyn), width=.2, position=position_dodge(.9))+ ggtitle("e") +labs(y = expression(pi[n]))+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_nonsyn, ymax=higher_pi_nonsyn), width=.1, position=position_dodge(.9))+ ggtitle("e") +labs(y = expression(pi[n]))+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
 
 p6 <- ggplot(data = pi_genes_c, mapping = aes(x=category, y=mean_ratio_pis)) + 
-    geom_point()+ geom_errorbar(aes(ymin=lower_ratio_pis, ymax=higher_ratio_pis), width=.2, position=position_dodge(.9))+ ggtitle("f") +labs(y = expression(paste(pi[n], "/", pi[s], " ratio")))+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
+    geom_point()+ geom_errorbar(aes(ymin=lower_ratio_pis, ymax=higher_ratio_pis), width=.1, position=position_dodge(.9))+ ggtitle("f") +labs(y = expression(paste(pi[n], "/", pi[s], " ratio")))+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
 
 p4 + p5 + p6 + plot_layout(nrow = 3,guides = "collect") 
 ```
@@ -179,7 +179,7 @@ pi_unbiased$category <- "unbiased"
 pi_genes_c_real <- rbind(pi_genesg_a, pi_geness_a, pi_unbiased)
 directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/diversity/"
 write.table(pi_genes_c_real, file = paste0(directory,"specific_genes_pi_real.txt"), row.names = FALSE, sep = "\t", quote = FALSE)
-
+pi_genes_c_real<- read.table(paste0(directory,"specific_genes_pi_real.txt"), header = T)
 pi_genes_c_real$category <- factor(pi_genes_c_real$category)
 levels(pi_genes_c_real$category) 
 pi_genes_c_real$category <- factor(pi_genes_c_real$category,
@@ -188,10 +188,10 @@ pi_genes_c_real$category <- factor(pi_genes_c_real$category,
 
 ```{r}
 p4_2 <- ggplot(data = pi_genes_c_real, mapping = aes(x=category, y=mean_avg_pi_syn)) + 
-    geom_point()+ geom_errorbar(aes(ymin=mean_avg_pi_syn - sem_avg_pi_syn, ymax=mean_avg_pi_syn + sem_avg_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("c") +labs(y = expression(pi[s]))+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
+    geom_point()+ geom_errorbar(aes(ymin=mean_avg_pi_syn - sem_avg_pi_syn, ymax=mean_avg_pi_syn + sem_avg_pi_syn), width=.1, position=position_dodge(.9))+ ggtitle("c") +labs(y = expression(pi[s]))+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
 
 p5_2 <- ggplot(data = pi_genes_c_real, mapping = aes(x=category, y=mean_avg_pi_nonsyn)) + 
-    geom_point()+ geom_errorbar(aes(ymin=mean_avg_pi_nonsyn - sem_avg_pi_nonsyn, ymax=mean_avg_pi_nonsyn + sem_avg_pi_nonsyn), width=.2, position=position_dodge(.9))+ ggtitle("d") +labs(y = expression(pi[n]))+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
+    geom_point()+ geom_errorbar(aes(ymin=mean_avg_pi_nonsyn - sem_avg_pi_nonsyn, ymax=mean_avg_pi_nonsyn + sem_avg_pi_nonsyn), width=.1, position=position_dodge(.9))+ ggtitle("d") +labs(y = expression(pi[n]))+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
 
 p4_2 + p5_2
 ```
@@ -232,7 +232,7 @@ pi_unbias$category <- "unbiased"
 pi_genes_r <- rbind(pi_genesp, pi_genesl, pi_unbias)
 directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/pixy/"
 write.table(pi_genes_r, file = paste0(directory,"specific_genes_pi_apr.txt"), row.names = FALSE, sep = "\t", quote = FALSE)
-
+pi_genes_r<- read.table(paste0(directory,"specific_genes_pi_apr.txt"), header = T)
 pi_genes_r$category <- factor(pi_genes_r$category)
 levels(pi_genes_r$category)
 pi_genes_r$category <- factor(pi_genes_r$category,
@@ -244,13 +244,13 @@ pi_genes_r$category <- factor(pi_genes_r$category,
 ## plot bs mean & CI
 ```{r}
 p1 <- ggplot(data = pi_genes_r, mapping = aes(x=category, y=mean_pi_syn)) + 
-    geom_point()+ geom_errorbar(aes(ymin=lower_pi_syn, ymax=higher_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("a") +labs(y = expression(pi[s]))+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_syn, ymax=higher_pi_syn), width=.1, position=position_dodge(.9))+ ggtitle("a") +labs(y = expression(pi[s]))+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
 
 p2 <- ggplot(data = pi_genes_r, mapping = aes(x=category, y=mean_pi_nonsyn)) + 
-    geom_point()+ geom_errorbar(aes(ymin=lower_pi_nonsyn, ymax=higher_pi_nonsyn), width=.2, position=position_dodge(.9))+ ggtitle("b") +labs(y = expression(pi[n]))+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_nonsyn, ymax=higher_pi_nonsyn), width=.1, position=position_dodge(.9))+ ggtitle("b") +labs(y = expression(pi[n]))+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
 
 p3 <- ggplot(data = pi_genes_r, mapping = aes(x=category, y=mean_ratio_pis)) + 
-    geom_point()+ geom_errorbar(aes(ymin=lower_ratio_pis, ymax=higher_ratio_pis), width=.2, position=position_dodge(.9))+ ggtitle("c") +labs(y = expression(paste(pi[n], "/", pi[s], " ratio")))+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
+    geom_point()+ geom_errorbar(aes(ymin=lower_ratio_pis, ymax=higher_ratio_pis), width=.1, position=position_dodge(.9))+ ggtitle("c") +labs(y = expression(paste(pi[n], "/", pi[s], " ratio")))+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
 
 p1 + p2 + p3
 ```
@@ -273,6 +273,7 @@ pi_unbias$category <- "unbiased"
 pi_genes_r_real <- rbind(pi_genesp, pi_genesl, pi_unbias)
 directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/pixy/"
 write.table(pi_genes_r_real, file = paste0(directory,"specific_genes_pi_real.txt"), row.names = FALSE, sep = "\t", quote = FALSE)
+pi_genes_r_real <- read.table(paste0(directory,"specific_genes_pi_real.txt"), header = T) 
 
 pi_genes_r_real$category <- factor(pi_genes_r_real$category)
 levels(pi_genes_r_real$category) 
@@ -283,10 +284,10 @@ pi_genes_r_real$category <- factor(pi_genes_r_real$category,
 plot mean & sem
 ```{r}
 p1_2 <- ggplot(data = pi_genes_r_real, mapping = aes(x=category, y=mean_avg_pi_syn)) + 
-    geom_point()+ geom_errorbar(aes(ymin=mean_avg_pi_syn - sem_avg_pi_syn, ymax=mean_avg_pi_syn + sem_avg_pi_syn), width=.2, position=position_dodge(.9))+ ggtitle("a") +labs(y = expression(pi[s]))+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
+    geom_point()+ geom_errorbar(aes(ymin=mean_avg_pi_syn - sem_avg_pi_syn, ymax=mean_avg_pi_syn + sem_avg_pi_syn), width=.1, position=position_dodge(.9))+ ggtitle("a") +labs(y = expression(pi[s]))+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
 
 p2_2 <- ggplot(data = pi_genes_r_real, mapping = aes(x=category, y=mean_avg_pi_nonsyn)) + 
-    geom_point()+ geom_errorbar(aes(ymin=mean_avg_pi_nonsyn - sem_avg_pi_nonsyn, ymax=mean_avg_pi_nonsyn + sem_avg_pi_nonsyn), width=.2, position=position_dodge(.9))+ ggtitle("b") +labs(y = expression(pi[n]))+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
+    geom_point()+ geom_errorbar(aes(ymin=mean_avg_pi_nonsyn - sem_avg_pi_nonsyn, ymax=mean_avg_pi_nonsyn + sem_avg_pi_nonsyn), width=.1, position=position_dodge(.9))+ ggtitle("b") +labs(y = expression(pi[n]))+ theme_classic() + theme(text = element_text(size = 10),axis.title.x=element_blank())
 
 p1_2 + p2_2
 ```

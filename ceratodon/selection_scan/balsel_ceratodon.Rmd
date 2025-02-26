@@ -147,22 +147,7 @@ scanc <- read.table(paste0(data,"ceratodon_scan_DAF.txt"), header = T)
 
 scan11 <- scan11[,1:7]
 ```
-7822484
-7775633
 
-   838286 ceratodon_input_DAF_Chr01.txt +1
-   885112 ceratodon_input_DAF_Chr02.txt +1
-   765846 ceratodon_input_DAF_Chr03.txt -1
-   748662 ceratodon_input_DAF_Chr04.txt +1
-   654954 ceratodon_input_DAF_Chr05.txt 0
-   603158 ceratodon_input_DAF_Chr06.txt -1
-   526720 ceratodon_input_DAF_Chr07.txt +1
-   520024 ceratodon_input_DAF_Chr08.txt +1
-   605444 ceratodon_input_DAF_Chr09.txt +1
-   511626 ceratodon_input_DAF_Chr10.txt -90000 mistake with 11
-   590200 ceratodon_input_DAF_Chr11.txt 0
-   493882 ceratodon_input_DAF_Chr12.txt 0
-  7743914 total
 
 ```{r}
 p1 <- ggplot(scan1, aes(x = physPos/1000000, y = CLR))+geom_point(aes(colour=log10(s_hat)),size = 0.3)+
@@ -311,6 +296,11 @@ result_CLR <- read.table(paste0(data,"balsel_sites.txt"), header = T)
 result_CLR <- result_CLR %>% filter(g_mean > 5 | s_mean > 5) 
 write.table(result_CLR, file=paste0(data,"balsel_genes_expressed.txt"), row.names = FALSE, quote = FALSE)
 result_CLR <- read.table(paste0(data,"balsel_genes_expressed.txt"), header = T)
+
+genes <- read.table(paste0(data,"balsel_genes_full.txt"), header = T)
+stats <- stats %>% dplyr::select(gene, avg_pi, avg_pi_nonsyn)
+genes <- left_join(genes, stats, by = "gene")
+write.csv(genes, file=paste0(data,"balsel_genes_full.csv"), row.names = FALSE, quote = FALSE)
 ```
 
 
@@ -479,7 +469,17 @@ alternative hypothesis: true difference in means between group balsel and group 
 sample estimates:
    mean in group balsel mean in group no_balsel 
              -0.7511957              -0.1733316 
-            
+
+
+## disease resistance   
+```{r}
+genes <- read.table(paste0(data,"balsel_genes_full.txt"), header =T)
+disease <- read.table(paste0(data,"disease.txt"))
+colnames(disease) <- "gene"
+disease$gene <- str_replace(disease$gene, "CepurR40.", "gene-KC19_")
+genes <- inner_join(disease, genes, by = "gene")
+```
+
 
 ## gametophyte-biased genes have higher CLR than unbiased genes?
 ```{r}

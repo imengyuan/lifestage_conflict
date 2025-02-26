@@ -161,15 +161,6 @@ levels(mean_tajD_nc$tag)
 
 ## plot the output
 ```{r}
-tags <- c("(,-1.61]","(-1.61,-0.774]", "(-0.774,-0.354]", "(-0.354,0)", "(0,0.419]", "(0.419,0.97]","(0.97,1.92]", "(1.92,)")
-mean_tajD_c$tag <- factor(mean_tajD_c$tag,
-                       levels = tags,
-                       ordered = FALSE)
-mean_tajD_nc$tag <- factor(mean_tajD_nc$tag,
-                       levels = tags,
-                       ordered = FALSE)
-
-
 p3 <- ggplot(data = mean_tajD_c, mapping = aes(x=tag, y=mean_tajD)) + 
     geom_point()+ geom_errorbar(aes(ymin=mean_tajD - sem_tajD, ymax=mean_tajD + sem_tajD), width=.2, position=position_dodge(.9))+ ggtitle("c") +labs(x ="log2FoldChange",y = expression(D[s]))+ theme_classic() + theme(text = element_text(size = 10), axis.title.x=element_blank(), axis.text.x=element_blank(), axis.ticks.x=element_blank())
 
@@ -185,5 +176,9 @@ directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Man
 write.table(mean_tajD_c, file = paste0(directory,"mean_tajD_s_apr.txt"), row.names = FALSE, quote = FALSE)
 
 write.table(mean_tajD_nc, file = paste0(directory,"mean_tajD_n_apr.txt"), row.names = FALSE, quote = FALSE)
+
+mean_tajD_c <- read.table(paste0(directory,"mean_tajD_s_apr.txt"), header = T)
+mean_tajD_nc <- read.table(paste0(directory,"mean_tajD_n_apr.txt"), header = T)
+
 ```
 

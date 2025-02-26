@@ -119,7 +119,7 @@ qt1 qt10  qt2  qt3  qt4  qt5  qt6  qt7  qt8  qt9
 ## plots
 ```{r}
 p1 <- ggplot(data = pi_expr_qt10, mapping = aes(x=expr_level, y=mean_pi_syn, colour = bias)) + 
-    geom_point()+ geom_errorbar(aes(ymin=lower_pi_syn, ymax=higher_pi_syn), width=.2)+ ggtitle("a") +labs(x ="",y = expression(pi[s]))+ theme_classic() + theme(text = element_text(size = 10)) 
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_syn, ymax=higher_pi_syn), width=.2)+ ggtitle("a") +labs(x ="",y = expression(pi[s]))+ theme_classic() + theme(text = element_text(size = 10))
 
 p2 <- ggplot(data = pi_expr_qt10, mapping = aes(x=expr_level, y=mean_pi_nonsyn, colour = bias)) + 
     geom_point()+ geom_errorbar(aes(ymin=lower_pi_nonsyn, ymax=higher_pi_nonsyn), width=.2)+ ggtitle("b") +labs(x ="",y = expression(pi[n]))+ theme_classic() + theme(text = element_text(size = 10)) 

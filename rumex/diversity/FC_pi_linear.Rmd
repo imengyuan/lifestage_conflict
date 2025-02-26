@@ -41,9 +41,20 @@ linear regression
 #cor(FC_pixy$avg_pi, FC_pixy$log2FoldChange) # 0.04935226
 #cor(FC_pixy$avg_pi, abs(FC_pixy$log2FoldChange)) # 0.06233079
 
-model <- lm(avg_pi ~ log2FoldChange, data = FC_pixy)
+model <- lm(avg_pi ~ log2FoldChange, data = statsr)
 summary(model)
-model <- lm(avg_pi ~ abs(log2FoldChange), data = FC_pixy)
+model <- lm(avg_pi ~ abs(log2FoldChange), data = statsr)
+summary(model)
+model <- lm(avg_pi_nonsyn ~ log2FoldChange, data = statsr)
+summary(model)
+model <- lm(avg_pi_nonsyn ~ abs(log2FoldChange), data = statsr)
+summary(model)
+
+statsr <- statsr %>% filter(avg_pi != 0 & avg_pi_nonsyn  != 0)
+statsr$pi_ratio <- statsr$avg_pi_nonsyn / statsr$avg_pi
+model <- lm(pi_ratio ~ log2FoldChange, data = statsr)
+summary(model)
+model <- lm(pi_ratio ~ abs(log2FoldChange), data = statsr)
 summary(model)
 ```
 
@@ -75,12 +86,19 @@ p1 + p2 + p3 + p4 + p5 + p6 + plot_layout(nrow = 3)
 
 linear regression
 ```{r}
-cor(ratio_pixy$avg_pi, ratio_pixy$log2FoldChange) # 0.08382991
-cor(ratio_pixy$avg_pi, abs(ratio_pixy$log2FoldChange)) # 0.08578927
-
-model <- lm(avg_pi ~ log2FoldChange, data = ratio_pixy)
+model <- lm(avg_pi ~ log2FoldChange, data = stats)
+summary(model)
+model <- lm(avg_pi ~ abs(log2FoldChange), data = stats)
+summary(model)
+model <- lm(avg_pi_nonsyn ~ log2FoldChange, data = stats)
+summary(model)
+model <- lm(avg_pi_nonsyn ~ abs(log2FoldChange), data = stats)
 summary(model)
 
-model <- lm(avg_pi ~ abs(log2FoldChange), data = ratio_pixy)
+stats <- stats %>% filter(avg_pi != 0 & avg_pi_nonsyn  != 0)
+stats$pi_ratio <- stats$avg_pi_nonsyn / stats$avg_pi
+model <- lm(pi_ratio ~ log2FoldChange, data = stats)
+summary(model)
+model <- lm(pi_ratio ~ abs(log2FoldChange), data = stats)
 summary(model)
 ```

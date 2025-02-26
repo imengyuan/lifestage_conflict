@@ -121,13 +121,13 @@ qt1 qt10  qt2  qt3  qt4  qt5  qt6  qt7  qt8  qt9
 ## plots 
 ```{r}
 p4 <- ggplot(data = pi_expr_qt_c10, mapping = aes(x=expr_level, y=mean_pi_syn, colour = bias)) + 
-    geom_point()+ geom_errorbar(aes(ymin=lower_pi_syn, ymax=higher_pi_syn), width=.2)+ ggtitle("d") +labs(x ="",y = expression(pi[s]))+ theme_classic() + theme(text = element_text(size = 10)) 
+    geom_point()+ geom_errorbar(aes(ymin=lower_pi_syn, ymax=higher_pi_syn), width=.2)+ ggtitle("d") +labs(x ="",y = expression(pi[s]))+ theme_classic() + theme(text = element_text(size = 10))
 
 p5 <- ggplot(data = pi_expr_qt_c10, mapping = aes(x=expr_level, y=mean_pi_nonsyn, colour = bias)) + 
     geom_point()+ geom_errorbar(aes(ymin=lower_pi_nonsyn, ymax=higher_pi_nonsyn), width=.2)+ ggtitle("e") +labs(x ="",y = expression(pi[n]))+ theme_classic() + theme(text = element_text(size = 10)) 
 
 p6 <- ggplot(data = pi_expr_qt_c10, mapping = aes(x=expr_level, y=mean_ratio_pis, colour = bias)) +
-    geom_point()+ geom_errorbar(aes(ymin=lower_ratio_pis, ymax=higher_ratio_pis), width=.2)+ ggtitle("f") +labs(x ="Expression level quantiles",y = expression(paste(pi[n], "/", pi[s], " ratio")))+ theme_classic() + theme(text = element_text(size = 10)) 
+    geom_point()+ geom_errorbar(aes(ymin=lower_ratio_pis, ymax=higher_ratio_pis), width=.2)+ ggtitle("f") +labs(x ="Expression level quantiles",y = expression(paste(pi[n], "/", pi[s], " ratio")))+ theme_classic() + theme(text = element_text(size = 10))
 
 p4 + p5 + p6+ plot_layout(nrow = 1,guides = "collect") & theme(legend.position = "right")
 ```

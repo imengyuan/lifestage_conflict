@@ -21,7 +21,7 @@ quantile(DE_tissue$p_l_ratio, probs = c(0.1, 0.9)) # 0.08399402 82.27061646
 nrow(DE_tissue[DE_tissue$p_l_ratio <= 0.08399402,]) # 1713
 nrow(DE_tissue[DE_tissue$p_l_ratio >= 82.27061646,]) # 1713
 # extract to check the FC
-gff <- read.table(paste0(directory,"/deseq2/REF_LA_filtered_annotation.genes.gff"))
+gff <- read.table(paste0(directory,"REF_LA_filtered_annotation.genes.gff"))
 colnames(gff) <- c("gene","chrom", "start", "end")
 DE_tissue <- left_join(DE_tissue, gff, by="gene")
 
@@ -48,6 +48,7 @@ DE_tissue <- DE_tissue %>% filter(p_mean>5 | l_mean>5) #17982
 
 unbias <- DE_tissue %>% filter(log2FoldChange <= 1.143 & log2FoldChange > -1.255) # 4496
 unbias <- unbias %>% filter(padj >= 0.05) # 969
+unbias <- unbias %>% filter(padj >= 0.1) # 824
 #unbias <- DE_tissue %>% filter(padj >= 0.05) # 1019
 
 write.table(unbias, file = paste0(directory,"unbias.txt"), sep = "\t", row.names = FALSE, quote = FALSE)
@@ -110,6 +111,12 @@ genesg_a <- genesg %>% filter(chrom != "U" & chrom != "V") #1514
 
 geness_a <- read.table(paste0(directory,"geness_a.txt"), header = T)
 genesg_a <- read.table(paste0(directory,"genesg_a.txt"), header = T)
+
+geness_UV <- geness %>% filter(chrom == "U" | chrom == "V") #221
+genesg_UV <- genesg %>% filter(chrom != "U" & chrom != "V") #1514
+write.csv(geness_UV, file =paste0(directory,"s_specific_UV.csv"), row.names = FALSE, quote = FALSE) 
+
+
 ```
 
 ## get unbiased genes
