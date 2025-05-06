@@ -622,6 +622,30 @@ geom_col(aes(x = category, y = count, fill = group), position = "fill", colour =
 p1 + p2 + plot_layout(guides = "collect") & theme(legend.position = "right")
 ```
 
+## plot SFS of balsel sites
+```{r}
+scanc95 <- read.table("balsel_scanc95.txt", header = T)
+scanc95 <- scanc95[,c(1,8)]
+
+daf <- read.table("ceratodon_gDNA.auto.filt.vcf.allele.cnt", header = T)
+scanc95_daf <- inner_join(scanc95, daf, by = c("chrom", "physPos"))
+
+scanc95_daf$cnt_derived <- ifelse(scanc95_daf$outgroup == "0", scanc95_daf$cnt_alt, scanc95_daf$cnt_ref)
+scanc95_daf <- scanc95_daf %>% mutate(daf = cnt_derived / n)  %>% mutate(maf = cnt_minor / n)
+daf <- daf %>% mutate(daf = cnt_derived / n)  %>% mutate(maf = cnt_minor / n)
+
+mean(scanc95_daf$maf) # 0.1310996
+mean(daf$maf) # 0.007428614
+median(scanc95_daf$maf) # 0.0625
+median(daf$maf) # 0
+wilcox.test(scan95_daf$maf, daf$maf)
+
+ggplot(scanc95_daf, aes(x = maf)) + geom_histogram(bins = 20)
+ggsave("ceratodon_balsel1.pdf",width = 5,height = 5,units = c("in"))
+ggplot(daf, aes(x = maf)) + geom_histogram(bins = 20)
+ggsave("ceratodon_balsel2.pdf",width = 5,height = 5,units = c("in"))
+
+```
 
 
 

@@ -557,3 +557,35 @@ sample estimates:
 odds ratio 
  0.8858652 
 
+## plot SFS of balsel sites
+chrom   physPos ref     alt     cnt_minor       cnt_alt cnt_ref n       ref_pileup      outgroup        cnt_derived
+
+```{r}
+
+daf <- read.table(paste0(data,"mpileup_allele_cnt_DAF.txt"), header = T)
+daf <- daf %>% mutate(chrom = factor(chrom))
+levels(daf$chrom)
+levels(daf$chrom)<- c("A1", "A4", "A2", "XY", "A3")
+
+scan95 <- read.table("balsel_scan95.txt", header = T)
+scan95 <- scan95[,c(1,8)]
+scan95_daf <- inner_join(scan95, daf, by = c("chrom", "physPos"))
+write.table(scan95_daf, file = "scan95_daf.txt", row.names = F, quote = F)
+scan95_daf <- read.table(paste0(data, "scan95_daf.txt"), header = T)
+
+scan95_daf <- scan95_daf %>% mutate(daf = cnt_derived / n)
+scan95_daf <- scan95_daf %>% mutate(maf = cnt_minor / n)
+
+daf <- daf %>% mutate(daf = cnt_derived / n)  %>% mutate(maf = cnt_minor / n)
+
+p1 <- ggplot(scan95_daf, aes(x = maf)) + geom_histogram(bins = 20)
+p2 <- ggplot(daf, aes(x = maf)) + geom_histogram(bins = 20)
+p1 + p2
+ggsave(paste0(data, "rumex_balsel.pdf"))
+mean(scan95_daf$maf) # 0.02131347
+mean(daf$maf) # 0.01811379
+median(scan95_daf$maf)
+median(daf$maf)
+wilcox.test(scan95_daf$maf, daf$maf)
+```
+
