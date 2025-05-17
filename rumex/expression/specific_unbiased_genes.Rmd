@@ -47,9 +47,8 @@ DE_tissue <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-Universit
 DE_tissue <- DE_tissue %>% filter(p_mean>5 | l_mean>5) #17982
 
 unbias <- DE_tissue %>% filter(log2FoldChange <= 1.143 & log2FoldChange > -1.255) # 4496
-unbias <- unbias %>% filter(padj >= 0.05) # 969
+# unbias <- unbias %>% filter(padj >= 0.05) # 969
 unbias <- unbias %>% filter(padj >= 0.1) # 824
-#unbias <- DE_tissue %>% filter(padj >= 0.05) # 1019
 
 write.table(unbias, file = paste0(directory,"unbias.txt"), sep = "\t", row.names = FALSE, quote = FALSE)
 write.table(unbias[, 8:10], file = paste0(directory,"unbias.bed"), sep = "\t", row.names = FALSE, col.names = FALSE, quote = FALSE)
@@ -124,8 +123,7 @@ write.csv(geness_UV, file =paste0(directory,"s_specific_UV.csv"), row.names = FA
 DE_c <- read.table("/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/deseq2/DE_results_all.txt", header =T) # 30107
 DE_c <- DE_c %>% filter(g_mean > 5 | s_mean > 5) # 25861 (including UV)
 unbiased <- DE_c %>% filter(log2FoldChange <= 0.43028 & log2FoldChange > -0.3853 ) # 6466
-unbiased <- unbiased %>% filter(padj >= 0.05) # 5221
-test <- DE_c %>% filter(padj >= 0.05) # 8006
+unbiased <- unbiased %>% filter(padj >= 0.1) # 4802
 
 write.table(unbiased, file = paste0(directory,"unbiased.txt"), sep = "\t", row.names = FALSE, quote = FALSE)
 write.table(unbiased[, 2:4], file = paste0(directory,"unbiased.bed"), sep = "\t", row.names = FALSE, col.names = FALSE, quote = FALSE)

@@ -127,7 +127,7 @@ genesg_a <- genesg_a %>% dplyr::select(1)
 unbiased <- unbiased %>% dplyr::select(1)
 stats_genesg_a <- inner_join(genesg_a, stats, by="gene") # 1217
 stats_geness_a <- inner_join(geness_a, stats, by="gene") # 1232
-stats_unbiased <- inner_join(unbiased, stats, by="gene") # 3747
+stats_unbiased <- inner_join(unbiased, stats, by="gene") # 3380
 ```
 
 ## bootstrap mean & CI 
@@ -215,7 +215,7 @@ genesp <- genesp %>% dplyr::select(1)
 unbias <- unbias %>% dplyr::select(1)
 statsr_genesl <- inner_join(genesl, statsr, by="gene") # 1149
 statsr_genesp <- inner_join(genesp, statsr, by="gene") # 920
-statsr_unbias <- inner_join(unbias, statsr, by="gene") # 615
+statsr_unbias <- inner_join(unbias, statsr, by="gene") # 524
 ```
 
 ## bootstrap mean & CI
@@ -257,6 +257,7 @@ p1 + p2 + p3
 
 ```{r}
 (p1 | p4) / (p2 | p5) / (p3 | p6)
+ggsave(paste0(directory, "figure2.pdf"))
 ```
 
 ## mean & sem
@@ -297,9 +298,9 @@ p1_2 + p2_2
 (p1 | p1_2) / (p2 | p2_2) / (p4 | p4_2) / (p5 | p5_2) 
 ```
 
-new figure s?
-p3 p6 place holder
+figure s4
 ```{r}
-(p1_2 | p4_2) / (p2_2 | p5_2) / (p3 | p6)
+(p1_2 | p4_2) / (p2_2 | p5_2) 
+ggsave(paste0(directory, "figureS4.pdf"), width = 7.29, height = 3.4, units = "in")
 ```
 
