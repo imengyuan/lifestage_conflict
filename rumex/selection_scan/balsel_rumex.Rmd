@@ -59,24 +59,18 @@ p1 + p2 + p3 + plot_layout(guides = "collect") & theme(legend.position = "right"
 
 plot the scans
 ```{r}
-lines_data_facet_A2 <- data.frame(xintercept = c(5.6,69), facet = "A2")
-lines_data_facet_A3 <- data.frame(xintercept = c(0,34), facet = "A3")
-lines_data_facet_A4 <- data.frame(xintercept = c(95,115), facet = "A4")
-
 p7 <- ggplot(scan, aes(x = physPos/1000000, y = genPos))+
     facet_grid(.~chrom,scales="free_x", switch = "x", space = "free_x") + geom_point(size=0.3, alpha=0.5)+ ggtitle("a") +
     xlab("")+ylab("Genetic position (cM)")+theme_bw()+theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside",legend.position ="none")+ theme(text = element_text(size = 10), panel.spacing = unit(0.5, "lines"))
 
 p8 <- ggplot(scan, aes(x = physPos/1000000, y = CLR))+geom_point(aes(colour=log10(s_hat)),size = 0.3)+
     facet_grid(.~chrom,scales="free_x", switch = "x", space = "free_x") + ggtitle("b")+
-    xlab("Physical position on Chromosome (Mb)")+ylab("Composite Likelihood Ratio")+theme_bw() +scale_color_gradient2(name = expression('log'[10]~hat(italic(a))), limits = c(-3, 9), midpoint = 0, high="red", mid = 'white', low="blue")+ theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside")+ theme(text = element_text(size = 10), panel.spacing = unit(0.5, "lines")) + geom_vline(data = lines_data_facet_A2, aes(xintercept = xintercept)) +
-  geom_vline(data = lines_data_facet_A3, aes(xintercept = xintercept))+
-  geom_vline(data = lines_data_facet_A4, aes(xintercept = xintercept))
+    xlab("Physical position on Chromosome (Mb)")+ylab("Composite Likelihood Ratio")+theme_bw() +scale_color_gradient2(name = expression('log'[10]~hat(italic(a))), limits = c(-3, 9), midpoint = 0, high="red", mid = 'white', low="blue")+ theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside")+ theme(text = element_text(size = 10), panel.spacing = unit(0.5, "lines"))
 
 #+ geom_hline(yintercept = 9.500813, linetype="dashed",color = "black", size =0.3)
 
-
 p7 / p8 + plot_layout(guides = "collect") & theme(legend.position = "right")
+ggsave(paste0(data, "Figure5.pdf"))
 ```
 
 check the number of genes in inversions
@@ -558,10 +552,7 @@ odds ratio
  0.8858652 
 
 ## plot SFS of balsel sites
-chrom   physPos ref     alt     cnt_minor       cnt_alt cnt_ref n       ref_pileup      outgroup        cnt_derived
-
 ```{r}
-
 daf <- read.table(paste0(data,"mpileup_allele_cnt_DAF.txt"), header = T)
 daf <- daf %>% mutate(chrom = factor(chrom))
 levels(daf$chrom)
@@ -573,19 +564,58 @@ scan95_daf <- inner_join(scan95, daf, by = c("chrom", "physPos"))
 write.table(scan95_daf, file = "scan95_daf.txt", row.names = F, quote = F)
 scan95_daf <- read.table(paste0(data, "scan95_daf.txt"), header = T)
 
-scan95_daf <- scan95_daf %>% mutate(daf = cnt_derived / n)
-scan95_daf <- scan95_daf %>% mutate(maf = cnt_minor / n)
+scan95_daf <- scan95_daf %>% mutate(daf = cnt_derived / n) %>% mutate(maf = ifelse(daf <= 0.5, daf, 1 - daf))
+daf <- daf %>% mutate(daf = cnt_derived / n) %>% mutate(maf = ifelse(daf <= 0.5, daf, 1 - daf))
 
-daf <- daf %>% mutate(daf = cnt_derived / n)  %>% mutate(maf = cnt_minor / n)
-
-p1 <- ggplot(scan95_daf, aes(x = maf)) + geom_histogram(bins = 20)
-p2 <- ggplot(daf, aes(x = maf)) + geom_histogram(bins = 20)
-p1 + p2
-ggsave(paste0(data, "rumex_balsel.pdf"))
-mean(scan95_daf$maf) # 0.02131347
-mean(daf$maf) # 0.01811379
+mean(scan95_daf$maf) # 0.0253503
+mean(daf$maf) # 0.02007629
 median(scan95_daf$maf)
 median(daf$maf)
-wilcox.test(scan95_daf$maf, daf$maf)
+wilcox.test(scan95_daf$maf, daf$maf) # p-value < 2.2e-16
+
+# proportion of MAF > 0.3
+mean(scan95_daf$maf > 0.3) # 0.02136445
+mean(daf$maf > 0.3) # 0.0162584
+```
+
+```{r}
+p1 <- ggplot(daf, aes(x=maf)) + geom_histogram(bins = 20) + theme_classic() + ggtitle("a")+ labs(x="MAF", y="Count")+ theme(text = element_text(size = 10)) + expand_limits(x=0.5) 
+p2 <- ggplot(scan95_daf, aes(x=maf)) + geom_histogram(bins = 20) + theme_classic() + ggtitle("b")+ labs(x="MAF", y="Count")+ theme(text = element_text(size = 10)) + expand_limits(x=0.5) 
+p1 + p2
+ggsave(paste0(data, "rumex_balsel.pdf"),width = 7, height = 3.5, units = "in")
+```
+
+
+## zoom in on some regions
+```{r}
+scan_test <- scan %>% filter(chrom == "A1" & physPos < 50000000)
+p7 <- ggplot(scan_test, aes(x = physPos/1000000, y = genPos))+
+    facet_grid(.~chrom,scales="free_x", switch = "x", space = "free_x") + geom_point(size=0.3, alpha=0.5)+ ggtitle("a") +
+    xlab("")+ylab("Genetic position (cM)")+theme_bw()+theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside",legend.position ="none")+ theme(text = element_text(size = 10), panel.spacing = unit(0.5, "lines"))
+
+p8 <- ggplot(scan_test, aes(x = physPos/1000000, y = CLR))+geom_point(aes(colour=log10(s_hat)),size = 0.3)+
+    facet_grid(.~chrom,scales="free_x", switch = "x", space = "free_x") + ggtitle("b")+
+    xlab("Physical position on Chromosome (Mb)")+ylab("Composite Likelihood Ratio")+theme_bw() +scale_color_gradient2(name = expression('log'[10]~hat(italic(a))), limits = c(-3, 9), midpoint = 0, high="red", mid = 'white', low="blue")+ theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside")+ theme(text = element_text(size = 10), panel.spacing = unit(0.5, "lines"))
+
+#+ geom_hline(yintercept = 9.500813, linetype="dashed",color = "black", size =0.3)
+
+p7 / p8 + plot_layout(guides = "collect") & theme(legend.position = "right")
+ggsave(paste0(data, "rumex_balsel_zoomin1.pdf"))
+```
+
+```{r}
+scan_test <- scan %>% filter(chrom == "A1" & physPos > 350000000)
+p7 <- ggplot(scan_test, aes(x = physPos/1000000, y = genPos))+
+    facet_grid(.~chrom,scales="free_x", switch = "x", space = "free_x") + geom_point(size=0.3, alpha=0.5)+ ggtitle("a") +
+    xlab("")+ylab("Genetic position (cM)")+theme_bw()+theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside",legend.position ="none")+ theme(text = element_text(size = 10), panel.spacing = unit(0.5, "lines"))
+
+p8 <- ggplot(scan_test, aes(x = physPos/1000000, y = CLR))+geom_point(aes(colour=log10(s_hat)),size = 0.3)+
+    facet_grid(.~chrom,scales="free_x", switch = "x", space = "free_x") + ggtitle("b")+
+    xlab("Physical position on Chromosome (Mb)")+ylab("Composite Likelihood Ratio")+theme_bw() +scale_color_gradient2(name = expression('log'[10]~hat(italic(a))), limits = c(-3, 9), midpoint = 0, high="red", mid = 'white', low="blue")+ theme(panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.ticks.x = element_blank(),panel.spacing = unit(0.1, "cm"),strip.background = element_blank(),strip.placement = "outside")+ theme(text = element_text(size = 10), panel.spacing = unit(0.5, "lines"))
+
+#+ geom_hline(yintercept = 9.500813, linetype="dashed",color = "black", size =0.3)
+
+p7 / p8 + plot_layout(guides = "collect") & theme(legend.position = "right")
+ggsave(paste0(data, "rumex_balsel_zoomin2.pdf"))
 ```
 

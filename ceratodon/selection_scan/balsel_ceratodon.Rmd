@@ -631,20 +631,24 @@ daf <- read.table("ceratodon_gDNA.auto.filt.vcf.allele.cnt", header = T)
 scanc95_daf <- inner_join(scanc95, daf, by = c("chrom", "physPos"))
 
 scanc95_daf$cnt_derived <- ifelse(scanc95_daf$outgroup == "0", scanc95_daf$cnt_alt, scanc95_daf$cnt_ref)
-scanc95_daf <- scanc95_daf %>% mutate(daf = cnt_derived / n)  %>% mutate(maf = cnt_minor / n)
-daf <- daf %>% mutate(daf = cnt_derived / n)  %>% mutate(maf = cnt_minor / n)
+scanc95_daf <- scanc95_daf %>% mutate(daf = cnt_derived / n)  %>% mutate(maf = ifelse(daf <= 0.5, daf, 1 - daf))
+daf$cnt_derived <- ifelse(daf$outgroup == "0", daf$cnt_alt, daf$cnt_ref)
+daf <- daf %>% mutate(daf = cnt_derived / n) %>% mutate(maf = ifelse(daf <= 0.5, daf, 1 - daf))
 
-mean(scanc95_daf$maf) # 0.1310996
-mean(daf$maf) # 0.007428614
+mean(scanc95_daf$maf) # 0.1297551
+mean(daf$maf) # 0.00718589
 median(scanc95_daf$maf) # 0.0625
 median(daf$maf) # 0
-wilcox.test(scan95_daf$maf, daf$maf)
+wilcox.test(scanc95_daf$maf, daf$maf) # p-value < 2.2e-16
 
-ggplot(scanc95_daf, aes(x = maf)) + geom_histogram(bins = 20)
-ggsave("ceratodon_balsel1.pdf",width = 5,height = 5,units = c("in"))
-ggplot(daf, aes(x = maf)) + geom_histogram(bins = 20)
-ggsave("ceratodon_balsel2.pdf",width = 5,height = 5,units = c("in"))
+# proportion of MAF > 0.3
+mean(scanc95_daf$maf > 0.3) # 0.1296112
+mean(daf$maf > 0.3) # 0.008146329
 
+p1 <- ggplot(daf, aes(x=maf)) + geom_histogram(bins = 20) + theme_classic() + ggtitle("a")+ labs(x="MAF", y="Count")+ theme(text = element_text(size = 10)) + expand_limits(x=0.5) 
+p2 <- ggplot(scanc95_daf, aes(x=maf)) + geom_histogram(bins = 20) + theme_classic() + ggtitle("b")+ labs(x="MAF", y="Count")+ theme(text = element_text(size = 10)) + expand_limits(x=0.5) 
+p1 + p2
+ggsave("ceratodon_balsel.pdf", width = 7, height = 3.5, units = "in")
 ```
 
 
