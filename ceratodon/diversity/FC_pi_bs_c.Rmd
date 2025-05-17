@@ -29,8 +29,8 @@ ratio_pixy <- read.csv(paste0(directory,"ratio_pixy_innerjoin.csv"))
 
 #ratio_pixy <- read.csv(paste0(directory,"ratio_pixy_innerjoin.txt"))
 pixy <- read.table(paste0(directory,"auto_nonsyn_geneWise_pi.txt"), header=TRUE) 
-pixy <- pixy[complete.cases(pixy),] # 32725
-pixy <- pixy %>% filter(no_sites >= 50) #32349
+pixy <- pixy[complete.cases(pixy),] 
+pixy <- pixy %>% filter(no_sites >= 50) 
 head(pixy)
 colnames(pixy)[2:5] <- c("chrom", "start", "end","avg_pi_nonsyn")
 
