@@ -255,7 +255,7 @@ p1_2 + p2_2 + plot_layout(nrow = 1, guides = "collect")
 directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/rumex_haploid_sel/pixy/"
 write.table(pi_r, file=paste0(directory,"pi_weighted_mean_CI_apr.txt"), sep = "\t",row.names = FALSE, quote = FALSE)
 write.table(pi_r_real, file=paste0(directory,"pi_mean_real_apr.txt"), sep = "\t",row.names = FALSE, quote = FALSE)
-pi_r <- read.table(paste0(directory,"pi_weighted_mean_CI.txt"), header = T)
+pi_r <- read.table(paste0(directory,"pi_weighted_mean_CI_apr.txt"), header = T)
 
 tag_cnt <- group_by(statsr, tag) %>%
   dplyr::summarise(

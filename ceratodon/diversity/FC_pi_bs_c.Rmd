@@ -172,6 +172,7 @@ p4 + p5 + p6 + plot_layout(nrow = 3,guides = "collect")
 plot both rumex and ceratodon
 ```{r}
 (p1 | p4) / (p2 | p5) / (p3 | p6)
+ggsave(paste0(directory, "Figure1.pdf"), width = 7.29, height = 4.6, units = "in")
 ```
 
 ## mean & sem plots rather than mean & CI
@@ -253,7 +254,7 @@ p3 p6 are just place holders
 directory="/Users/yuanmeng/Library/CloudStorage/OneDrive-UniversityofToronto/Manuscripts/ceratodon_haploid_sel/diversity/"
 write.table(pi_c, file=paste0(directory,"pi_weighted_mean_CI_apr10.txt"), sep = "\t",row.names = FALSE, quote = FALSE)
 write.table(pi_c_real, file=paste0(directory,"pi_c_real.txt_apr"), sep = "\t",row.names = FALSE, quote = FALSE)
-#pi_c <- read.table(paste0(directory,"pi_sd_weighted.txt"),header=T)
+pi_c <- read.table(paste0(directory,"pi_weighted_mean_CI_apr10.txt"),header=T)
 
 tag_cnt <- group_by(stats, tag) %>%
   dplyr::summarise(

@@ -134,7 +134,8 @@ p4 + p5 + p6+ plot_layout(nrow = 1,guides = "collect") & theme(legend.position =
 
 for both species
 ```{r}
-(p1 | p4) / (p2 | p5) / (p3 | p6) + plot_layout(guides = "collect") & theme(legend.position = "right")
+(p1 | p4) / (p2 | p5) / (p3 | p6) + plot_layout(guides = "collect") & theme(legend.position = "right", plot.margin = margin())
+ggsave(paste0(directory, "Figure3.pdf"), width = 7, height = 5.1, units = "in")
 ```
 
 
